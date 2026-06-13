@@ -1,74 +1,147 @@
 {
-  "modulos": [
+  "course": {
+    "title": "Calculo III",
+    "description": "Organizador de recursos para construir y revisar un curso en Moodle."
+  },
+  "sections": [
+    {
+      "id": "preparacion",
+      "title": "Preparacion",
+      "description": "Recursos previos, recordatorios y materiales de entrada."
+    },
+    {
+      "id": "profundizacion",
+      "title": "Profundizacion",
+      "description": "Lecturas, videos, enlaces y materiales para ampliar el tema."
+    },
+    {
+      "id": "reto",
+      "title": "Reto",
+      "description": "Actividades, preguntas, problemas y evidencias de aprendizaje."
+    },
+    {
+      "id": "cierre",
+      "title": "Cierre",
+      "description": "Autoevaluacion, sintesis y decisiones finales de la leccion."
+    }
+  ],
+  "modules": [
     {
       "id": "m1",
-      "titulo": "Funciones vectoriales y de varias variables",
-      "lecciones": [
+      "title": "Funciones vectoriales y de varias variables",
+      "lessons": [
         {
           "id": "l10",
-          "titulo": "Introducci\u00f3n a la asignatura"
+          "title": "Introduccion a la asignatura",
+          "resources": [
+            {
+              "id": "r1",
+              "section": "preparacion",
+              "title": "Video de bienvenida del curso",
+              "type": "video",
+              "status": "planned",
+              "url": "",
+              "owner": "Profesor",
+              "priority": "high",
+              "notes": "Definir duracion y mensaje inicial."
+            },
+            {
+              "id": "r2",
+              "section": "cierre",
+              "title": "Encuesta diagnostica",
+              "type": "quiz",
+              "status": "missing",
+              "url": "",
+              "owner": "",
+              "priority": "medium",
+              "notes": "Pendiente decidir si va como cuestionario de Moodle o formulario externo."
+            }
+          ]
         },
         {
           "id": "l11",
-          "titulo": "Funci\u00f3n vectorial y funci\u00f3n de varias variables"
+          "title": "Funcion vectorial y funcion de varias variables",
+          "resources": []
         },
         {
           "id": "l12",
-          "titulo": "L\u00edmites y continuidad"
+          "title": "Limites y continuidad",
+          "resources": []
         },
         {
           "id": "l13",
-          "titulo": "Plano tangente"
+          "title": "Plano tangente",
+          "resources": [
+            {
+              "id": "r3",
+              "section": "profundizacion",
+              "title": "Applet o enlace de visualizacion 3D",
+              "type": "link",
+              "status": "review",
+              "url": "",
+              "owner": "",
+              "priority": "medium",
+              "notes": "Buscar alternativa que pueda enlazarse desde Moodle."
+            }
+          ]
         }
       ]
     },
     {
       "id": "m2",
-      "titulo": "Derivadas de funciones",
-      "lecciones": [
+      "title": "Derivadas de funciones",
+      "lessons": [
         {
           "id": "l21",
-          "titulo": "Derivada direccional"
+          "title": "Derivada direccional",
+          "resources": []
         },
         {
           "id": "l22",
-          "titulo": "Multiplicadores de Lagrange"
+          "title": "Multiplicadores de Lagrange",
+          "resources": []
         },
         {
           "id": "l23",
-          "titulo": "Aplicaciones de la integral doble"
+          "title": "Aplicaciones de la integral doble",
+          "resources": []
         }
       ]
     },
     {
       "id": "m3",
-      "titulo": "Integrales m\u00faltiples",
-      "lecciones": [
+      "title": "Integrales multiples",
+      "lessons": [
         {
           "id": "l31",
-          "titulo": "Integrales triples"
+          "title": "Integrales triples",
+          "resources": []
         },
         {
           "id": "l32",
-          "titulo": "Cambio de variables"
+          "title": "Cambio de variables",
+          "resources": []
         },
         {
           "id": "l33",
-          "titulo": "Campos conservativos"
+          "title": "Campos conservativos",
+          "resources": []
         }
       ]
     },
     {
       "id": "m4",
-      "titulo": "C\u00e1lculo vectorial",
-      "lecciones": [
+      "title": "Calculo vectorial",
+      "lessons": [
         {
           "id": "l41",
-          "titulo": "Green y divergencia"
+          "title": "Green y divergencia",
+          "resources": []
         },
         {
           "id": "l42",
-          "titulo": "Stokes"
+          "title": "Stokes",
+          "resources": []
         }
       ]
     }

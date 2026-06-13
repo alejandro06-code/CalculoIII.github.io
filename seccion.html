@@ -3,77 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Secci&oacute;n | Repositorio de C&aacute;lculo III</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <meta http-equiv="refresh" content="0; url=index.html">
+  <title>Organizador Moodle | Calculo III</title>
 </head>
 <body>
-  <header class="site-header compact">
-    <a id="back-to-lesson" class="back-link" href="index.html">Volver</a>
-    <p class="eyebrow" id="lesson-label">Secci&oacute;n</p>
-    <h1 id="section-title">Cargando...</h1>
-  </header>
-
-  <main class="container" id="content" aria-live="polite"></main>
-
-  <script>
-    const params = new URLSearchParams(location.search);
-    const moduleId = params.get('modulo');
-    const lessonId = params.get('leccion');
-    const type = params.get('tipo') ?? 'preparacion';
-    const sectionTitle = document.querySelector('#section-title');
-    const lessonLabel = document.querySelector('#lesson-label');
-    const content = document.querySelector('#content');
-    const backToLesson = document.querySelector('#back-to-lesson');
-
-    const sectionCopy = {
-      preparacion: {
-        title: 'Preparaci\u00f3n',
-        blocks: ['Recursos implementados', 'Recursos por implementar'],
-      },
-      profundizacion: {
-        title: 'Profundizaci\u00f3n',
-        blocks: ['Bibliograf\u00eda', 'Enlaces complementarios'],
-      },
-      reto: {
-        title: 'Reto',
-        blocks: ['Banco de preguntas', 'Actividades propuestas'],
-      },
-      cierre: {
-        title: 'Cierre',
-        blocks: ['Autoevaluaci\u00f3n', 'S\u00edntesis'],
-      },
-    };
-
-    fetch('js/data.json')
-      .then((response) => response.json())
-      .then((data) => {
-        const module = (data.modulos ?? []).find((item) => item.id === moduleId);
-        const lesson = module?.lecciones?.find((item) => item.id === lessonId);
-        const section = sectionCopy[type] ?? sectionCopy.preparacion;
-
-        if (!module || !lesson) {
-          sectionTitle.textContent = 'Secci\u00f3n no encontrada';
-          content.innerHTML = '<p class="notice">Revisa el enlace o vuelve al inicio.</p>';
-          return;
-        }
-
-        document.title = `${section.title} | ${lesson.titulo}`;
-        lessonLabel.textContent = lesson.titulo;
-        sectionTitle.textContent = section.title;
-        backToLesson.href = `leccion.html?modulo=${encodeURIComponent(module.id)}&leccion=${encodeURIComponent(lesson.id)}`;
-        backToLesson.textContent = 'Volver a la lecci\u00f3n';
-
-        content.innerHTML = section.blocks.map((block) => `
-          <section class="panel">
-            <h2>${block}</h2>
-            <p class="empty-state">Contenido pendiente por organizar.</p>
-          </section>
-        `).join('');
-      })
-      .catch(() => {
-        sectionTitle.textContent = 'No se pudo cargar la secci\u00f3n';
-        content.innerHTML = '<p class="notice">Intenta recargar la p&aacute;gina.</p>';
-      });
-  </script>
+  <p>Redirigiendo al organizador del curso...</p>
+  <script>location.replace('index.html');</script>
 </body>
 </html>

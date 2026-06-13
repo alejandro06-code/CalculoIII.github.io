@@ -3,54 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>M&oacute;dulo | Repositorio de C&aacute;lculo III</title>
-  <link rel="stylesheet" href="css/styles.css">
+  <meta http-equiv="refresh" content="0; url=index.html">
+  <title>Organizador Moodle | Calculo III</title>
 </head>
 <body>
-  <header class="site-header compact">
-    <a class="back-link" href="index.html">Volver al inicio</a>
-    <p class="eyebrow">M&oacute;dulo</p>
-    <h1 id="module-title">Cargando...</h1>
-  </header>
-
-  <main class="container">
-    <section>
-      <h2>Lecciones</h2>
-      <div id="lessons" class="grid" aria-live="polite"></div>
-    </section>
-  </main>
-
-  <script>
-    const params = new URLSearchParams(location.search);
-    const moduleId = params.get('id');
-    const title = document.querySelector('#module-title');
-    const lessonsContainer = document.querySelector('#lessons');
-
-    fetch('js/data.json')
-      .then((response) => response.json())
-      .then((data) => {
-        const module = (data.modulos ?? []).find((item) => item.id === moduleId);
-
-        if (!module) {
-          title.textContent = 'M\u00f3dulo no encontrado';
-          lessonsContainer.innerHTML = '<p class="notice">Revisa el enlace o vuelve al inicio.</p>';
-          return;
-        }
-
-        document.title = `${module.titulo} | Repositorio de C\u00e1lculo III`;
-        title.textContent = module.titulo;
-        lessonsContainer.innerHTML = (module.lecciones ?? []).map((lesson) => `
-          <article class="card">
-            <p class="card-kicker">${lesson.id.toUpperCase()}</p>
-            <h3>${lesson.titulo}</h3>
-            <a class="btn" href="leccion.html?modulo=${encodeURIComponent(module.id)}&leccion=${encodeURIComponent(lesson.id)}">Abrir lecci&oacute;n</a>
-          </article>
-        `).join('');
-      })
-      .catch(() => {
-        title.textContent = 'No se pudo cargar el m\u00f3dulo';
-        lessonsContainer.innerHTML = '<p class="notice">Intenta recargar la p&aacute;gina.</p>';
-      });
-  </script>
+  <p>Redirigiendo al organizador del curso...</p>
+  <script>location.replace('index.html');</script>
 </body>
 </html>
