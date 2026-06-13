@@ -1,1 +1,59 @@
-<!DOCTYPE html><html><head><meta charset='utf-8'><link rel='stylesheet' href='css/styles.css'></head><body><header><h1>Repositorio de Cálculo III</h1></header><div class='container'><div id='mods' class='grid'></div></div><script>fetch('js/data.json').then(r=>r.json()).then(d=>mods.innerHTML=d.modulos.map(m=>`<div class='card'><h2>${m.titulo}</h2><a class='btn' href='modulo.html?id=${m.id}'>Abrir módulo</a></div>`).join(''));</script></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Repositorio de C&aacute;lculo III</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <p class="eyebrow">Repositorio organizador</p>
+    <h1>C&aacute;lculo III</h1>
+    <p class="lead">M&oacute;dulos, lecciones y recursos para acompa&ntilde;ar el curso.</p>
+  </header>
+
+  <main class="container">
+    <section class="toolbar" aria-label="Resumen del repositorio">
+      <div>
+        <strong id="module-count">0</strong>
+        <span>m&oacute;dulos</span>
+      </div>
+      <div>
+        <strong id="lesson-count">0</strong>
+        <span>lecciones</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>M&oacute;dulos</h2>
+      <div id="mods" class="grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script>
+    const modulesContainer = document.querySelector('#mods');
+    const moduleCount = document.querySelector('#module-count');
+    const lessonCount = document.querySelector('#lesson-count');
+
+    fetch('js/data.json')
+      .then((response) => response.json())
+      .then((data) => {
+        const modules = data.modulos ?? [];
+        moduleCount.textContent = modules.length;
+        lessonCount.textContent = modules.reduce((total, module) => total + (module.lecciones?.length ?? 0), 0);
+
+        modulesContainer.innerHTML = modules.map((module) => `
+          <article class="card">
+            <p class="card-kicker">${module.lecciones?.length ?? 0} lecciones</p>
+            <h3>${module.titulo}</h3>
+            <a class="btn" href="modulo.html?id=${encodeURIComponent(module.id)}">Abrir m&oacute;dulo</a>
+          </article>
+        `).join('');
+      })
+      .catch(() => {
+        modulesContainer.innerHTML = '<p class="notice">No se pudo cargar la informaci&oacute;n del repositorio.</p>';
+      });
+  </script>
+</body>
+</html>

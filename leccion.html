@@ -1,1 +1,72 @@
-<!DOCTYPE html><html><head><meta charset='utf-8'><link rel='stylesheet' href='css/styles.css'></head><body><header><h1>Lección</h1></header><div class='container'><div class='grid'><div class='card'><h2>Preparación</h2><a class='btn' href='seccion.html?tipo=preparacion'>Abrir</a></div><div class='card'><h2>Profundización</h2><a class='btn' href='seccion.html?tipo=profundizacion'>Abrir</a></div><div class='card'><h2>Reto</h2><a class='btn' href='seccion.html?tipo=reto'>Abrir</a></div><div class='card'><h2>Cierre</h2><a class='btn' href='seccion.html?tipo=cierre'>Abrir</a></div></div></div></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lecci&oacute;n | Repositorio de C&aacute;lculo III</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header compact">
+    <a id="back-to-module" class="back-link" href="index.html">Volver</a>
+    <p class="eyebrow" id="module-label">Lecci&oacute;n</p>
+    <h1 id="lesson-title">Cargando...</h1>
+  </header>
+
+  <main class="container">
+    <section>
+      <h2>Momentos de trabajo</h2>
+      <div id="sections" class="grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const moduleId = params.get('modulo');
+    const lessonId = params.get('leccion');
+    const lessonTitle = document.querySelector('#lesson-title');
+    const moduleLabel = document.querySelector('#module-label');
+    const sectionsContainer = document.querySelector('#sections');
+    const backToModule = document.querySelector('#back-to-module');
+
+    const sections = [
+      { id: 'preparacion', title: 'Preparaci\u00f3n', description: 'Materiales y recursos para entrar al tema.' },
+      { id: 'profundizacion', title: 'Profundizaci\u00f3n', description: 'Lecturas, bibliograf\u00eda y enlaces complementarios.' },
+      { id: 'reto', title: 'Reto', description: 'Preguntas y actividades para poner a prueba las ideas.' },
+      { id: 'cierre', title: 'Cierre', description: 'Autoevaluaci\u00f3n y s\u00edntesis de la lecci\u00f3n.' },
+    ];
+
+    fetch('js/data.json')
+      .then((response) => response.json())
+      .then((data) => {
+        const module = (data.modulos ?? []).find((item) => item.id === moduleId);
+        const lesson = module?.lecciones?.find((item) => item.id === lessonId);
+
+        if (!module || !lesson) {
+          lessonTitle.textContent = 'Lecci\u00f3n no encontrada';
+          sectionsContainer.innerHTML = '<p class="notice">Revisa el enlace o vuelve al inicio.</p>';
+          return;
+        }
+
+        document.title = `${lesson.titulo} | Repositorio de C\u00e1lculo III`;
+        moduleLabel.textContent = module.titulo;
+        lessonTitle.textContent = lesson.titulo;
+        backToModule.href = `modulo.html?id=${encodeURIComponent(module.id)}`;
+        backToModule.textContent = 'Volver al m\u00f3dulo';
+
+        sectionsContainer.innerHTML = sections.map((section) => `
+          <article class="card">
+            <p class="card-kicker">${section.id}</p>
+            <h3>${section.title}</h3>
+            <p>${section.description}</p>
+            <a class="btn" href="seccion.html?modulo=${encodeURIComponent(module.id)}&leccion=${encodeURIComponent(lesson.id)}&tipo=${encodeURIComponent(section.id)}">Abrir</a>
+          </article>
+        `).join('');
+      })
+      .catch(() => {
+        lessonTitle.textContent = 'No se pudo cargar la lecci\u00f3n';
+        sectionsContainer.innerHTML = '<p class="notice">Intenta recargar la p&aacute;gina.</p>';
+      });
+  </script>
+</body>
+</html>

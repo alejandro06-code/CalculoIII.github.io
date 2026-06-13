@@ -6,15 +6,15 @@
       "lecciones": [
         {
           "id": "l10",
-          "titulo": "Introducción a la asignatura"
+          "titulo": "Introducci\u00f3n a la asignatura"
         },
         {
           "id": "l11",
-          "titulo": "Función vectorial y función de varias variables"
+          "titulo": "Funci\u00f3n vectorial y funci\u00f3n de varias variables"
         },
         {
           "id": "l12",
-          "titulo": "Límites y continuidad"
+          "titulo": "L\u00edmites y continuidad"
         },
         {
           "id": "l13",
@@ -42,7 +42,7 @@
     },
     {
       "id": "m3",
-      "titulo": "Integrales múltiples",
+      "titulo": "Integrales m\u00faltiples",
       "lecciones": [
         {
           "id": "l31",
@@ -60,7 +60,7 @@
     },
     {
       "id": "m4",
-      "titulo": "Cálculo vectorial",
+      "titulo": "C\u00e1lculo vectorial",
       "lecciones": [
         {
           "id": "l41",
