@@ -386,11 +386,11 @@ textarea {
 
 .map-lesson-title {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 7px;
   width: 100%;
-  align-items: center;
-  padding: 5px 4px 8px;
+  align-items: start;
+  padding: 5px 4px 10px;
   background: transparent;
   border: 0;
   text-align: left;
@@ -403,13 +403,14 @@ textarea {
 .lesson-name {
   display: block;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .lesson-pills {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
+  justify-content: flex-start;
+  gap: 5px;
 }
 
 .lesson-pills .pill-danger {
