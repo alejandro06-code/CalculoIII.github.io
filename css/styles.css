@@ -373,25 +373,35 @@ textarea {
 }
 
 .map-lesson {
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.map-lesson.active {
+  border-color: #b7d4cf;
+  box-shadow: inset 3px 0 0 var(--brand-2);
+}
+
+.map-lesson-title {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   width: 100%;
   align-items: center;
-  padding: 9px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 5px 4px 8px;
+  background: transparent;
+  border: 0;
   text-align: left;
 }
 
-.map-lesson:hover,
-.map-lesson.active {
-  background: var(--surface-3);
-  border-color: #b7d4cf;
+.map-lesson-title:hover .lesson-name {
+  color: var(--brand);
 }
 
 .lesson-name {
+  display: block;
   font-weight: 700;
 }
 
@@ -410,6 +420,40 @@ textarea {
 .lesson-pills .pill-warning {
   color: #70470b;
   background: #ffedc6;
+}
+
+.map-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.map-section {
+  display: grid;
+  gap: 2px;
+  min-height: 54px;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.map-section span {
+  font-size: 0.83rem;
+  font-weight: 800;
+}
+
+.map-section small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.map-section:hover,
+.map-section.active {
+  background: var(--surface-3);
+  border-color: #b7d4cf;
 }
 
 .section-tabs {
@@ -653,7 +697,8 @@ textarea {
   }
 
   .filters,
-  .map-lesson,
+  .map-lesson-title,
+  .map-sections,
   .two-col {
     grid-template-columns: 1fr;
   }

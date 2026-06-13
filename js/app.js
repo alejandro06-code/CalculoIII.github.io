@@ -162,6 +162,16 @@ function lessonStats(lesson) {
   };
 }
 
+function sectionStats(lesson, sectionId) {
+  const resources = (lesson.resources || []).filter((resource) => resource.section === sectionId);
+  return {
+    total: resources.length,
+    missing: resources.filter((resource) => resource.status === 'missing').length,
+    review: resources.filter((resource) => resource.status === 'review').length,
+    approved: resources.filter((resource) => resource.status === 'approved').length,
+  };
+}
+
 function renderCourseMap() {
   dom.map.innerHTML = '';
 
@@ -198,29 +208,62 @@ function renderCourseMap() {
 
     const lessons = document.createElement('div');
     lessons.className = 'map-lessons';
-    module.lessons.forEach((lesson) => {
+    module.lessons.forEach((lesson, lessonIndex) => {
       const stats = lessonStats(lesson);
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'map-lesson';
+      const lessonBlock = document.createElement('section');
+      lessonBlock.className = 'map-lesson';
       if (module.id === state.selectedModuleId && lesson.id === state.selectedLessonId) {
-        button.classList.add('active');
+        lessonBlock.classList.add('active');
       }
-      button.innerHTML = `
-        <span class="lesson-name">${lesson.title}</span>
-        <span class="lesson-pills">
-          <span>${stats.total} rec.</span>
-          <span class="${stats.missing ? 'pill-danger' : ''}">${stats.missing} falta</span>
-          <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} rev.</span>
-        </span>
+      lessonBlock.innerHTML = `
+        <button class="map-lesson-title" type="button">
+          <span>
+            <span class="map-kicker">Leccion ${lessonIndex + 1}</span>
+            <span class="lesson-name">${lesson.title}</span>
+          </span>
+          <span class="lesson-pills">
+            <span>${stats.total} rec.</span>
+            <span class="${stats.missing ? 'pill-danger' : ''}">${stats.missing} falta</span>
+            <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} rev.</span>
+          </span>
+        </button>
       `;
-      button.addEventListener('click', () => {
+      lessonBlock.querySelector('.map-lesson-title').addEventListener('click', () => {
         state.selectedModuleId = module.id;
         state.selectedLessonId = lesson.id;
         clearForm();
         render();
       });
-      lessons.appendChild(button);
+
+      const sectionList = document.createElement('div');
+      sectionList.className = 'map-sections';
+      state.data.sections.forEach((section) => {
+        const partStats = sectionStats(lesson, section.id);
+        const sectionButton = document.createElement('button');
+        sectionButton.type = 'button';
+        sectionButton.className = 'map-section';
+        if (
+          module.id === state.selectedModuleId &&
+          lesson.id === state.selectedLessonId &&
+          section.id === state.selectedSectionId
+        ) {
+          sectionButton.classList.add('active');
+        }
+        sectionButton.innerHTML = `
+          <span>${section.title}</span>
+          <small>${partStats.total} rec. · ${partStats.missing} faltan · ${partStats.review} rev.</small>
+        `;
+        sectionButton.addEventListener('click', () => {
+          state.selectedModuleId = module.id;
+          state.selectedLessonId = lesson.id;
+          state.selectedSectionId = section.id;
+          clearForm();
+          render();
+        });
+        sectionList.appendChild(sectionButton);
+      });
+      lessonBlock.appendChild(sectionList);
+      lessons.appendChild(lessonBlock);
     });
 
     card.appendChild(lessons);
