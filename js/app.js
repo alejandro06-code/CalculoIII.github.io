@@ -287,7 +287,11 @@ function renderCourseMap() {
         sectionButton.innerHTML = `
           <span>${section.title}</span>
           <small class="section-total">${plural(partStats.total, 'recurso registrado', 'recursos registrados')}</small>
-          <small class="section-status">${plural(partStats.missing, 'falta', 'faltan')} · ${partStats.review} revisar · ${plural(partStats.approved, 'aprobado', 'aprobados')}</small>
+          <small class="section-status">
+            <span>${plural(partStats.missing, 'falta', 'faltan')}</span>
+            <span>${partStats.review} revisar</span>
+            <span>${plural(partStats.approved, 'aprobado', 'aprobados')}</span>
+          </small>
         `;
         sectionButton.addEventListener('click', () => {
           state.selectedModuleId = module.id;
@@ -620,9 +624,6 @@ function wireEvents() {
     state.typeFilter = event.target.value;
     renderResources();
   });
-  document.querySelector('#add-resource').addEventListener('click', clearForm);
-  document.querySelector('#add-module').addEventListener('click', () => dom.moduleTitleInput.focus());
-  document.querySelector('#add-lesson').addEventListener('click', () => dom.lessonTitleInput.focus());
   document.querySelector('#save-module').addEventListener('click', addModule);
   document.querySelector('#save-lesson').addEventListener('click', addLesson);
   document.querySelector('#clear-form').addEventListener('click', clearForm);

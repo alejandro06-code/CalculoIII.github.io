@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-125500">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-163000">
 </head>
 <body>
   <header class="app-header">
@@ -24,48 +24,12 @@
   </header>
 
   <main class="app-shell">
-    <aside class="sidebar" aria-label="Navegacion del curso">
-      <div class="search-box">
-        <label for="search">Buscar recurso</label>
-        <input id="search" type="search" placeholder="Titulo, enlace, nota...">
-      </div>
-
-      <section class="summary-grid" aria-label="Resumen">
-        <article>
-          <strong id="total-resources">0</strong>
-          <span>recursos</span>
-        </article>
-        <article>
-          <strong id="missing-resources">0</strong>
-          <span>faltantes</span>
-        </article>
-        <article>
-          <strong id="approved-resources">0</strong>
-          <span>aprobados</span>
-        </article>
-        <article>
-          <strong id="review-resources">0</strong>
-          <span>por revisar</span>
-        </article>
-      </section>
-
-      <div class="sidebar-title">
-        <h2>Modulos y lecciones</h2>
-        <button class="icon-btn" id="add-module" type="button" title="Agregar modulo">+</button>
-      </div>
-      <nav id="course-nav" class="course-nav"></nav>
-    </aside>
-
     <section class="workspace" aria-label="Area de trabajo">
       <div class="workspace-header">
         <div>
           <p class="eyebrow" id="current-module-label">Modulo</p>
           <h2 id="current-lesson-title">Selecciona una leccion</h2>
           <p class="muted" id="current-lesson-meta">Elige un punto del curso para organizar sus recursos.</p>
-        </div>
-        <div class="workspace-actions">
-          <button class="btn secondary" id="add-lesson" type="button">Agregar leccion</button>
-          <button class="btn primary" id="add-resource" type="button">Agregar recurso</button>
         </div>
       </div>
 
@@ -79,48 +43,82 @@
         </div>
         <div id="course-map" class="course-map"></div>
       </section>
-
-      <div class="filters" aria-label="Filtros de recursos">
-        <label>
-          Estado
-          <select id="status-filter">
-            <option value="all">Todos</option>
-            <option value="exists">Existe</option>
-            <option value="planned">Por anadir</option>
-            <option value="missing">Falta</option>
-            <option value="review">Por revisar</option>
-            <option value="approved">Aprobado</option>
-            <option value="discarded">Descartado</option>
-          </select>
-        </label>
-        <label>
-          Tipo
-          <select id="type-filter">
-            <option value="all">Todos</option>
-            <option value="video">Video</option>
-            <option value="link">Link</option>
-            <option value="file">Archivo</option>
-            <option value="page">Pagina Moodle</option>
-            <option value="h5p">H5P</option>
-            <option value="quiz">Pregunta/reto</option>
-            <option value="other">Otro</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="section-tabs" id="section-tabs" role="tablist" aria-label="Momentos de la leccion"></div>
-
-      <section class="resource-panel">
-        <div class="panel-heading">
-          <h3 id="section-heading">Recursos</h3>
-          <p id="section-description">Organiza lo que existe, lo que falta y lo que se debe revisar.</p>
-        </div>
-        <div id="resource-list" class="resource-list"></div>
-      </section>
     </section>
 
-    <aside class="editor-panel" aria-label="Editor">
-      <form id="resource-form" class="editor-card">
+    <section class="workbench" aria-label="Herramientas y recursos">
+      <aside class="sidebar" aria-label="Navegacion del curso">
+        <div class="search-box">
+          <label for="search">Buscar recurso</label>
+          <input id="search" type="search" placeholder="Titulo, enlace, nota...">
+        </div>
+
+        <section class="summary-grid" aria-label="Resumen">
+          <article>
+            <strong id="total-resources">0</strong>
+            <span>recursos</span>
+          </article>
+          <article>
+            <strong id="missing-resources">0</strong>
+            <span>faltantes</span>
+          </article>
+          <article>
+            <strong id="approved-resources">0</strong>
+            <span>aprobados</span>
+          </article>
+          <article>
+            <strong id="review-resources">0</strong>
+            <span>por revisar</span>
+          </article>
+        </section>
+
+        <div class="sidebar-title">
+          <h2>Modulos y lecciones</h2>
+        </div>
+        <nav id="course-nav" class="course-nav"></nav>
+      </aside>
+
+      <section class="resource-workspace" aria-label="Recursos de la leccion">
+        <div class="filters" aria-label="Filtros de recursos">
+          <label>
+            Estado
+            <select id="status-filter">
+              <option value="all">Todos</option>
+              <option value="exists">Existe</option>
+              <option value="planned">Por anadir</option>
+              <option value="missing">Falta</option>
+              <option value="review">Por revisar</option>
+              <option value="approved">Aprobado</option>
+              <option value="discarded">Descartado</option>
+            </select>
+          </label>
+          <label>
+            Tipo
+            <select id="type-filter">
+              <option value="all">Todos</option>
+              <option value="video">Video</option>
+              <option value="link">Link</option>
+              <option value="file">Archivo</option>
+              <option value="page">Pagina Moodle</option>
+              <option value="h5p">H5P</option>
+              <option value="quiz">Pregunta/reto</option>
+              <option value="other">Otro</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="section-tabs" id="section-tabs" role="tablist" aria-label="Momentos de la leccion"></div>
+
+        <section class="resource-panel">
+          <div class="panel-heading">
+            <h3 id="section-heading">Recursos</h3>
+            <p id="section-description">Organiza lo que existe, lo que falta y lo que se debe revisar.</p>
+          </div>
+          <div id="resource-list" class="resource-list"></div>
+        </section>
+      </section>
+
+      <aside class="editor-panel" aria-label="Editor">
+        <form id="resource-form" class="editor-card">
         <input type="hidden" id="resource-id">
         <h2 id="form-title">Nuevo recurso</h2>
         <label>
@@ -188,9 +186,15 @@
           <button class="btn ghost" id="clear-form" type="button">Limpiar</button>
         </div>
       </form>
+      </aside>
+    </section>
 
-      <form id="structure-form" class="editor-card">
+    <section class="structure-row" aria-label="Estructura">
+      <div>
+        <p class="eyebrow">Edicion de estructura</p>
         <h2>Estructura</h2>
+      </div>
+      <form id="structure-form" class="structure-form">
         <label>
           Nuevo modulo
           <input id="module-title-input" placeholder="Nombre del modulo">
@@ -202,7 +206,7 @@
         </label>
         <button class="btn secondary" id="save-lesson" type="button">Crear leccion</button>
       </form>
-    </aside>
+    </section>
   </main>
 
   <template id="resource-template">
@@ -225,6 +229,6 @@
     </article>
   </template>
 
-  <script src="js/app.js?v=20260613-125500"></script>
+  <script src="js/app.js?v=20260613-163000"></script>
 </body>
 </html>
