@@ -75,6 +75,11 @@ const dom = {
   template: document.querySelector('#resource-template'),
 };
 
+function onOptional(selector, eventName, handler) {
+  const element = document.querySelector(selector);
+  if (element) element.addEventListener(eventName, handler);
+}
+
 function uid(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -700,10 +705,10 @@ function wireEvents() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !dom.deleteConfirm.hidden) closeDeleteConfirm();
   });
-  document.querySelector('#export-json').addEventListener('click', exportJson);
-  document.querySelector('#export-csv').addEventListener('click', exportCsv);
-  document.querySelector('#import-json').addEventListener('change', importJson);
-  document.querySelector('#reset-data').addEventListener('click', resetData);
+  onOptional('#export-json', 'click', exportJson);
+  onOptional('#export-csv', 'click', exportCsv);
+  onOptional('#import-json', 'change', importJson);
+  onOptional('#reset-data', 'click', resetData);
   dom.form.addEventListener('submit', saveResource);
 }
 
