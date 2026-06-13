@@ -20,6 +20,10 @@ const labels = {
   low: 'Baja',
 };
 
+function plural(count, singular, pluralText) {
+  return `${count} ${count === 1 ? singular : pluralText}`;
+}
+
 const state = {
   data: null,
   selectedModuleId: null,
@@ -227,13 +231,13 @@ function renderCourseMap() {
           <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
           <h4>${module.title}</h4>
         </div>
-        <span class="map-count">${totals.total} recursos</span>
+        <span class="map-count"><strong>${totals.total}</strong><span> ${totals.total === 1 ? 'recurso registrado' : 'recursos registrados'}</span></span>
       </div>
       <div class="map-stats">
-        <span>${module.lessons.length} lecciones</span>
-        <span>${totals.missing} faltan</span>
-        <span>${totals.review} revisar</span>
-        <span>${totals.approved} aprobados</span>
+        <span>${plural(module.lessons.length, 'leccion', 'lecciones')}</span>
+        <span class="${totals.missing ? 'pill-danger' : ''}">${plural(totals.missing, 'faltante', 'faltantes')}</span>
+        <span class="${totals.review ? 'pill-warning' : ''}">${totals.review} por revisar</span>
+        <span class="${totals.approved ? 'pill-ok' : ''}">${plural(totals.approved, 'aprobado', 'aprobados')}</span>
       </div>
     `;
 
@@ -253,9 +257,9 @@ function renderCourseMap() {
             <span class="lesson-name">${lesson.title}</span>
           </span>
           <span class="lesson-pills">
-            <span>${stats.total} rec.</span>
-            <span class="${stats.missing ? 'pill-danger' : ''}">${stats.missing} falta</span>
-            <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} rev.</span>
+            <span class="total-pill">${stats.total} en total</span>
+            <span class="${stats.missing ? 'pill-danger' : ''}">${plural(stats.missing, 'falta', 'faltan')}</span>
+            <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} revisar</span>
           </span>
         </button>
       `;
@@ -282,7 +286,8 @@ function renderCourseMap() {
         }
         sectionButton.innerHTML = `
           <span>${section.title}</span>
-          <small>${partStats.total} rec. · ${partStats.missing} faltan · ${partStats.review} rev.</small>
+          <small class="section-total">${plural(partStats.total, 'recurso registrado', 'recursos registrados')}</small>
+          <small class="section-status">${plural(partStats.missing, 'falta', 'faltan')} · ${partStats.review} revisar · ${plural(partStats.approved, 'aprobado', 'aprobados')}</small>
         `;
         sectionButton.addEventListener('click', () => {
           state.selectedModuleId = module.id;

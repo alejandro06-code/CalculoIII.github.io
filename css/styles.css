@@ -11,6 +11,7 @@
   --brand: #1e4f87;
   --brand-2: #2b746b;
   --brand-soft: #e9f2fb;
+  --active-soft: #e8f4f1;
   --danger: #9f2d3d;
   --warning: #9b641c;
   --ok: #247548;
@@ -254,6 +255,10 @@ textarea {
   border-color: #b7d4cf;
 }
 
+.lesson-button.active {
+  box-shadow: inset 4px 0 0 var(--brand-2);
+}
+
 .workspace-header {
   padding-bottom: 18px;
   border-bottom: 1px solid var(--line);
@@ -319,6 +324,12 @@ textarea {
   border-radius: 8px;
 }
 
+.map-module:has(.map-lesson.active) {
+  background: linear-gradient(180deg, #ffffff, #f3faf8);
+  border-color: #9ccdc4;
+  box-shadow: inset 4px 0 0 var(--brand-2);
+}
+
 .map-module-header {
   display: grid;
   gap: 8px;
@@ -337,13 +348,25 @@ textarea {
 }
 
 .map-count {
+  display: inline-grid;
   width: fit-content;
-  padding: 5px 8px;
+  gap: 1px;
+  padding: 7px 10px;
   color: var(--brand);
   background: var(--brand-soft);
-  border-radius: 999px;
-  font-size: 0.78rem;
+  border: 1px solid #cce0f1;
+  border-radius: 8px;
+  font-size: 0.75rem;
   font-weight: 800;
+}
+
+.map-count strong {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.map-count span {
+  color: #45617f;
 }
 
 .map-stats {
@@ -366,6 +389,23 @@ textarea {
   font-weight: 800;
 }
 
+.map-stats .pill-danger,
+.lesson-pills .pill-danger {
+  color: #842233;
+  background: #f9d7dd;
+}
+
+.map-stats .pill-warning,
+.lesson-pills .pill-warning {
+  color: #70470b;
+  background: #ffedc6;
+}
+
+.map-stats .pill-ok {
+  color: #0d5131;
+  background: #dff3e8;
+}
+
 .map-lessons {
   display: grid;
   gap: 6px;
@@ -381,6 +421,7 @@ textarea {
 .map-lesson.active {
   border-color: #b7d4cf;
   box-shadow: inset 3px 0 0 var(--brand-2);
+  background: #fbfefd;
 }
 
 .map-lesson-title {
@@ -412,14 +453,9 @@ textarea {
   gap: 5px;
 }
 
-.lesson-pills .pill-danger {
-  color: #842233;
-  background: #f9d7dd;
-}
-
-.lesson-pills .pill-warning {
-  color: #70470b;
-  background: #ffedc6;
+.lesson-pills .total-pill {
+  color: var(--brand);
+  background: var(--brand-soft);
 }
 
 .map-sections {
@@ -450,10 +486,23 @@ textarea {
   font-weight: 700;
 }
 
+.map-section .section-total {
+  color: var(--brand);
+  font-weight: 800;
+}
+
+.map-section .section-status {
+  color: #6b7280;
+}
+
 .map-section:hover,
 .map-section.active {
   background: var(--surface-3);
   border-color: #b7d4cf;
+}
+
+.map-section.active {
+  box-shadow: inset 3px 0 0 var(--brand-2);
 }
 
 .section-tabs {
