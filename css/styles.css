@@ -116,9 +116,10 @@ h4 {
 
 .sidebar {
   position: sticky;
-  top: 12px;
-  max-height: calc(100vh - 24px);
+  top: 16px;
+  height: clamp(380px, calc(100vh - 170px), 680px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 14px;
 }
 
@@ -319,10 +320,8 @@ textarea {
 }
 
 .map-module-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  gap: 8px;
 }
 
 .map-kicker {
@@ -338,7 +337,7 @@ textarea {
 }
 
 .map-count {
-  flex: 0 0 auto;
+  width: fit-content;
   padding: 5px 8px;
   color: var(--brand);
   background: var(--brand-soft);
@@ -351,7 +350,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin: 10px 0;
+  margin: 0 0 10px;
 }
 
 .map-stats span,
