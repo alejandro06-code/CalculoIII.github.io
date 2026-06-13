@@ -1,4 +1,5 @@
-const STORAGE_KEY = 'calculo-iii-moodle-organizer-v1';
+const STORAGE_KEY = 'calculo-iii-moodle-organizer-v2';
+const LEGACY_STORAGE_KEYS = ['calculo-iii-moodle-organizer-v1', 'calculo-iii-moodle-organizer-v0'];
 
 const labels = {
   exists: 'Existe',
@@ -72,13 +73,33 @@ function saveData() {
 }
 
 function loadStoredData() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return null;
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return null;
+  const keys = [STORAGE_KEY, ...LEGACY_STORAGE_KEYS];
+  for (const key of keys) {
+    const stored = localStorage.getItem(key);
+    if (!stored) continue;
+    try {
+      const parsed = JSON.parse(stored);
+      if (isUsableCourseData(parsed)) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        return parsed;
+      }
+      localStorage.removeItem(key);
+    } catch {
+      localStorage.removeItem(key);
+    }
   }
+  return null;
+}
+
+function isUsableCourseData(data) {
+  return Boolean(
+    data &&
+      Array.isArray(data.modules) &&
+      data.modules.length > 0 &&
+      data.modules.some((module) => Array.isArray(module.lessons) && module.lessons.length > 0) &&
+      Array.isArray(data.sections) &&
+      data.sections.length > 0
+  );
 }
 
 function allResources() {
@@ -120,6 +141,11 @@ function renderSummary() {
 
 function renderNavigation() {
   dom.nav.innerHTML = '';
+
+  if (!state.data.modules.length) {
+    dom.nav.innerHTML = '<p class="empty-state">No hay modulos cargados. Usa Restaurar demo para volver a la estructura base.</p>';
+    return;
+  }
 
   state.data.modules.forEach((module) => {
     const moduleNode = document.createElement('section');
@@ -174,6 +200,11 @@ function sectionStats(lesson, sectionId) {
 
 function renderCourseMap() {
   dom.map.innerHTML = '';
+
+  if (!state.data.modules.length) {
+    dom.map.innerHTML = '<p class="empty-state">No hay estructura cargada. La pagina intentara recuperar la estructura base al recargar.</p>';
+    return;
+  }
 
   state.data.modules.forEach((module, moduleIndex) => {
     const totals = module.lessons.reduce(
@@ -567,6 +598,7 @@ function importJson(event) {
 function resetData() {
   if (!confirm('Restaurar los datos de demostracion? Esto borra los cambios guardados en este navegador.')) return;
   localStorage.removeItem(STORAGE_KEY);
+  LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
   init(true);
 }
 
@@ -602,6 +634,7 @@ async function init(forceDefault = false) {
   if (stored) {
     state.data = stored;
   } else {
+    localStorage.removeItem(STORAGE_KEY);
     const response = await fetch('js/data.json');
     state.data = await response.json();
     saveData();
