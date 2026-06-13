@@ -1,0 +1,76 @@
+{
+  "modulos": [
+    {
+      "id": "m1",
+      "titulo": "Funciones vectoriales y de varias variables",
+      "lecciones": [
+        {
+          "id": "l10",
+          "titulo": "Introducción a la asignatura"
+        },
+        {
+          "id": "l11",
+          "titulo": "Función vectorial y función de varias variables"
+        },
+        {
+          "id": "l12",
+          "titulo": "Límites y continuidad"
+        },
+        {
+          "id": "l13",
+          "titulo": "Plano tangente"
+        }
+      ]
+    },
+    {
+      "id": "m2",
+      "titulo": "Derivadas de funciones",
+      "lecciones": [
+        {
+          "id": "l21",
+          "titulo": "Derivada direccional"
+        },
+        {
+          "id": "l22",
+          "titulo": "Multiplicadores de Lagrange"
+        },
+        {
+          "id": "l23",
+          "titulo": "Aplicaciones de la integral doble"
+        }
+      ]
+    },
+    {
+      "id": "m3",
+      "titulo": "Integrales múltiples",
+      "lecciones": [
+        {
+          "id": "l31",
+          "titulo": "Integrales triples"
+        },
+        {
+          "id": "l32",
+          "titulo": "Cambio de variables"
+        },
+        {
+          "id": "l33",
+          "titulo": "Campos conservativos"
+        }
+      ]
+    },
+    {
+      "id": "m4",
+      "titulo": "Cálculo vectorial",
+      "lecciones": [
+        {
+          "id": "l41",
+          "titulo": "Green y divergencia"
+        },
+        {
+          "id": "l42",
+          "titulo": "Stokes"
+        }
+      ]
+    }
+  ]
+}
