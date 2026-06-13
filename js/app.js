@@ -32,6 +32,7 @@ const state = {
   statusFilters: [],
   typeFilters: [],
   search: '',
+  pendingDeleteResourceId: null,
 };
 
 const dom = {
@@ -67,6 +68,10 @@ const dom = {
   lessonEditSelect: document.querySelector('#lesson-edit-select'),
   lessonTitleInput: document.querySelector('#lesson-title-input'),
   lessonEditTitleInput: document.querySelector('#lesson-edit-title-input'),
+  deleteConfirm: document.querySelector('#delete-confirm'),
+  deleteConfirmResource: document.querySelector('#delete-confirm-resource'),
+  confirmDelete: document.querySelector('#confirm-delete'),
+  cancelDelete: document.querySelector('#cancel-delete'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -533,10 +538,31 @@ function duplicateResource() {
 function deleteResource(resourceId) {
   const lesson = currentLesson();
   if (!lesson) return;
-  if (!confirm('Eliminar este recurso del organizador?')) return;
+  const resource = (lesson.resources || []).find((item) => item.id === resourceId);
+  if (!resource) return;
+  state.pendingDeleteResourceId = resourceId;
+  dom.deleteConfirmResource.textContent = resource.title;
+  dom.deleteConfirm.hidden = false;
+  dom.confirmDelete.focus();
+}
+
+function closeDeleteConfirm() {
+  state.pendingDeleteResourceId = null;
+  dom.deleteConfirm.hidden = true;
+  dom.deleteConfirmResource.textContent = '';
+}
+
+function confirmDeleteResource() {
+  const lesson = currentLesson();
+  if (!lesson || !state.pendingDeleteResourceId) {
+    closeDeleteConfirm();
+    return;
+  }
+  const resourceId = state.pendingDeleteResourceId;
   lesson.resources = (lesson.resources || []).filter((resource) => resource.id !== resourceId);
   saveData();
   clearForm();
+  closeDeleteConfirm();
   render();
 }
 
@@ -666,6 +692,14 @@ function wireEvents() {
   });
   document.querySelector('#clear-form').addEventListener('click', clearForm);
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
+  dom.confirmDelete.addEventListener('click', confirmDeleteResource);
+  dom.cancelDelete.addEventListener('click', closeDeleteConfirm);
+  dom.deleteConfirm.addEventListener('click', (event) => {
+    if (event.target === dom.deleteConfirm) closeDeleteConfirm();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !dom.deleteConfirm.hidden) closeDeleteConfirm();
+  });
   document.querySelector('#export-json').addEventListener('click', exportJson);
   document.querySelector('#export-csv').addEventListener('click', exportCsv);
   document.querySelector('#import-json').addEventListener('change', importJson);

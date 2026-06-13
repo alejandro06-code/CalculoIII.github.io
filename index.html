@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-164627">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-170050">
 </head>
 <body>
   <header class="app-header">
@@ -215,6 +215,19 @@
     </section>
   </main>
 
+  <div class="confirm-overlay" id="delete-confirm" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+      <p class="eyebrow">Confirmacion requerida</p>
+      <h2 id="delete-confirm-title">Eliminar recurso</h2>
+      <p class="confirm-copy">Esta accion quitara el recurso del organizador.</p>
+      <p class="confirm-resource" id="delete-confirm-resource"></p>
+      <div class="confirm-actions">
+        <button class="btn ghost" id="cancel-delete" type="button">Cancelar</button>
+        <button class="btn danger" id="confirm-delete" type="button">Eliminar recurso</button>
+      </div>
+    </section>
+  </div>
+
   <template id="resource-template">
     <article class="resource-card">
       <div class="resource-main">
@@ -235,6 +248,6 @@
     </article>
   </template>
 
-  <script src="js/app.js?v=20260613-164627"></script>
+  <script src="js/app.js?v=20260613-170050"></script>
 </body>
 </html>

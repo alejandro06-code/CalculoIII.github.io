@@ -117,8 +117,10 @@ h4 {
 }
 
 .sidebar {
-  height: clamp(360px, calc(100vh - 190px), 620px);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  overflow: hidden;
   overscroll-behavior: contain;
   padding: 14px;
 }
@@ -132,12 +134,13 @@ h4 {
   display: grid;
   grid-template-columns: minmax(250px, 330px) minmax(0, 1fr);
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .workbench-main {
   display: grid;
   gap: 14px;
+  align-content: start;
 }
 
 .resource-workspace {
@@ -222,6 +225,13 @@ textarea {
 
 .sidebar-title h2 {
   font-size: 1rem;
+}
+
+.course-nav {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 .module-group {
@@ -759,6 +769,56 @@ textarea {
   opacity: 0;
 }
 
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(23, 32, 51, 0.44);
+}
+
+.confirm-overlay[hidden] {
+  display: none;
+}
+
+.confirm-dialog {
+  width: min(440px, 100%);
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(23, 32, 51, 0.28);
+}
+
+.confirm-dialog .eyebrow {
+  color: var(--brand-2);
+}
+
+.confirm-copy {
+  margin: 12px 0 10px;
+  color: var(--muted);
+}
+
+.confirm-resource {
+  margin: 0;
+  padding: 12px;
+  color: var(--text);
+  font-weight: 800;
+  background: #fff4f5;
+  border: 1px solid #f0c6cc;
+  border-radius: 8px;
+}
+
+.confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 .editor-card {
   display: grid;
   gap: 12px;
@@ -835,6 +895,16 @@ textarea {
     position: static;
     max-height: none;
     height: auto;
+  }
+
+  .sidebar {
+    display: block;
+    overflow: visible;
+  }
+
+  .course-nav {
+    overflow: visible;
+    padding-right: 0;
   }
 
   .filters,
