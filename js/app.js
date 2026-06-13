@@ -31,6 +31,7 @@ const state = {
 
 const dom = {
   nav: document.querySelector('#course-nav'),
+  map: document.querySelector('#course-map'),
   tabs: document.querySelector('#section-tabs'),
   list: document.querySelector('#resource-list'),
   totalResources: document.querySelector('#total-resources'),
@@ -151,6 +152,82 @@ function renderNavigation() {
   });
 }
 
+function lessonStats(lesson) {
+  const resources = lesson.resources || [];
+  return {
+    total: resources.length,
+    missing: resources.filter((resource) => resource.status === 'missing').length,
+    review: resources.filter((resource) => resource.status === 'review').length,
+    approved: resources.filter((resource) => resource.status === 'approved').length,
+  };
+}
+
+function renderCourseMap() {
+  dom.map.innerHTML = '';
+
+  state.data.modules.forEach((module, moduleIndex) => {
+    const totals = module.lessons.reduce(
+      (acc, lesson) => {
+        const stats = lessonStats(lesson);
+        acc.total += stats.total;
+        acc.missing += stats.missing;
+        acc.review += stats.review;
+        acc.approved += stats.approved;
+        return acc;
+      },
+      { total: 0, missing: 0, review: 0, approved: 0 }
+    );
+
+    const card = document.createElement('article');
+    card.className = 'map-module';
+    card.innerHTML = `
+      <div class="map-module-header">
+        <div>
+          <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
+          <h4>${module.title}</h4>
+        </div>
+        <span class="map-count">${totals.total} recursos</span>
+      </div>
+      <div class="map-stats">
+        <span>${module.lessons.length} lecciones</span>
+        <span>${totals.missing} faltan</span>
+        <span>${totals.review} revisar</span>
+        <span>${totals.approved} aprobados</span>
+      </div>
+    `;
+
+    const lessons = document.createElement('div');
+    lessons.className = 'map-lessons';
+    module.lessons.forEach((lesson) => {
+      const stats = lessonStats(lesson);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'map-lesson';
+      if (module.id === state.selectedModuleId && lesson.id === state.selectedLessonId) {
+        button.classList.add('active');
+      }
+      button.innerHTML = `
+        <span class="lesson-name">${lesson.title}</span>
+        <span class="lesson-pills">
+          <span>${stats.total} rec.</span>
+          <span class="${stats.missing ? 'pill-danger' : ''}">${stats.missing} falta</span>
+          <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} rev.</span>
+        </span>
+      `;
+      button.addEventListener('click', () => {
+        state.selectedModuleId = module.id;
+        state.selectedLessonId = lesson.id;
+        clearForm();
+        render();
+      });
+      lessons.appendChild(button);
+    });
+
+    card.appendChild(lessons);
+    dom.map.appendChild(card);
+  });
+}
+
 function renderTabs() {
   dom.tabs.innerHTML = '';
   state.data.sections.forEach((section) => {
@@ -250,6 +327,7 @@ function renderTargets() {
 function render() {
   renderSummary();
   renderNavigation();
+  renderCourseMap();
   renderTabs();
   renderTargets();
   renderResources();
