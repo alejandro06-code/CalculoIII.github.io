@@ -29,8 +29,8 @@ const state = {
   selectedModuleId: null,
   selectedLessonId: null,
   selectedSectionId: 'preparacion',
-  statusFilter: 'all',
-  typeFilter: 'all',
+  statusFilters: [],
+  typeFilters: [],
   search: '',
 };
 
@@ -63,8 +63,10 @@ const dom = {
   resourcePriority: document.querySelector('#resource-priority'),
   resourceTarget: document.querySelector('#resource-target'),
   resourceNotes: document.querySelector('#resource-notes'),
-  moduleTitleInput: document.querySelector('#module-title-input'),
+  lessonModuleSelect: document.querySelector('#lesson-module-select'),
+  lessonEditSelect: document.querySelector('#lesson-edit-select'),
   lessonTitleInput: document.querySelector('#lesson-title-input'),
+  lessonEditTitleInput: document.querySelector('#lesson-edit-title-input'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -151,12 +153,15 @@ function renderNavigation() {
     return;
   }
 
-  state.data.modules.forEach((module) => {
+  state.data.modules.forEach((module, moduleIndex) => {
     const moduleNode = document.createElement('section');
     moduleNode.className = 'module-group';
-    moduleNode.innerHTML = `<h3>${module.title}</h3>`;
+    moduleNode.innerHTML = `
+      <p class="nav-kicker">Modulo ${moduleIndex + 1}</p>
+      <h3>${module.title}</h3>
+    `;
 
-    module.lessons.forEach((lesson) => {
+    module.lessons.forEach((lesson, lessonIndex) => {
       const resources = lesson.resources || [];
       const missing = resources.filter((resource) => resource.status === 'missing').length;
       const button = document.createElement('button');
@@ -166,8 +171,9 @@ function renderNavigation() {
         button.classList.add('active');
       }
       button.innerHTML = `
+        <small>Leccion ${lessonIndex + 1}</small>
         <span>${lesson.title}</span>
-        <small>${resources.length} recursos${missing ? `, ${missing} faltan` : ''}</small>
+        <small>${resources.length} recursos registrados${missing ? ` · ${missing} faltan` : ''}</small>
       `;
       button.addEventListener('click', () => {
         state.selectedModuleId = module.id;
@@ -331,8 +337,8 @@ function renderTabs() {
 
 function resourceMatches(resource) {
   const sectionMatch = resource.section === state.selectedSectionId;
-  const statusMatch = state.statusFilter === 'all' || resource.status === state.statusFilter;
-  const typeMatch = state.typeFilter === 'all' || resource.type === state.typeFilter;
+  const statusMatch = !state.statusFilters.length || state.statusFilters.includes(resource.status);
+  const typeMatch = !state.typeFilters.length || state.typeFilters.includes(resource.type);
   const haystack = `${resource.title} ${resource.url} ${resource.owner} ${resource.notes}`.toLowerCase();
   const searchMatch = !state.search || haystack.includes(state.search.toLowerCase());
   return sectionMatch && statusMatch && typeMatch && searchMatch;
@@ -407,12 +413,39 @@ function renderTargets() {
   dom.resourceTarget.value = currentValue;
 }
 
+function renderLessonControls() {
+  dom.lessonModuleSelect.innerHTML = '';
+  dom.lessonEditSelect.innerHTML = '';
+
+  state.data.modules.forEach((module, moduleIndex) => {
+    const moduleOption = document.createElement('option');
+    moduleOption.value = module.id;
+    moduleOption.textContent = `Modulo ${moduleIndex + 1}: ${module.title}`;
+    dom.lessonModuleSelect.appendChild(moduleOption);
+
+    module.lessons.forEach((lesson, lessonIndex) => {
+      const lessonOption = document.createElement('option');
+      lessonOption.value = `${module.id}|${lesson.id}`;
+      lessonOption.textContent = `Modulo ${moduleIndex + 1} / Leccion ${lessonIndex + 1}: ${lesson.title}`;
+      dom.lessonEditSelect.appendChild(lessonOption);
+    });
+  });
+
+  dom.lessonModuleSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
+  dom.lessonEditSelect.value = `${state.selectedModuleId}|${state.selectedLessonId}`;
+  const selectedLesson = currentLesson();
+  if (selectedLesson && !dom.lessonEditTitleInput.value) {
+    dom.lessonEditTitleInput.placeholder = selectedLesson.title;
+  }
+}
+
 function render() {
   renderSummary();
   renderNavigation();
   renderCourseMap();
   renderTabs();
   renderTargets();
+  renderLessonControls();
   renderResources();
 }
 
@@ -522,26 +555,29 @@ function moveResource(resourceId, direction) {
   render();
 }
 
-function addModule() {
-  const title = dom.moduleTitleInput.value.trim();
-  if (!title) return;
-  const module = { id: uid('m'), title, lessons: [] };
-  state.data.modules.push(module);
-  state.selectedModuleId = module.id;
-  state.selectedLessonId = null;
-  dom.moduleTitleInput.value = '';
-  saveData();
-  render();
-}
-
 function addLesson() {
-  const module = currentModule();
+  const module = state.data.modules.find((item) => item.id === dom.lessonModuleSelect.value);
   const title = dom.lessonTitleInput.value.trim();
   if (!module || !title) return;
   const lesson = { id: uid('l'), title, resources: [] };
   module.lessons.push(lesson);
+  state.selectedModuleId = module.id;
   state.selectedLessonId = lesson.id;
+  state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
   dom.lessonTitleInput.value = '';
+  saveData();
+  render();
+}
+
+function updateLesson() {
+  const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
+  const lesson = findLesson(moduleId, lessonId);
+  const title = dom.lessonEditTitleInput.value.trim();
+  if (!lesson || !title) return;
+  lesson.title = title;
+  state.selectedModuleId = moduleId;
+  state.selectedLessonId = lessonId;
+  dom.lessonEditTitleInput.value = '';
   saveData();
   render();
 }
@@ -616,16 +652,18 @@ function wireEvents() {
     state.search = event.target.value;
     renderResources();
   });
-  dom.statusFilter.addEventListener('change', (event) => {
-    state.statusFilter = event.target.value;
-    renderResources();
+  dom.statusFilter.addEventListener('change', () => updateMultiFilter('status'));
+  dom.typeFilter.addEventListener('change', () => updateMultiFilter('type'));
+  document.querySelectorAll('[data-filter-reset]').forEach((button) => {
+    button.addEventListener('click', () => resetMultiFilter(button.dataset.filterReset));
   });
-  dom.typeFilter.addEventListener('change', (event) => {
-    state.typeFilter = event.target.value;
-    renderResources();
-  });
-  document.querySelector('#save-module').addEventListener('click', addModule);
   document.querySelector('#save-lesson').addEventListener('click', addLesson);
+  document.querySelector('#update-lesson').addEventListener('click', updateLesson);
+  dom.lessonEditSelect.addEventListener('change', () => {
+    const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
+    const lesson = findLesson(moduleId, lessonId);
+    dom.lessonEditTitleInput.value = lesson?.title ?? '';
+  });
   document.querySelector('#clear-form').addEventListener('click', clearForm);
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
   document.querySelector('#export-json').addEventListener('click', exportJson);
@@ -633,6 +671,30 @@ function wireEvents() {
   document.querySelector('#import-json').addEventListener('change', importJson);
   document.querySelector('#reset-data').addEventListener('click', resetData);
   dom.form.addEventListener('submit', saveResource);
+}
+
+function updateMultiFilter(kind) {
+  const container = kind === 'status' ? dom.statusFilter : dom.typeFilter;
+  const values = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+  if (kind === 'status') {
+    state.statusFilters = values;
+  } else {
+    state.typeFilters = values;
+  }
+  renderResources();
+}
+
+function resetMultiFilter(kind) {
+  const container = kind === 'status' ? dom.statusFilter : dom.typeFilter;
+  container.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.checked = false;
+  });
+  if (kind === 'status') {
+    state.statusFilters = [];
+  } else {
+    state.typeFilters = [];
+  }
+  renderResources();
 }
 
 async function init(forceDefault = false) {
