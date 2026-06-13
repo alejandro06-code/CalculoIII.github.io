@@ -306,7 +306,7 @@ textarea {
 .muted,
 .panel-heading p,
 .resource-notes,
-.resource-link,
+.resource-location,
 .empty-state {
   color: var(--muted);
 }
@@ -656,10 +656,48 @@ textarea {
   margin: 10px 0 4px;
 }
 
-.resource-link {
+.resource-location {
   margin: 0 0 10px;
   font-family: Consolas, "Courier New", monospace;
   font-size: 0.86rem;
+}
+
+.resource-assets {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.asset-chip-group {
+  display: grid;
+  gap: 6px;
+}
+
+.asset-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.asset-chip {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  padding: 7px 9px;
+  color: var(--brand);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.asset-chip:hover {
+  background: var(--brand-soft);
 }
 
 .badges,
@@ -764,6 +802,79 @@ textarea {
   position: absolute;
   inset: 0;
   opacity: 0;
+}
+
+.asset-manager {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.asset-manager-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.asset-manager h3 {
+  font-size: 0.95rem;
+}
+
+.asset-input-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(180px, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.file-drop {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  color: var(--brand);
+  background: #fff;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.file-drop input {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+}
+
+.asset-list {
+  display: grid;
+  gap: 6px;
+}
+
+.asset-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.asset-row a {
+  color: var(--brand);
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.asset-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
 }
 
 .confirm-overlay {
@@ -907,7 +1018,8 @@ textarea {
   .filters,
   .map-lesson-title,
   .map-sections,
-  .two-col {
+  .two-col,
+  .asset-input-row {
     grid-template-columns: 1fr;
   }
 

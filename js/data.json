@@ -41,6 +41,8 @@
               "type": "video",
               "status": "planned",
               "url": "",
+              "links": [],
+              "files": [],
               "owner": "Profesor",
               "priority": "high",
               "notes": "Definir duracion y mensaje inicial."
@@ -52,6 +54,8 @@
               "type": "quiz",
               "status": "missing",
               "url": "",
+              "links": [],
+              "files": [],
               "owner": "",
               "priority": "medium",
               "notes": "Pendiente decidir si va como cuestionario de Moodle o formulario externo."
@@ -79,6 +83,8 @@
               "type": "link",
               "status": "review",
               "url": "",
+              "links": [],
+              "files": [],
               "owner": "",
               "priority": "medium",
               "notes": "Buscar alternativa que pueda enlazarse desde Moodle."

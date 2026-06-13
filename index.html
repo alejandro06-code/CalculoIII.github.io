@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-173020">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-181500">
 </head>
 <body>
   <header class="app-header">
@@ -138,14 +138,34 @@
               </select>
             </label>
           </div>
-          <label>
-            Ubicacion o enlace
-            <input id="resource-url" placeholder="URL, ruta Moodle o nombre del archivo">
-          </label>
-          <label>
-            Archivo de referencia
-            <input id="resource-file" type="file">
-          </label>
+          <section class="asset-manager" aria-label="Enlaces del recurso">
+            <div class="asset-manager-header">
+              <h3>Enlaces</h3>
+            </div>
+            <div class="asset-input-row">
+              <label>
+                Nombre
+                <input id="link-label" placeholder="Ej. Video, applet, Moodle">
+              </label>
+              <label>
+                URL
+                <input id="link-url" type="url" placeholder="https://...">
+              </label>
+              <button class="btn ghost" id="add-link" type="button">Anadir enlace</button>
+            </div>
+            <div class="asset-list" id="links-list"></div>
+          </section>
+
+          <section class="asset-manager" aria-label="Archivos del recurso">
+            <div class="asset-manager-header">
+              <h3>Archivos</h3>
+            </div>
+            <label class="file-drop">
+              <span>Seleccionar archivos</span>
+              <input id="resource-files" type="file" multiple>
+            </label>
+            <div class="asset-list" id="files-list"></div>
+          </section>
           <div class="two-col">
             <label>
               Responsable
@@ -229,7 +249,7 @@
         <div class="badges"></div>
       </div>
       <p class="resource-notes"></p>
-      <p class="resource-link"></p>
+      <div class="resource-assets"></div>
       <div class="resource-actions">
         <button class="mini-btn edit" type="button">Editar</button>
         <button class="mini-btn move-up" type="button">Subir</button>
@@ -239,6 +259,6 @@
     </article>
   </template>
 
-  <script src="js/app.js?v=20260613-173020"></script>
+  <script src="js/app.js?v=20260613-181500"></script>
 </body>
 </html>

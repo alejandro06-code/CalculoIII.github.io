@@ -33,6 +33,8 @@ const state = {
   typeFilters: [],
   search: '',
   pendingDeleteResourceId: null,
+  draftLinks: [],
+  draftFiles: [],
 };
 
 const dom = {
@@ -58,8 +60,12 @@ const dom = {
   resourceTitle: document.querySelector('#resource-title'),
   resourceType: document.querySelector('#resource-type'),
   resourceStatus: document.querySelector('#resource-status'),
-  resourceUrl: document.querySelector('#resource-url'),
-  resourceFile: document.querySelector('#resource-file'),
+  linkLabel: document.querySelector('#link-label'),
+  linkUrl: document.querySelector('#link-url'),
+  addLink: document.querySelector('#add-link'),
+  linksList: document.querySelector('#links-list'),
+  resourceFiles: document.querySelector('#resource-files'),
+  filesList: document.querySelector('#files-list'),
   resourceOwner: document.querySelector('#resource-owner'),
   resourcePriority: document.querySelector('#resource-priority'),
   resourceTarget: document.querySelector('#resource-target'),
@@ -85,7 +91,13 @@ function uid(prefix) {
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+    return true;
+  } catch {
+    alert('No se pudo guardar. El navegador no tiene espacio suficiente para estos archivos. Prueba con archivos mas livianos o guarda el archivo definitivo en la carpeta archivos-recursos del repositorio.');
+    return false;
+  }
 }
 
 function loadStoredData() {
@@ -124,6 +136,52 @@ function allResources() {
       (lesson.resources || []).map((resource) => ({ module, lesson, resource }))
     )
   );
+}
+
+function normalizeLinks(resource) {
+  const links = Array.isArray(resource.links) ? resource.links : [];
+  if (links.length) return links;
+  if (!resource.url) return [];
+  const value = resource.url.trim();
+  if (!value) return [];
+  const isWebUrl = /^(https?:\/\/|www\.)/i.test(value);
+  return isWebUrl
+    ? [{ id: uid('link'), label: 'Enlace', url: normalizeUrl(value) }]
+    : [];
+}
+
+function normalizeFiles(resource) {
+  return Array.isArray(resource.files) ? resource.files : [];
+}
+
+function normalizeUrl(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function formatFileSize(size = 0) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileToResourceFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve({
+        id: uid('file'),
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        dataUrl: reader.result,
+        addedAt: new Date().toISOString(),
+      });
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function currentModule() {
@@ -349,7 +407,9 @@ function resourceMatches(resource) {
   const sectionMatch = resource.section === state.selectedSectionId;
   const statusMatch = !state.statusFilters.length || state.statusFilters.includes(resource.status);
   const typeMatch = !state.typeFilters.length || state.typeFilters.includes(resource.type);
-  const haystack = `${resource.title} ${resource.url} ${resource.owner} ${resource.notes}`.toLowerCase();
+  const linkText = normalizeLinks(resource).map((link) => `${link.label} ${link.url}`).join(' ');
+  const fileText = normalizeFiles(resource).map((file) => file.name).join(' ');
+  const haystack = `${resource.title} ${resource.url} ${linkText} ${fileText} ${resource.owner} ${resource.notes}`.toLowerCase();
   const searchMatch = !state.search || haystack.includes(state.search.toLowerCase());
   return sectionMatch && statusMatch && typeMatch && searchMatch;
 }
@@ -385,13 +445,7 @@ function renderResources() {
     node.querySelector('.resource-meta').textContent = `${labels[resource.type] ?? resource.type} · Prioridad ${labels[resource.priority] ?? resource.priority}`;
     node.querySelector('.resource-notes').textContent = resource.notes || 'Sin notas.';
 
-    const link = node.querySelector('.resource-link');
-    if (resource.url) {
-      link.textContent = resource.url;
-      link.title = resource.url;
-    } else {
-      link.textContent = 'Sin enlace o archivo asociado.';
-    }
+    renderResourceAssets(node.querySelector('.resource-assets'), resource);
 
     const badges = node.querySelector('.badges');
     badges.innerHTML = `
@@ -405,6 +459,65 @@ function renderResources() {
     node.querySelector('.move-down').addEventListener('click', () => moveResource(resource.id, 1));
     dom.list.appendChild(node);
   });
+}
+
+function renderResourceAssets(container, resource) {
+  container.innerHTML = '';
+  const links = normalizeLinks(resource);
+  const files = normalizeFiles(resource);
+
+  if (!links.length && !files.length && resource.url) {
+    const legacy = document.createElement('p');
+    legacy.className = 'resource-location';
+    legacy.textContent = resource.url;
+    container.appendChild(legacy);
+    return;
+  }
+
+  if (!links.length && !files.length) {
+    const empty = document.createElement('p');
+    empty.className = 'resource-location';
+    empty.textContent = 'Sin enlaces ni archivos asociados.';
+    container.appendChild(empty);
+    return;
+  }
+
+  if (links.length) {
+    const group = document.createElement('div');
+    group.className = 'asset-chip-group';
+    const title = document.createElement('p');
+    title.className = 'asset-label';
+    title.textContent = 'Enlaces';
+    group.appendChild(title);
+    links.forEach((link) => {
+      const anchor = document.createElement('a');
+      anchor.className = 'asset-chip link-chip';
+      anchor.href = normalizeUrl(link.url);
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      anchor.textContent = link.label || link.url;
+      group.appendChild(anchor);
+    });
+    container.appendChild(group);
+  }
+
+  if (files.length) {
+    const group = document.createElement('div');
+    group.className = 'asset-chip-group';
+    const title = document.createElement('p');
+    title.className = 'asset-label';
+    title.textContent = 'Archivos';
+    group.appendChild(title);
+    files.forEach((file) => {
+      const anchor = document.createElement('a');
+      anchor.className = 'asset-chip file-chip';
+      anchor.href = file.dataUrl || file.path || '#';
+      anchor.download = file.name;
+      anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
+      group.appendChild(anchor);
+    });
+    container.appendChild(group);
+  }
 }
 
 function renderTargets() {
@@ -459,12 +572,73 @@ function render() {
   renderResources();
 }
 
+function renderDraftAssets() {
+  renderDraftLinks();
+  renderDraftFiles();
+}
+
+function renderDraftLinks() {
+  dom.linksList.innerHTML = '';
+  if (!state.draftLinks.length) {
+    dom.linksList.innerHTML = '<p class="asset-empty">No hay enlaces agregados.</p>';
+    return;
+  }
+  state.draftLinks.forEach((link) => {
+    const row = document.createElement('div');
+    row.className = 'asset-row';
+    const anchor = document.createElement('a');
+    anchor.href = normalizeUrl(link.url);
+    anchor.target = '_blank';
+    anchor.rel = 'noopener noreferrer';
+    anchor.textContent = link.label || link.url;
+    const remove = document.createElement('button');
+    remove.className = 'mini-btn delete';
+    remove.type = 'button';
+    remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => {
+      state.draftLinks = state.draftLinks.filter((item) => item.id !== link.id);
+      renderDraftLinks();
+    });
+    row.append(anchor, remove);
+    dom.linksList.appendChild(row);
+  });
+}
+
+function renderDraftFiles() {
+  dom.filesList.innerHTML = '';
+  if (!state.draftFiles.length) {
+    dom.filesList.innerHTML = '<p class="asset-empty">No hay archivos agregados.</p>';
+    return;
+  }
+  state.draftFiles.forEach((file) => {
+    const row = document.createElement('div');
+    row.className = 'asset-row';
+    const anchor = document.createElement('a');
+    anchor.href = file.dataUrl || file.path || '#';
+    anchor.download = file.name;
+    anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
+    const remove = document.createElement('button');
+    remove.className = 'mini-btn delete';
+    remove.type = 'button';
+    remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => {
+      state.draftFiles = state.draftFiles.filter((item) => item.id !== file.id);
+      renderDraftFiles();
+    });
+    row.append(anchor, remove);
+    dom.filesList.appendChild(row);
+  });
+}
+
 function clearForm() {
   dom.form.reset();
   dom.resourceId.value = '';
   dom.formTitle.textContent = 'Nuevo recurso';
   dom.resourcePriority.value = 'medium';
   dom.resourceStatus.value = 'planned';
+  state.draftLinks = [];
+  state.draftFiles = [];
+  renderDraftAssets();
   renderTargets();
 }
 
@@ -477,11 +651,13 @@ function editResource(resourceId) {
   dom.resourceTitle.value = resource.title ?? '';
   dom.resourceType.value = resource.type ?? 'link';
   dom.resourceStatus.value = resource.status ?? 'planned';
-  dom.resourceUrl.value = resource.url ?? '';
   dom.resourceOwner.value = resource.owner ?? '';
   dom.resourcePriority.value = resource.priority ?? 'medium';
   dom.resourceNotes.value = resource.notes ?? '';
   dom.resourceTarget.value = `${state.selectedModuleId}|${state.selectedLessonId}|${resource.section}`;
+  state.draftLinks = normalizeLinks(resource).map((link) => ({ ...link }));
+  state.draftFiles = normalizeFiles(resource).map((file) => ({ ...file }));
+  renderDraftAssets();
 }
 
 function findLesson(moduleId, lessonId) {
@@ -490,17 +666,24 @@ function findLesson(moduleId, lessonId) {
 }
 
 function formResource() {
-  const selectedFile = dom.resourceFile.files[0];
-  const url = selectedFile
-    ? `${selectedFile.name} (${Math.round(selectedFile.size / 1024)} KB)`
-    : dom.resourceUrl.value.trim();
+  const links = state.draftLinks.map((link) => ({
+    ...link,
+    url: normalizeUrl(link.url),
+  }));
+  const files = state.draftFiles.map((file) => ({ ...file }));
+  const locationSummary = [
+    ...links.map((link) => link.url),
+    ...files.map((file) => file.name),
+  ].join(' | ');
 
   return {
     id: dom.resourceId.value || uid('r'),
     title: dom.resourceTitle.value.trim(),
     type: dom.resourceType.value,
     status: dom.resourceStatus.value,
-    url,
+    url: locationSummary,
+    links,
+    files,
     owner: dom.resourceOwner.value.trim(),
     priority: dom.resourcePriority.value,
     notes: dom.resourceNotes.value.trim(),
@@ -528,9 +711,36 @@ function saveResource(event) {
   state.selectedModuleId = targetModuleId;
   state.selectedLessonId = targetLessonId;
   state.selectedSectionId = targetSectionId;
-  saveData();
+  if (!saveData()) return;
   clearForm();
   render();
+}
+
+function addLink() {
+  const url = normalizeUrl(dom.linkUrl.value);
+  if (!url) return;
+  state.draftLinks.push({
+    id: uid('link'),
+    label: dom.linkLabel.value.trim() || url,
+    url,
+  });
+  dom.linkLabel.value = '';
+  dom.linkUrl.value = '';
+  renderDraftLinks();
+}
+
+async function addFiles(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  try {
+    const loaded = await Promise.all(files.map(fileToResourceFile));
+    state.draftFiles.push(...loaded);
+    renderDraftFiles();
+  } catch {
+    alert('No se pudieron leer uno o mas archivos.');
+  } finally {
+    dom.resourceFiles.value = '';
+  }
 }
 
 function duplicateResource() {
@@ -619,7 +829,7 @@ function exportJson() {
 
 function exportCsv() {
   const rows = [
-    ['Modulo', 'Leccion', 'Seccion', 'Titulo', 'Tipo', 'Estado', 'Prioridad', 'Responsable', 'Ubicacion', 'Notas'],
+    ['Modulo', 'Leccion', 'Seccion', 'Titulo', 'Tipo', 'Estado', 'Prioridad', 'Responsable', 'Enlaces', 'Archivos', 'Notas'],
     ...allResources().map(({ module, lesson, resource }) => [
       module.title,
       lesson.title,
@@ -629,7 +839,8 @@ function exportCsv() {
       labels[resource.status] ?? resource.status,
       labels[resource.priority] ?? resource.priority,
       resource.owner ?? '',
-      resource.url ?? '',
+      normalizeLinks(resource).map((link) => `${link.label}: ${link.url}`).join(' | '),
+      normalizeFiles(resource).map((file) => file.name).join(' | '),
       resource.notes ?? '',
     ]),
   ];
@@ -697,6 +908,14 @@ function wireEvents() {
   });
   document.querySelector('#clear-form').addEventListener('click', clearForm);
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
+  dom.addLink.addEventListener('click', addLink);
+  dom.linkUrl.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addLink();
+    }
+  });
+  dom.resourceFiles.addEventListener('change', addFiles);
   dom.confirmDelete.addEventListener('click', confirmDeleteResource);
   dom.cancelDelete.addEventListener('click', closeDeleteConfirm);
   dom.deleteConfirm.addEventListener('click', (event) => {
