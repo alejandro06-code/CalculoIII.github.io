@@ -10,7 +10,7 @@ create table if not exists public.course_editors (
 );
 
 insert into public.course_editors (email)
-values ('TU_CORREO_DE_EDITOR_AQUI')
+values ('maira2004hernandez@gmail.com')
 on conflict (email) do nothing;
 
 create or replace function public.is_course_editor()
@@ -34,6 +34,20 @@ drop policy if exists "course_editors editor read" on public.course_editors;
 create policy "course_editors editor read"
 on public.course_editors
 for select
+to authenticated
+using (public.is_course_editor());
+
+drop policy if exists "course_editors editor insert" on public.course_editors;
+create policy "course_editors editor insert"
+on public.course_editors
+for insert
+to authenticated
+with check (public.is_course_editor());
+
+drop policy if exists "course_editors editor delete" on public.course_editors;
+create policy "course_editors editor delete"
+on public.course_editors
+for delete
 to authenticated
 using (public.is_course_editor());
 

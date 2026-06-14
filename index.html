@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-184500">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-191500">
 </head>
 <body>
   <header class="app-header">
@@ -235,6 +235,80 @@
         <button class="btn ghost" id="update-lesson" type="button">Renombrar</button>
       </form>
     </section>
+
+    <section class="admin-row" aria-label="Administracion del curso">
+      <div class="admin-heading">
+        <div>
+          <p class="eyebrow">Administracion</p>
+          <h2>Configuracion del curso</h2>
+        </div>
+        <p class="muted">Los visitantes pueden ver y descargar. Solo editores autorizados pueden guardar cambios.</p>
+      </div>
+
+      <div class="admin-grid">
+        <section class="admin-card">
+          <h3>Curso</h3>
+          <label>
+            Titulo principal
+            <input id="course-title-input" placeholder="Calculo III">
+          </label>
+          <label>
+            Descripcion
+            <textarea id="course-description-input" rows="3" placeholder="Descripcion del organizador"></textarea>
+          </label>
+          <button class="btn primary" id="save-course-settings" type="button">Guardar curso</button>
+        </section>
+
+        <section class="admin-card">
+          <h3>Modulos</h3>
+          <label>
+            Modulo actual
+            <select id="module-edit-select"></select>
+          </label>
+          <label>
+            Nombre del modulo
+            <input id="module-title-input" placeholder="Nombre del modulo">
+          </label>
+          <div class="form-actions">
+            <button class="btn secondary" id="update-module" type="button">Renombrar modulo</button>
+            <button class="btn danger" id="delete-module" type="button">Eliminar modulo</button>
+          </div>
+          <label>
+            Nuevo modulo
+            <input id="new-module-title-input" placeholder="Nombre del nuevo modulo">
+          </label>
+          <button class="btn ghost" id="add-module" type="button">Crear modulo</button>
+        </section>
+
+        <section class="admin-card">
+          <h3>Partes de cada leccion</h3>
+          <label>
+            Parte
+            <select id="section-edit-select"></select>
+          </label>
+          <label>
+            Nombre
+            <input id="section-title-input" placeholder="Preparacion">
+          </label>
+          <label>
+            Descripcion
+            <textarea id="section-description-input" rows="3" placeholder="Descripcion visible en recursos"></textarea>
+          </label>
+          <button class="btn secondary" id="update-section" type="button">Guardar parte</button>
+        </section>
+
+        <section class="admin-card">
+          <h3>Editores</h3>
+          <p class="muted">Los editores pueden crear recursos, subir archivos y modificar la estructura.</p>
+          <label>
+            Nuevo editor
+            <input id="editor-email-input" type="email" placeholder="correo@ejemplo.com">
+          </label>
+          <button class="btn ghost" id="add-editor" type="button">Autorizar editor</button>
+          <div class="editor-list" id="editor-list"></div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <div class="confirm-overlay" id="delete-confirm" hidden>
@@ -271,7 +345,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260613-184500"></script>
-  <script src="js/app.js?v=20260613-184500"></script>
+  <script src="js/supabase-config.js?v=20260613-191500"></script>
+  <script src="js/app.js?v=20260613-191500"></script>
 </body>
 </html>

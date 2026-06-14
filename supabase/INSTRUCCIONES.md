@@ -11,11 +11,11 @@ Pasos obligatorios en Supabase:
 
 1. Abrir el SQL Editor.
 2. Copiar todo el contenido de `supabase/setup.sql`.
-3. Reemplazar `TU_CORREO_DE_EDITOR_AQUI` por el correo que va a editar recursos.
-4. Ejecutar el SQL con Run.
-5. En Authentication > URL Configuration, poner como Site URL:
+3. Ejecutar el SQL con Run. El editor principal ya queda configurado como:
+   `maira2004hernandez@gmail.com`
+4. En Authentication > URL Configuration, poner como Site URL:
    `https://alejandro06-code.github.io/CalculoIII.github.io/`
-6. Agregar también como Redirect URL:
+5. Agregar también como Redirect URL:
    `https://alejandro06-code.github.io/CalculoIII.github.io/`
 
 Notas:

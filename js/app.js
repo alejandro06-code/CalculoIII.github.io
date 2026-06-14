@@ -41,6 +41,7 @@ const state = {
   draftLinks: [],
   draftFiles: [],
   session: null,
+  isEditor: false,
   cloudReady: false,
   cloudStatus: 'local',
 };
@@ -90,6 +91,16 @@ const dom = {
   loginEmail: document.querySelector('#login-email'),
   loginButton: document.querySelector('#login-button'),
   logoutButton: document.querySelector('#logout-button'),
+  courseTitleInput: document.querySelector('#course-title-input'),
+  courseDescriptionInput: document.querySelector('#course-description-input'),
+  moduleEditSelect: document.querySelector('#module-edit-select'),
+  moduleTitleInput: document.querySelector('#module-title-input'),
+  newModuleTitleInput: document.querySelector('#new-module-title-input'),
+  sectionEditSelect: document.querySelector('#section-edit-select'),
+  sectionTitleInput: document.querySelector('#section-title-input'),
+  sectionDescriptionInput: document.querySelector('#section-description-input'),
+  editorEmailInput: document.querySelector('#editor-email-input'),
+  editorList: document.querySelector('#editor-list'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -112,7 +123,9 @@ function updateAuthUi() {
   dom.loginButton.hidden = signedIn;
   dom.logoutButton.hidden = !signedIn;
   if (signedIn) {
-    dom.logoutButton.textContent = `Salir (${state.session.user.email})`;
+    dom.logoutButton.textContent = state.isEditor
+      ? `Salir (${state.session.user.email})`
+      : `Salir (${state.session.user.email}, sin permiso)`;
   }
 }
 
@@ -121,12 +134,12 @@ function remoteEditingActive() {
 }
 
 function canEdit() {
-  return !remoteEditingActive() || Boolean(state.session?.user);
+  return !remoteEditingActive() || state.isEditor;
 }
 
 function requireEditPermission() {
   if (canEdit()) return true;
-  alert('Para editar, subir archivos o guardar cambios debes iniciar sesion como editor.');
+  alert('Para editar, subir archivos o guardar cambios debes iniciar sesion con un correo autorizado como editor.');
   return false;
 }
 
@@ -309,6 +322,7 @@ function selectFirstAvailable() {
 
 function renderSummary() {
   const resources = allResources().map((item) => item.resource);
+  document.querySelector('h1').textContent = state.data.course?.title ?? 'Calculo III';
   dom.totalResources.textContent = resources.length;
   dom.missingResources.textContent = resources.filter((resource) => resource.status === 'missing').length;
   dom.approvedResources.textContent = resources.filter((resource) => resource.status === 'approved').length;
@@ -664,6 +678,35 @@ function renderLessonControls() {
   }
 }
 
+function renderAdminControls() {
+  if (!state.data) return;
+  dom.courseTitleInput.value = state.data.course?.title ?? '';
+  dom.courseDescriptionInput.value = state.data.course?.description ?? '';
+
+  dom.moduleEditSelect.innerHTML = '';
+  state.data.modules.forEach((module, index) => {
+    const option = document.createElement('option');
+    option.value = module.id;
+    option.textContent = `Modulo ${index + 1}: ${module.title}`;
+    dom.moduleEditSelect.appendChild(option);
+  });
+  dom.moduleEditSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
+  const selectedModule = state.data.modules.find((module) => module.id === dom.moduleEditSelect.value);
+  dom.moduleTitleInput.value = selectedModule?.title ?? '';
+
+  dom.sectionEditSelect.innerHTML = '';
+  state.data.sections.forEach((section, index) => {
+    const option = document.createElement('option');
+    option.value = section.id;
+    option.textContent = `Parte ${index + 1}: ${section.title}`;
+    dom.sectionEditSelect.appendChild(option);
+  });
+  dom.sectionEditSelect.value = state.selectedSectionId ?? state.data.sections[0]?.id ?? '';
+  const selectedSection = state.data.sections.find((section) => section.id === dom.sectionEditSelect.value);
+  dom.sectionTitleInput.value = selectedSection?.title ?? '';
+  dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
+}
+
 function render() {
   renderSummary();
   renderNavigation();
@@ -671,6 +714,7 @@ function render() {
   renderTabs();
   renderTargets();
   renderLessonControls();
+  renderAdminControls();
   renderResources();
 }
 
@@ -937,6 +981,65 @@ async function updateLesson() {
   render();
 }
 
+async function updateCourseSettings() {
+  if (!requireEditPermission()) return;
+  state.data.course = state.data.course || {};
+  state.data.course.title = dom.courseTitleInput.value.trim() || 'Calculo III';
+  state.data.course.description = dom.courseDescriptionInput.value.trim();
+  document.querySelector('h1').textContent = state.data.course.title;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function addModule() {
+  if (!requireEditPermission()) return;
+  const title = dom.newModuleTitleInput.value.trim();
+  if (!title) return;
+  const module = { id: uid('m'), title, lessons: [] };
+  state.data.modules.push(module);
+  state.selectedModuleId = module.id;
+  state.selectedLessonId = null;
+  dom.newModuleTitleInput.value = '';
+  if (!(await saveData())) return;
+  render();
+}
+
+async function updateModule() {
+  if (!requireEditPermission()) return;
+  const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
+  const title = dom.moduleTitleInput.value.trim();
+  if (!module || !title) return;
+  module.title = title;
+  state.selectedModuleId = module.id;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function deleteModule() {
+  if (!requireEditPermission()) return;
+  const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
+  if (!module) return;
+  const lessonCount = module.lessons?.length ?? 0;
+  if (!confirm(`Eliminar el modulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
+  state.data.modules = state.data.modules.filter((item) => item.id !== module.id);
+  selectFirstAvailable();
+  if (!(await saveData())) return;
+  clearForm();
+  render();
+}
+
+async function updateSection() {
+  if (!requireEditPermission()) return;
+  const section = state.data.sections.find((item) => item.id === dom.sectionEditSelect.value);
+  const title = dom.sectionTitleInput.value.trim();
+  if (!section || !title) return;
+  section.title = title;
+  section.description = dom.sectionDescriptionInput.value.trim();
+  state.selectedSectionId = section.id;
+  if (!(await saveData())) return;
+  render();
+}
+
 function exportJson() {
   downloadFile('organizador-calculo-iii.json', JSON.stringify(state.data, null, 2), 'application/json');
 }
@@ -1028,8 +1131,102 @@ async function logoutEditor() {
   if (!cloudClient) return;
   await cloudClient.auth.signOut();
   state.session = null;
+  state.isEditor = false;
   updateAuthUi();
+  renderEditorList([]);
   setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
+}
+
+function renderEditorList(editors = []) {
+  if (!dom.editorList) return;
+  if (!remoteEditingActive()) {
+    dom.editorList.innerHTML = '<p class="asset-empty">Activa Supabase para administrar editores.</p>';
+    return;
+  }
+  if (!state.isEditor) {
+    dom.editorList.innerHTML = '<p class="asset-empty">Inicia sesion con un correo editor para ver y modificar esta lista.</p>';
+    return;
+  }
+  if (!editors.length) {
+    dom.editorList.innerHTML = '<p class="asset-empty">No hay editores cargados.</p>';
+    return;
+  }
+  dom.editorList.innerHTML = '';
+  editors.forEach((editor) => {
+    const row = document.createElement('div');
+    row.className = 'editor-row';
+    const email = document.createElement('span');
+    email.textContent = editor.email;
+    const remove = document.createElement('button');
+    remove.className = 'mini-btn delete';
+    remove.type = 'button';
+    remove.textContent = 'Quitar';
+    remove.addEventListener('click', () => removeEditor(editor.email));
+    row.append(email, remove);
+    dom.editorList.appendChild(row);
+  });
+}
+
+async function refreshEditorStatus() {
+  if (!cloudClient || !state.session?.user || !state.cloudReady) {
+    state.isEditor = false;
+    updateAuthUi();
+    renderEditorList([]);
+    return;
+  }
+  const email = state.session.user.email;
+  const { data, error } = await cloudClient
+    .from('course_editors')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle();
+  state.isEditor = Boolean(data?.email && !error);
+  updateAuthUi();
+  setCloudStatus(
+    state.isEditor ? 'Sesion de editor activa.' : 'Sesion iniciada, pero este correo no esta autorizado para editar.',
+    state.isEditor ? 'ok' : 'pending'
+  );
+  await loadEditors();
+}
+
+async function loadEditors() {
+  if (!cloudClient || !state.isEditor) {
+    renderEditorList([]);
+    return;
+  }
+  const { data, error } = await cloudClient
+    .from('course_editors')
+    .select('email, created_at')
+    .order('email');
+  if (error) {
+    renderEditorList([]);
+    return;
+  }
+  renderEditorList(data);
+}
+
+async function addEditor() {
+  if (!requireEditPermission()) return;
+  const email = dom.editorEmailInput.value.trim().toLowerCase();
+  if (!email) return;
+  const { error } = await cloudClient.from('course_editors').insert({ email });
+  if (error) {
+    alert(`No se pudo autorizar este correo: ${error.message}`);
+    return;
+  }
+  dom.editorEmailInput.value = '';
+  await loadEditors();
+}
+
+async function removeEditor(email) {
+  if (!requireEditPermission()) return;
+  if (email === state.session?.user?.email && !confirm('Estas quitando tu propio permiso de editor. Continuar?')) return;
+  const { error } = await cloudClient.from('course_editors').delete().eq('email', email);
+  if (error) {
+    alert(`No se pudo quitar este editor: ${error.message}`);
+    return;
+  }
+  await refreshEditorStatus();
 }
 
 function wireEvents() {
@@ -1053,6 +1250,21 @@ function wireEvents() {
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
   dom.loginButton.addEventListener('click', loginEditor);
   dom.logoutButton.addEventListener('click', logoutEditor);
+  document.querySelector('#save-course-settings').addEventListener('click', updateCourseSettings);
+  document.querySelector('#add-module').addEventListener('click', addModule);
+  document.querySelector('#update-module').addEventListener('click', updateModule);
+  document.querySelector('#delete-module').addEventListener('click', deleteModule);
+  document.querySelector('#update-section').addEventListener('click', updateSection);
+  document.querySelector('#add-editor').addEventListener('click', addEditor);
+  dom.moduleEditSelect.addEventListener('change', () => {
+    const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
+    dom.moduleTitleInput.value = module?.title ?? '';
+  });
+  dom.sectionEditSelect.addEventListener('change', () => {
+    const section = state.data.sections.find((item) => item.id === dom.sectionEditSelect.value);
+    dom.sectionTitleInput.value = section?.title ?? '';
+    dom.sectionDescriptionInput.value = section?.description ?? '';
+  });
   dom.addLink.addEventListener('click', addLink);
   dom.linkUrl.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -1125,11 +1337,12 @@ async function initCloudSession() {
   const { data } = await cloudClient.auth.getSession();
   state.session = data.session;
   updateAuthUi();
-  cloudClient.auth.onAuthStateChange((_event, session) => {
+  cloudClient.auth.onAuthStateChange(async (_event, session) => {
     state.session = session;
     updateAuthUi();
+    await refreshEditorStatus();
     if (state.cloudReady) {
-      setCloudStatus(session ? 'Sesion de editor activa.' : 'Modo lectura. Inicia sesion para editar.', session ? 'ok' : 'pending');
+      if (!session) setCloudStatus('Modo lectura. Inicia sesion para editar.', 'pending');
     }
   });
 }
@@ -1140,8 +1353,10 @@ async function init(forceDefault = false) {
   const stored = forceDefault || cloudData ? null : loadStoredData();
   if (cloudData) {
     state.data = cloudData;
+    await refreshEditorStatus();
   } else if (stored) {
     state.data = stored;
+    renderEditorList([]);
   } else {
     localStorage.removeItem(STORAGE_KEY);
     const response = await fetch('js/data.json');
@@ -1151,6 +1366,7 @@ async function init(forceDefault = false) {
   selectFirstAvailable();
   clearForm();
   render();
+  if (state.cloudReady) await loadEditors();
 }
 
 wireEvents();
