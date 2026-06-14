@@ -95,6 +95,7 @@ const dom = {
   appShell: document.querySelector('.app-shell'),
   loginName: document.querySelector('#login-name'),
   loginEmail: document.querySelector('#login-email'),
+  loginIdentifierLabel: document.querySelector('#login-identifier-label'),
   loginPassword: document.querySelector('#login-password'),
   loginButton: document.querySelector('#login-button'),
   signupButton: document.querySelector('#signup-button'),
@@ -147,14 +148,19 @@ function updateAuthUi() {
   dom.signupButton.hidden = signedIn || !signupMode;
   dom.resetPasswordButton.hidden = signedIn || signupMode;
   dom.logoutButton.hidden = !signedIn;
+  if (dom.loginIdentifierLabel) {
+    dom.loginIdentifierLabel.textContent = signupMode ? 'Correo' : 'Correo o nombre de usuario';
+  }
+  dom.loginEmail.placeholder = signupMode ? 'Correo' : 'Correo o nombre de usuario';
+  dom.loginPassword.autocomplete = signupMode ? 'new-password' : 'current-password';
   dom.authLoginMode?.classList.toggle('active', !signupMode);
   dom.authSignupMode?.classList.toggle('active', signupMode);
   if (dom.authTitle) {
-    dom.authTitle.textContent = signupMode ? 'Crea tu cuenta para entrar' : 'Inicia sesion para ver el organizador';
+    dom.authTitle.textContent = signupMode ? 'Registrate para entrar al organizador' : 'Inicia sesion para ver el organizador';
   }
   if (dom.authDescription) {
     dom.authDescription.textContent = signupMode
-      ? 'Registrate con nombre, correo y contrasena. Despues la cuenta principal podra darte permiso de editor si corresponde.'
+      ? 'Crea un usuario con correo y contrasena. Despues la cuenta principal podra darte permiso de editor si corresponde.'
       : 'Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.';
   }
   if (signedIn) {

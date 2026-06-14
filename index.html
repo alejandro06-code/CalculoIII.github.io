@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-203000">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-210000">
 </head>
 <body>
   <header class="app-header">
@@ -32,22 +32,22 @@
     <div class="auth-card" aria-label="Acceso al organizador">
       <div class="auth-tabs" role="tablist" aria-label="Modo de acceso">
         <button class="auth-tab active" id="auth-login-mode" type="button">Iniciar sesion</button>
-        <button class="auth-tab" id="auth-signup-mode" type="button">Registrarse</button>
+        <button class="auth-tab" id="auth-signup-mode" type="button">Registro</button>
       </div>
       <label class="auth-field signup-only" id="login-name-field">
-        Nombre completo
-        <input id="login-name" maxlength="80" autocomplete="name" placeholder="Ej. Maira Hernandez">
+        Nombre de usuario
+        <input id="login-name" maxlength="80" autocomplete="name" placeholder="Nombre de usuario">
       </label>
       <label class="auth-field">
-        Correo o nombre de usuario
-        <input id="login-email" autocomplete="username" placeholder="correo o nombre">
+        <span id="login-identifier-label">Correo o nombre de usuario</span>
+        <input id="login-email" autocomplete="username" placeholder="Correo o nombre de usuario">
       </label>
       <label class="auth-field">
         Contrasena
         <input id="login-password" type="password" maxlength="72" autocomplete="current-password" placeholder="contrasena">
       </label>
       <button class="btn primary" id="login-button" type="button">Entrar</button>
-      <button class="btn primary" id="signup-button" type="button" hidden>Crear cuenta</button>
+      <button class="btn primary" id="signup-button" type="button" hidden>Registrarse</button>
       <button class="auth-link" id="reset-password-button" type="button">Recuperar contrasena</button>
     </div>
   </section>
@@ -372,7 +372,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260613-203000"></script>
-  <script src="js/app.js?v=20260613-203000"></script>
+  <script src="js/supabase-config.js?v=20260613-210000"></script>
+  <script src="js/app.js?v=20260613-210000"></script>
 </body>
 </html>
