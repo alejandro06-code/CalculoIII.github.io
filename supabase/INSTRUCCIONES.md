@@ -24,10 +24,11 @@ Notas:
 - Sin cuenta no se puede entrar al organizador.
 - Los usuarios registrados sin permiso pueden ver la estructura y los recursos, pero no pueden editar, abrir enlaces ni descargar archivos.
 - Solo los correos registrados en `course_editors` podran editar, guardar, subir archivos, abrir enlaces y descargar archivos.
+- Solo la cuenta principal `maira2004hernandez@gmail.com` puede ver la lista de editores, autorizar nuevos editores o quitar permisos.
 - Cada usuario debe registrarse desde la pagina con nombre, correo y contrasena.
 - Para iniciar sesion puede usar correo o nombre de usuario, siempre con su contrasena.
 - Los nombres de usuario aceptan espacios y deben ser unicos.
-- Registrar una cuenta no da permiso de editor por si solo; el correo debe estar autorizado por un editor existente.
+- Registrar una cuenta no da permiso de editor por si solo; el correo debe estar autorizado desde la cuenta principal.
 - Los datos de usuarios se guardan en Supabase Auth y en la tabla `user_profiles`, no en el repositorio.
 - Los archivos se guardan en Supabase Storage, bucket `resource-files`.
 - La pagina oficial sera:

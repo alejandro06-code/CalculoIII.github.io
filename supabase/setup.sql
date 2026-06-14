@@ -38,6 +38,16 @@ as $$
   );
 $$;
 
+create or replace function public.is_main_editor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'maira2004hernandez@gmail.com';
+$$;
+
 create or replace function public.email_for_login(login_identifier text)
 returns text
 language sql
@@ -85,21 +95,24 @@ create policy "course_editors editor read"
 on public.course_editors
 for select
 to authenticated
-using (public.is_course_editor());
+using (
+  public.is_main_editor()
+  or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+);
 
 drop policy if exists "course_editors editor insert" on public.course_editors;
 create policy "course_editors editor insert"
 on public.course_editors
 for insert
 to authenticated
-with check (public.is_course_editor());
+with check (public.is_main_editor());
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
 create policy "course_editors editor delete"
 on public.course_editors
 for delete
 to authenticated
-using (public.is_course_editor());
+using (public.is_main_editor());
 
 drop policy if exists "course_state public read" on public.course_state;
 create policy "course_state public read"

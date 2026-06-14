@@ -64,7 +64,7 @@ p {
 
 .cloud-panel {
   display: grid;
-  min-width: min(520px, 100%);
+  min-width: min(430px, 100%);
   gap: 10px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.08);
@@ -91,23 +91,21 @@ p {
 }
 
 .cloud-actions {
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(130px, 0.8fr) auto auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-}
-
-.cloud-actions input {
-  min-height: 38px;
-  background: #fff;
 }
 
 .auth-gate {
   display: grid;
-  width: min(760px, calc(100% - 36px));
+  grid-template-columns: minmax(260px, 1fr) minmax(280px, 360px);
+  align-items: center;
+  width: min(950px, calc(100% - 36px));
   min-height: 360px;
-  place-items: center;
+  gap: 32px;
   margin: 28px auto;
-  padding: 28px;
+  padding: 42px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -119,10 +117,69 @@ p {
   font-size: clamp(1.5rem, 3vw, 2.1rem);
 }
 
-.auth-gate p:last-child {
+.auth-copy p:last-child {
   max-width: 620px;
   margin: 0;
   color: var(--muted);
+}
+
+.auth-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: #f7fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-tab {
+  min-height: 42px;
+  padding: 8px 10px;
+  color: var(--brand);
+  font-weight: 800;
+  background: #fff;
+  border: 1px solid #bfd0e4;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-tab.active {
+  color: #fff;
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.auth-field {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.auth-field input {
+  min-height: 48px;
+  background: #fff;
+}
+
+.auth-link {
+  width: fit-content;
+  padding: 0;
+  color: var(--brand);
+  font-weight: 800;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+body.auth-login-mode .signup-only {
+  display: none;
 }
 
 .auth-gate[hidden],
@@ -788,6 +845,10 @@ body:not(.can-edit) .admin-row {
   display: none;
 }
 
+body.can-edit:not(.main-editor) .editor-admin-card {
+  display: none;
+}
+
 .badges,
 .resource-actions {
   display: flex;
@@ -1150,12 +1211,9 @@ body:not(.can-edit) .admin-row {
     display: grid;
   }
 
-  .cloud-actions {
-    grid-template-columns: 1fr;
-  }
-
   .app-shell,
   .workbench,
+  .auth-gate,
   .course-map,
   .admin-grid,
   .structure-row,
@@ -1174,6 +1232,10 @@ body:not(.can-edit) .admin-row {
   .sidebar {
     display: block;
     overflow: visible;
+  }
+
+  .auth-gate {
+    padding: 26px;
   }
 
   .course-nav {

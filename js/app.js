@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'calculo-iii-moodle-organizer-v2';
 const LEGACY_STORAGE_KEYS = ['calculo-iii-moodle-organizer-v1', 'calculo-iii-moodle-organizer-v0'];
+const MAIN_EDITOR_EMAIL = 'maira2004hernandez@gmail.com';
 const cloudConfig = window.SUPABASE_CONFIG ?? {};
 const cloudClient =
   window.supabase && cloudConfig.url && cloudConfig.publishableKey
@@ -42,6 +43,8 @@ const state = {
   draftFiles: [],
   session: null,
   isEditor: false,
+  isMainEditor: false,
+  authMode: 'login',
   cloudReady: false,
   cloudStatus: 'local',
 };
@@ -95,6 +98,10 @@ const dom = {
   loginPassword: document.querySelector('#login-password'),
   loginButton: document.querySelector('#login-button'),
   signupButton: document.querySelector('#signup-button'),
+  authLoginMode: document.querySelector('#auth-login-mode'),
+  authSignupMode: document.querySelector('#auth-signup-mode'),
+  authTitle: document.querySelector('#auth-title'),
+  authDescription: document.querySelector('#auth-description'),
   resetPasswordButton: document.querySelector('#reset-password-button'),
   logoutButton: document.querySelector('#logout-button'),
   courseTitleInput: document.querySelector('#course-title-input'),
@@ -125,21 +132,37 @@ function setCloudStatus(message, mode = 'local') {
 function updateAuthUi() {
   if (!dom.loginName || !dom.loginEmail || !dom.loginPassword || !dom.loginButton || !dom.signupButton || !dom.resetPasswordButton || !dom.logoutButton) return;
   const signedIn = Boolean(state.session?.user);
+  const signupMode = state.authMode === 'signup';
   document.body.classList.toggle('signed-out', !signedIn);
   document.body.classList.toggle('can-edit', state.isEditor || !remoteEditingActive());
+  document.body.classList.toggle('main-editor', state.isMainEditor || !remoteEditingActive());
+  document.body.classList.toggle('auth-login-mode', !signupMode);
+  document.body.classList.toggle('auth-signup-mode', signupMode);
   dom.authGate.hidden = signedIn;
   dom.appShell.hidden = !signedIn;
   dom.loginName.hidden = signedIn;
   dom.loginEmail.hidden = signedIn;
   dom.loginPassword.hidden = signedIn;
-  dom.loginButton.hidden = signedIn;
-  dom.signupButton.hidden = signedIn;
-  dom.resetPasswordButton.hidden = signedIn;
+  dom.loginButton.hidden = signedIn || signupMode;
+  dom.signupButton.hidden = signedIn || !signupMode;
+  dom.resetPasswordButton.hidden = signedIn || signupMode;
   dom.logoutButton.hidden = !signedIn;
+  dom.authLoginMode?.classList.toggle('active', !signupMode);
+  dom.authSignupMode?.classList.toggle('active', signupMode);
+  if (dom.authTitle) {
+    dom.authTitle.textContent = signupMode ? 'Crea tu cuenta para entrar' : 'Inicia sesion para ver el organizador';
+  }
+  if (dom.authDescription) {
+    dom.authDescription.textContent = signupMode
+      ? 'Registrate con nombre, correo y contrasena. Despues la cuenta principal podra darte permiso de editor si corresponde.'
+      : 'Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.';
+  }
   if (signedIn) {
-    dom.logoutButton.textContent = state.isEditor
-      ? `Salir (${state.session.user.email})`
-      : `Salir (${state.session.user.email}, sin permiso)`;
+    dom.logoutButton.textContent = state.isMainEditor
+      ? `Salir (${state.session.user.email}, principal)`
+      : state.isEditor
+        ? `Salir (${state.session.user.email})`
+        : `Salir (${state.session.user.email}, sin permiso)`;
   }
 }
 
@@ -154,6 +177,21 @@ function canEdit() {
 function requireEditPermission() {
   if (canEdit()) return true;
   alert('Para editar, subir archivos o guardar cambios debes iniciar sesion con un correo autorizado como editor.');
+  return false;
+}
+
+function setAuthMode(mode) {
+  state.authMode = mode;
+  updateAuthUi();
+}
+
+function canManageEditors() {
+  return !remoteEditingActive() || state.isMainEditor;
+}
+
+function requireMainEditorPermission() {
+  if (canManageEditors()) return true;
+  alert('Solo la cuenta principal puede autorizar o quitar editores.');
   return false;
 }
 
@@ -1250,6 +1288,7 @@ async function logoutEditor() {
   await cloudClient.auth.signOut();
   state.session = null;
   state.isEditor = false;
+  state.isMainEditor = false;
   updateAuthUi();
   renderEditorList([]);
   setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
@@ -1261,8 +1300,8 @@ function renderEditorList(editors = []) {
     dom.editorList.innerHTML = '<p class="asset-empty">Activa Supabase para administrar editores.</p>';
     return;
   }
-  if (!state.isEditor) {
-    dom.editorList.innerHTML = '<p class="asset-empty">Inicia sesion con un correo editor para ver y modificar esta lista.</p>';
+  if (!state.isMainEditor) {
+    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal puede ver y modificar editores.</p>';
     return;
   }
   if (!editors.length) {
@@ -1288,11 +1327,13 @@ function renderEditorList(editors = []) {
 async function refreshEditorStatus() {
   if (!cloudClient || !state.session?.user || !state.cloudReady) {
     state.isEditor = false;
+    state.isMainEditor = false;
     updateAuthUi();
     renderEditorList([]);
     return;
   }
   const email = state.session.user.email;
+  state.isMainEditor = email.toLowerCase() === MAIN_EDITOR_EMAIL;
   const { data, error } = await cloudClient
     .from('course_editors')
     .select('email')
@@ -1309,7 +1350,7 @@ async function refreshEditorStatus() {
 }
 
 async function loadEditors() {
-  if (!cloudClient || !state.isEditor) {
+  if (!cloudClient || !state.isMainEditor) {
     renderEditorList([]);
     return;
   }
@@ -1325,7 +1366,7 @@ async function loadEditors() {
 }
 
 async function addEditor() {
-  if (!requireEditPermission()) return;
+  if (!requireMainEditorPermission()) return;
   const email = dom.editorEmailInput.value.trim().toLowerCase();
   if (!email) return;
   const { error } = await cloudClient.from('course_editors').insert({ email });
@@ -1338,7 +1379,7 @@ async function addEditor() {
 }
 
 async function removeEditor(email) {
-  if (!requireEditPermission()) return;
+  if (!requireMainEditorPermission()) return;
   if (email === state.session?.user?.email && !confirm('Estas quitando tu propio permiso de editor. Continuar?')) return;
   const { error } = await cloudClient.from('course_editors').delete().eq('email', email);
   if (error) {
@@ -1369,6 +1410,8 @@ function wireEvents() {
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
   dom.loginButton.addEventListener('click', loginEditor);
   dom.signupButton.addEventListener('click', signupEditor);
+  dom.authLoginMode.addEventListener('click', () => setAuthMode('login'));
+  dom.authSignupMode.addEventListener('click', () => setAuthMode('signup'));
   dom.resetPasswordButton.addEventListener('click', resetPassword);
   dom.logoutButton.addEventListener('click', logoutEditor);
   dom.loginPassword.addEventListener('keydown', (event) => {

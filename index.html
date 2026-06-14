@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-201000">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-203000">
 </head>
 <body>
   <header class="app-header">
@@ -18,22 +18,37 @@
         <p id="cloud-status">Preparando conexion...</p>
       </div>
       <div class="cloud-actions">
-        <input id="login-name" maxlength="80" placeholder="nombre completo">
-        <input id="login-email" placeholder="correo o nombre de usuario">
-        <input id="login-password" type="password" maxlength="72" placeholder="contrasena">
-        <button class="btn ghost" id="login-button" type="button">Entrar</button>
-        <button class="btn ghost" id="signup-button" type="button">Registrarse</button>
-        <button class="btn ghost" id="reset-password-button" type="button">Recuperar</button>
         <button class="btn ghost" id="logout-button" type="button" hidden>Salir</button>
       </div>
     </section>
   </header>
 
   <section class="auth-gate" id="auth-gate">
-    <div>
+    <div class="auth-copy">
       <p class="eyebrow">Acceso requerido</p>
-      <h2>Inicia sesion para ver el organizador</h2>
-      <p>Registrate con tu nombre, correo y contrasena. Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.</p>
+      <h2 id="auth-title">Inicia sesion para ver el organizador</h2>
+      <p id="auth-description">Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.</p>
+    </div>
+    <div class="auth-card" aria-label="Acceso al organizador">
+      <div class="auth-tabs" role="tablist" aria-label="Modo de acceso">
+        <button class="auth-tab active" id="auth-login-mode" type="button">Iniciar sesion</button>
+        <button class="auth-tab" id="auth-signup-mode" type="button">Registrarse</button>
+      </div>
+      <label class="auth-field signup-only" id="login-name-field">
+        Nombre completo
+        <input id="login-name" maxlength="80" autocomplete="name" placeholder="Ej. Maira Hernandez">
+      </label>
+      <label class="auth-field">
+        Correo o nombre de usuario
+        <input id="login-email" autocomplete="username" placeholder="correo o nombre">
+      </label>
+      <label class="auth-field">
+        Contrasena
+        <input id="login-password" type="password" maxlength="72" autocomplete="current-password" placeholder="contrasena">
+      </label>
+      <button class="btn primary" id="login-button" type="button">Entrar</button>
+      <button class="btn primary" id="signup-button" type="button" hidden>Crear cuenta</button>
+      <button class="auth-link" id="reset-password-button" type="button">Recuperar contrasena</button>
     </div>
   </section>
 
@@ -258,7 +273,7 @@
       </div>
 
       <div class="admin-grid">
-        <section class="admin-card">
+        <section class="admin-card editor-admin-card">
           <h3>Curso</h3>
           <label>
             Titulo principal
@@ -357,7 +372,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260613-201000"></script>
-  <script src="js/app.js?v=20260613-201000"></script>
+  <script src="js/supabase-config.js?v=20260613-203000"></script>
+  <script src="js/app.js?v=20260613-203000"></script>
 </body>
 </html>
