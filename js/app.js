@@ -88,6 +88,9 @@ const dom = {
   confirmDelete: document.querySelector('#confirm-delete'),
   cancelDelete: document.querySelector('#cancel-delete'),
   cloudStatus: document.querySelector('#cloud-status'),
+  authGate: document.querySelector('#auth-gate'),
+  appShell: document.querySelector('.app-shell'),
+  loginName: document.querySelector('#login-name'),
   loginEmail: document.querySelector('#login-email'),
   loginPassword: document.querySelector('#login-password'),
   loginButton: document.querySelector('#login-button'),
@@ -120,8 +123,13 @@ function setCloudStatus(message, mode = 'local') {
 }
 
 function updateAuthUi() {
-  if (!dom.loginEmail || !dom.loginPassword || !dom.loginButton || !dom.signupButton || !dom.resetPasswordButton || !dom.logoutButton) return;
+  if (!dom.loginName || !dom.loginEmail || !dom.loginPassword || !dom.loginButton || !dom.signupButton || !dom.resetPasswordButton || !dom.logoutButton) return;
   const signedIn = Boolean(state.session?.user);
+  document.body.classList.toggle('signed-out', !signedIn);
+  document.body.classList.toggle('can-edit', state.isEditor || !remoteEditingActive());
+  dom.authGate.hidden = signedIn;
+  dom.appShell.hidden = !signedIn;
+  dom.loginName.hidden = signedIn;
   dom.loginEmail.hidden = signedIn;
   dom.loginPassword.hidden = signedIn;
   dom.loginButton.hidden = signedIn;
@@ -575,6 +583,7 @@ function renderResources() {
       ${resource.owner ? `<span class="badge neutral">${resource.owner}</span>` : ''}
     `;
 
+    node.querySelector('.resource-actions').hidden = remoteEditingActive() && !state.isEditor;
     node.querySelector('.edit').addEventListener('click', () => editResource(resource.id));
     node.querySelector('.delete').addEventListener('click', () => deleteResource(resource.id));
     node.querySelector('.move-up').addEventListener('click', () => moveResource(resource.id, -1));
@@ -612,13 +621,15 @@ function renderResourceAssets(container, resource) {
     title.textContent = 'Enlaces';
     group.appendChild(title);
     links.forEach((link) => {
-      const anchor = document.createElement('a');
-      anchor.className = 'asset-chip link-chip';
-      anchor.href = normalizeUrl(link.url);
-      anchor.target = '_blank';
-      anchor.rel = 'noopener noreferrer';
-      anchor.textContent = link.label || link.url;
-      group.appendChild(anchor);
+      const item = document.createElement(state.isEditor ? 'a' : 'span');
+      item.className = `asset-chip link-chip${state.isEditor ? '' : ' locked-asset'}`;
+      if (state.isEditor) {
+        item.href = normalizeUrl(link.url);
+        item.target = '_blank';
+        item.rel = 'noopener noreferrer';
+      }
+      item.textContent = state.isEditor ? link.label || link.url : `${link.label || 'Enlace'} (solo editores)`;
+      group.appendChild(item);
     });
     container.appendChild(group);
   }
@@ -631,12 +642,14 @@ function renderResourceAssets(container, resource) {
     title.textContent = 'Archivos';
     group.appendChild(title);
     files.forEach((file) => {
-      const anchor = document.createElement('a');
-      anchor.className = 'asset-chip file-chip';
-      anchor.href = file.publicUrl || file.dataUrl || file.path || '#';
-      anchor.download = file.name;
-      anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
-      group.appendChild(anchor);
+      const item = document.createElement(state.isEditor ? 'a' : 'span');
+      item.className = `asset-chip file-chip${state.isEditor ? '' : ' locked-asset'}`;
+      if (state.isEditor) {
+        item.href = file.publicUrl || file.dataUrl || file.path || '#';
+        item.download = file.name;
+      }
+      item.textContent = `${file.name} (${formatFileSize(file.size)})${state.isEditor ? '' : ' - solo editores'}`;
+      group.appendChild(item);
     });
     container.appendChild(group);
   }
@@ -1134,6 +1147,8 @@ async function loginEditor() {
   }
   dom.loginPassword.value = '';
   setCloudStatus('Sesion iniciada. Verificando permisos...', 'pending');
+  const { data } = await cloudClient.auth.getUser();
+  if (data.user) await upsertUserProfile(data.user);
   await refreshEditorStatus();
 }
 
@@ -1142,27 +1157,35 @@ async function signupEditor() {
     alert('Supabase aun no esta configurado.');
     return;
   }
+  const name = dom.loginName.value.trim();
   const email = dom.loginEmail.value.trim();
   const password = dom.loginPassword.value;
-  if (!email || !password) {
-    alert('Escribe correo y contrasena para registrarte.');
+  if (!name || !email || !password) {
+    alert('Escribe nombre, correo y contrasena para registrarte.');
     return;
   }
-  if (password.length < 6) {
-    alert('La contrasena debe tener al menos 6 caracteres.');
+  if (name.length > 80 || password.length > 72) {
+    alert('El nombre o la contrasena superan el maximo permitido.');
     return;
   }
-  const { error } = await cloudClient.auth.signUp({
+  const { data, error } = await cloudClient.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: window.location.href.split('#')[0],
+      data: {
+        full_name: name,
+      },
     },
   });
   if (error) {
     alert(`No se pudo registrar la cuenta: ${error.message}`);
     return;
   }
+  if (data.user) {
+    await upsertUserProfile(data.user, name);
+  }
+  dom.loginName.value = '';
   dom.loginPassword.value = '';
   setCloudStatus('Cuenta creada. Si Supabase pide confirmacion, revisa el correo antes de entrar.', 'pending');
 }
@@ -1185,6 +1208,20 @@ async function resetPassword() {
     return;
   }
   setCloudStatus('Revisa el correo para recuperar la contrasena.', 'pending');
+}
+
+async function upsertUserProfile(user, name = '') {
+  if (!cloudClient || !user?.email) return;
+  const fullName = name || user.user_metadata?.full_name || user.email;
+  const { error } = await cloudClient.from('user_profiles').upsert({
+    id: user.id,
+    email: user.email,
+    full_name: fullName,
+    updated_at: new Date().toISOString(),
+  });
+  if (error) {
+    console.warn('No se pudo guardar el perfil de usuario.', error.message);
+  }
 }
 
 async function logoutEditor() {
@@ -1247,6 +1284,7 @@ async function refreshEditorStatus() {
     state.isEditor ? 'ok' : 'pending'
   );
   await loadEditors();
+  if (state.data) render();
 }
 
 async function loadEditors() {

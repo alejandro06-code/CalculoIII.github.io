@@ -101,6 +101,39 @@ p {
   background: #fff;
 }
 
+.auth-gate {
+  display: grid;
+  width: min(760px, calc(100% - 36px));
+  min-height: 360px;
+  place-items: center;
+  margin: 28px auto;
+  padding: 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.auth-gate h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+}
+
+.auth-gate p:last-child {
+  max-width: 620px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.auth-gate[hidden],
+.app-shell[hidden] {
+  display: none;
+}
+
+.signed-out .cloud-panel {
+  max-width: 760px;
+}
+
 .eyebrow {
   margin: 0 0 4px;
   color: #cce5df;
@@ -740,6 +773,19 @@ textarea {
 
 .asset-chip:hover {
   background: var(--brand-soft);
+}
+
+.locked-asset {
+  color: #6b7280;
+  background: #eef1f4;
+  border-style: dashed;
+  cursor: not-allowed;
+}
+
+body:not(.can-edit) .editor-panel,
+body:not(.can-edit) .structure-row,
+body:not(.can-edit) .admin-row {
+  display: none;
 }
 
 .badges,

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-193500">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-195500">
 </head>
 <body>
   <header class="app-header">
@@ -18,8 +18,9 @@
         <p id="cloud-status">Preparando conexion...</p>
       </div>
       <div class="cloud-actions">
+        <input id="login-name" maxlength="80" placeholder="nombre completo">
         <input id="login-email" type="email" placeholder="correo">
-        <input id="login-password" type="password" placeholder="contrasena">
+        <input id="login-password" type="password" maxlength="72" placeholder="contrasena">
         <button class="btn ghost" id="login-button" type="button">Entrar</button>
         <button class="btn ghost" id="signup-button" type="button">Registrarse</button>
         <button class="btn ghost" id="reset-password-button" type="button">Recuperar</button>
@@ -27,6 +28,14 @@
       </div>
     </section>
   </header>
+
+  <section class="auth-gate" id="auth-gate">
+    <div>
+      <p class="eyebrow">Acceso requerido</p>
+      <h2>Inicia sesion para ver el organizador</h2>
+      <p>Registrate con tu nombre, correo y contrasena. Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.</p>
+    </div>
+  </section>
 
   <main class="app-shell">
     <section class="workspace" aria-label="Area de trabajo">
@@ -348,7 +357,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260613-193500"></script>
-  <script src="js/app.js?v=20260613-193500"></script>
+  <script src="js/supabase-config.js?v=20260613-195500"></script>
+  <script src="js/app.js?v=20260613-195500"></script>
 </body>
 </html>

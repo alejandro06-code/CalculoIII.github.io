@@ -21,10 +21,12 @@ Pasos obligatorios en Supabase:
 
 Notas:
 
-- Cualquier persona podra ver recursos y descargar archivos.
-- Solo los correos registrados en `course_editors` podran editar, guardar y subir archivos.
-- Cada editor debe registrarse o iniciar sesion desde la pagina con su correo y contrasena.
+- Sin cuenta no se puede entrar al organizador.
+- Los usuarios registrados sin permiso pueden ver la estructura y los recursos, pero no pueden editar, abrir enlaces ni descargar archivos.
+- Solo los correos registrados en `course_editors` podran editar, guardar, subir archivos, abrir enlaces y descargar archivos.
+- Cada usuario debe registrarse o iniciar sesion desde la pagina con nombre, correo y contrasena.
 - Registrar una cuenta no da permiso de editor por si solo; el correo debe estar autorizado por un editor existente.
+- Los datos de usuarios se guardan en Supabase Auth y en la tabla `user_profiles`, no en el repositorio.
 - Los archivos se guardan en Supabase Storage, bucket `resource-files`.
 - La pagina oficial sera:
   `https://alejandro06-code.github.io/CalculoIII.github.io/`

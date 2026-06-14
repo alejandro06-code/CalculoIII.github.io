@@ -9,6 +9,14 @@ create table if not exists public.course_editors (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.user_profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  email text not null unique,
+  full_name text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 insert into public.course_editors (email)
 values ('maira2004hernandez@gmail.com')
 on conflict (email) do nothing;
@@ -29,6 +37,29 @@ $$;
 
 alter table public.course_state enable row level security;
 alter table public.course_editors enable row level security;
+alter table public.user_profiles enable row level security;
+
+drop policy if exists "user_profiles own read" on public.user_profiles;
+create policy "user_profiles own read"
+on public.user_profiles
+for select
+to authenticated
+using (id = auth.uid() or public.is_course_editor());
+
+drop policy if exists "user_profiles own insert" on public.user_profiles;
+create policy "user_profiles own insert"
+on public.user_profiles
+for insert
+to authenticated
+with check (id = auth.uid());
+
+drop policy if exists "user_profiles own update" on public.user_profiles;
+create policy "user_profiles own update"
+on public.user_profiles
+for update
+to authenticated
+using (id = auth.uid() or public.is_course_editor())
+with check (id = auth.uid() or public.is_course_editor());
 
 drop policy if exists "course_editors editor read" on public.course_editors;
 create policy "course_editors editor read"
