@@ -1,5 +1,10 @@
 const STORAGE_KEY = 'calculo-iii-moodle-organizer-v2';
 const LEGACY_STORAGE_KEYS = ['calculo-iii-moodle-organizer-v1', 'calculo-iii-moodle-organizer-v0'];
+const cloudConfig = window.SUPABASE_CONFIG ?? {};
+const cloudClient =
+  window.supabase && cloudConfig.url && cloudConfig.publishableKey
+    ? window.supabase.createClient(cloudConfig.url, cloudConfig.publishableKey)
+    : null;
 
 const labels = {
   exists: 'Existe',
@@ -35,6 +40,9 @@ const state = {
   pendingDeleteResourceId: null,
   draftLinks: [],
   draftFiles: [],
+  session: null,
+  cloudReady: false,
+  cloudStatus: 'local',
 };
 
 const dom = {
@@ -78,6 +86,10 @@ const dom = {
   deleteConfirmResource: document.querySelector('#delete-confirm-resource'),
   confirmDelete: document.querySelector('#confirm-delete'),
   cancelDelete: document.querySelector('#cancel-delete'),
+  cloudStatus: document.querySelector('#cloud-status'),
+  loginEmail: document.querySelector('#login-email'),
+  loginButton: document.querySelector('#login-button'),
+  logoutButton: document.querySelector('#logout-button'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -86,11 +98,60 @@ function onOptional(selector, eventName, handler) {
   if (element) element.addEventListener(eventName, handler);
 }
 
+function setCloudStatus(message, mode = 'local') {
+  state.cloudStatus = mode;
+  if (!dom.cloudStatus) return;
+  dom.cloudStatus.textContent = message;
+  dom.cloudStatus.dataset.mode = mode;
+}
+
+function updateAuthUi() {
+  if (!dom.loginEmail || !dom.loginButton || !dom.logoutButton) return;
+  const signedIn = Boolean(state.session?.user);
+  dom.loginEmail.hidden = signedIn;
+  dom.loginButton.hidden = signedIn;
+  dom.logoutButton.hidden = !signedIn;
+  if (signedIn) {
+    dom.logoutButton.textContent = `Salir (${state.session.user.email})`;
+  }
+}
+
+function remoteEditingActive() {
+  return state.cloudReady && Boolean(cloudClient);
+}
+
+function canEdit() {
+  return !remoteEditingActive() || Boolean(state.session?.user);
+}
+
+function requireEditPermission() {
+  if (canEdit()) return true;
+  alert('Para editar, subir archivos o guardar cambios debes iniciar sesion como editor.');
+  return false;
+}
+
 function uid(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function saveData() {
+async function saveData() {
+  if (remoteEditingActive()) {
+    if (!requireEditPermission()) return false;
+    const { error } = await cloudClient
+      .from('course_state')
+      .upsert({
+        id: cloudConfig.courseStateId,
+        data: state.data,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) {
+      alert(`No se pudo guardar en Supabase: ${error.message}`);
+      return false;
+    }
+    setCloudStatus('Cambios guardados en la nube.', 'ok');
+    return true;
+  }
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
     return true;
@@ -182,6 +243,47 @@ function fileToResourceFile(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
+}
+
+function slugify(value) {
+  return String(value || 'archivo')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'archivo';
+}
+
+async function uploadResourceFile(file) {
+  const module = currentModule();
+  const lesson = currentLesson();
+  const section = currentSection();
+  const folder = [
+    slugify(module?.title ?? state.selectedModuleId),
+    slugify(lesson?.title ?? state.selectedLessonId),
+    slugify(section?.title ?? state.selectedSectionId),
+  ].join('/');
+  const filename = `${Date.now()}-${uid('file')}-${slugify(file.name)}`;
+  const path = `${folder}/${filename}`;
+  const { error } = await cloudClient.storage
+    .from(cloudConfig.storageBucket)
+    .upload(path, file, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType: file.type || 'application/octet-stream',
+    });
+  if (error) throw error;
+  const { data } = cloudClient.storage.from(cloudConfig.storageBucket).getPublicUrl(path);
+  return {
+    id: uid('file'),
+    name: file.name,
+    type: file.type || 'application/octet-stream',
+    size: file.size,
+    path,
+    publicUrl: data.publicUrl,
+    addedAt: new Date().toISOString(),
+  };
 }
 
 function currentModule() {
@@ -511,7 +613,7 @@ function renderResourceAssets(container, resource) {
     files.forEach((file) => {
       const anchor = document.createElement('a');
       anchor.className = 'asset-chip file-chip';
-      anchor.href = file.dataUrl || file.path || '#';
+      anchor.href = file.publicUrl || file.dataUrl || file.path || '#';
       anchor.download = file.name;
       anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
       group.appendChild(anchor);
@@ -614,7 +716,7 @@ function renderDraftFiles() {
     const row = document.createElement('div');
     row.className = 'asset-row';
     const anchor = document.createElement('a');
-    anchor.href = file.dataUrl || file.path || '#';
+    anchor.href = file.publicUrl || file.dataUrl || file.path || '#';
     anchor.download = file.name;
     anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
     const remove = document.createElement('button');
@@ -690,8 +792,9 @@ function formResource() {
   };
 }
 
-function saveResource(event) {
+async function saveResource(event) {
   event.preventDefault();
+  if (!requireEditPermission()) return;
   if (!dom.resourceTitle.value.trim()) return;
   const [targetModuleId, targetLessonId, targetSectionId] = dom.resourceTarget.value.split('|');
   const targetLesson = findLesson(targetModuleId, targetLessonId);
@@ -711,12 +814,13 @@ function saveResource(event) {
   state.selectedModuleId = targetModuleId;
   state.selectedLessonId = targetLessonId;
   state.selectedSectionId = targetSectionId;
-  if (!saveData()) return;
+  if (!(await saveData())) return;
   clearForm();
   render();
 }
 
 function addLink() {
+  if (!requireEditPermission()) return;
   const url = normalizeUrl(dom.linkUrl.value);
   if (!url) return;
   state.draftLinks.push({
@@ -730,14 +834,20 @@ function addLink() {
 }
 
 async function addFiles(event) {
+  if (!requireEditPermission()) {
+    dom.resourceFiles.value = '';
+    return;
+  }
   const files = Array.from(event.target.files || []);
   if (!files.length) return;
   try {
-    const loaded = await Promise.all(files.map(fileToResourceFile));
+    const loaded = remoteEditingActive()
+      ? await Promise.all(files.map(uploadResourceFile))
+      : await Promise.all(files.map(fileToResourceFile));
     state.draftFiles.push(...loaded);
     renderDraftFiles();
   } catch {
-    alert('No se pudieron leer uno o mas archivos.');
+    alert('No se pudieron cargar uno o mas archivos.');
   } finally {
     dom.resourceFiles.value = '';
   }
@@ -751,6 +861,7 @@ function duplicateResource() {
 }
 
 function deleteResource(resourceId) {
+  if (!requireEditPermission()) return;
   const lesson = currentLesson();
   if (!lesson) return;
   const resource = (lesson.resources || []).find((item) => item.id === resourceId);
@@ -767,7 +878,7 @@ function closeDeleteConfirm() {
   dom.deleteConfirmResource.textContent = '';
 }
 
-function confirmDeleteResource() {
+async function confirmDeleteResource() {
   const lesson = currentLesson();
   if (!lesson || !state.pendingDeleteResourceId) {
     closeDeleteConfirm();
@@ -775,13 +886,14 @@ function confirmDeleteResource() {
   }
   const resourceId = state.pendingDeleteResourceId;
   lesson.resources = (lesson.resources || []).filter((resource) => resource.id !== resourceId);
-  saveData();
+  if (!(await saveData())) return;
   clearForm();
   closeDeleteConfirm();
   render();
 }
 
-function moveResource(resourceId, direction) {
+async function moveResource(resourceId, direction) {
+  if (!requireEditPermission()) return;
   const lesson = currentLesson();
   if (!lesson) return;
   const resources = lesson.resources || [];
@@ -792,11 +904,12 @@ function moveResource(resourceId, direction) {
   const indexA = resources.findIndex((resource) => resource.id === resourceId);
   const indexB = resources.findIndex((resource) => resource.id === neighbor.id);
   [resources[indexA], resources[indexB]] = [resources[indexB], resources[indexA]];
-  saveData();
+  if (!(await saveData())) return;
   render();
 }
 
-function addLesson() {
+async function addLesson() {
+  if (!requireEditPermission()) return;
   const module = state.data.modules.find((item) => item.id === dom.lessonModuleSelect.value);
   const title = dom.lessonTitleInput.value.trim();
   if (!module || !title) return;
@@ -806,11 +919,12 @@ function addLesson() {
   state.selectedLessonId = lesson.id;
   state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
   dom.lessonTitleInput.value = '';
-  saveData();
+  if (!(await saveData())) return;
   render();
 }
 
-function updateLesson() {
+async function updateLesson() {
+  if (!requireEditPermission()) return;
   const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
   const lesson = findLesson(moduleId, lessonId);
   const title = dom.lessonEditTitleInput.value.trim();
@@ -819,7 +933,7 @@ function updateLesson() {
   state.selectedModuleId = moduleId;
   state.selectedLessonId = lessonId;
   dom.lessonEditTitleInput.value = '';
-  saveData();
+  if (!(await saveData())) return;
   render();
 }
 
@@ -866,13 +980,13 @@ function importJson(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     try {
       const imported = JSON.parse(reader.result);
       if (!imported.modules || !imported.sections) throw new Error('Invalid structure');
       state.data = imported;
       selectFirstAvailable();
-      saveData();
+      if (!(await saveData())) return;
       clearForm();
       render();
     } catch {
@@ -882,11 +996,40 @@ function importJson(event) {
   reader.readAsText(file);
 }
 
-function resetData() {
+async function resetData() {
   if (!confirm('Restaurar los datos de demostracion? Esto borra los cambios guardados en este navegador.')) return;
+  if (!requireEditPermission()) return;
   localStorage.removeItem(STORAGE_KEY);
   LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
   init(true);
+}
+
+async function loginEditor() {
+  if (!cloudClient) {
+    alert('Supabase aun no esta configurado.');
+    return;
+  }
+  const email = dom.loginEmail.value.trim();
+  if (!email) return;
+  const { error } = await cloudClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.href.split('#')[0],
+    },
+  });
+  if (error) {
+    alert(`No se pudo enviar el enlace de acceso: ${error.message}`);
+    return;
+  }
+  setCloudStatus('Revisa tu correo para confirmar el acceso de editor.', 'pending');
+}
+
+async function logoutEditor() {
+  if (!cloudClient) return;
+  await cloudClient.auth.signOut();
+  state.session = null;
+  updateAuthUi();
+  setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
 }
 
 function wireEvents() {
@@ -908,6 +1051,8 @@ function wireEvents() {
   });
   document.querySelector('#clear-form').addEventListener('click', clearForm);
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
+  dom.loginButton.addEventListener('click', loginEditor);
+  dom.logoutButton.addEventListener('click', logoutEditor);
   dom.addLink.addEventListener('click', addLink);
   dom.linkUrl.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -955,15 +1100,53 @@ function resetMultiFilter(kind) {
   renderResources();
 }
 
+async function loadCloudData() {
+  if (!cloudClient) return null;
+  const { data, error } = await cloudClient
+    .from('course_state')
+    .select('data, updated_at')
+    .eq('id', cloudConfig.courseStateId)
+    .single();
+  if (error) {
+    setCloudStatus('Falta ejecutar la configuracion de Supabase. Usando modo local.', 'local');
+    return null;
+  }
+  state.cloudReady = true;
+  setCloudStatus(`Datos compartidos activos. Ultima sincronizacion: ${new Date(data.updated_at).toLocaleString()}.`, 'ok');
+  return data.data;
+}
+
+async function initCloudSession() {
+  if (!cloudClient) {
+    setCloudStatus('Modo local. Supabase no esta configurado.', 'local');
+    updateAuthUi();
+    return;
+  }
+  const { data } = await cloudClient.auth.getSession();
+  state.session = data.session;
+  updateAuthUi();
+  cloudClient.auth.onAuthStateChange((_event, session) => {
+    state.session = session;
+    updateAuthUi();
+    if (state.cloudReady) {
+      setCloudStatus(session ? 'Sesion de editor activa.' : 'Modo lectura. Inicia sesion para editar.', session ? 'ok' : 'pending');
+    }
+  });
+}
+
 async function init(forceDefault = false) {
-  const stored = forceDefault ? null : loadStoredData();
-  if (stored) {
+  await initCloudSession();
+  const cloudData = forceDefault ? null : await loadCloudData();
+  const stored = forceDefault || cloudData ? null : loadStoredData();
+  if (cloudData) {
+    state.data = cloudData;
+  } else if (stored) {
     state.data = stored;
   } else {
     localStorage.removeItem(STORAGE_KEY);
     const response = await fetch('js/data.json');
     state.data = await response.json();
-    saveData();
+    await saveData();
   }
   selectFirstAvailable();
   clearForm();

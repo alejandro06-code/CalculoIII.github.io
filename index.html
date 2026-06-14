@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-181500">
+  <link rel="stylesheet" href="css/styles.css?v=20260613-184500">
 </head>
 <body>
   <header class="app-header">
@@ -12,6 +12,17 @@
       <p class="eyebrow">Propuesta de organizador Moodle</p>
       <h1>Calculo III</h1>
     </div>
+    <section class="cloud-panel" aria-label="Sincronizacion">
+      <div>
+        <p class="eyebrow">Datos compartidos</p>
+        <p id="cloud-status">Preparando conexion...</p>
+      </div>
+      <div class="cloud-actions">
+        <input id="login-email" type="email" placeholder="correo del editor">
+        <button class="btn ghost" id="login-button" type="button">Entrar</button>
+        <button class="btn ghost" id="logout-button" type="button" hidden>Salir</button>
+      </div>
+    </section>
   </header>
 
   <main class="app-shell">
@@ -259,6 +270,8 @@
     </article>
   </template>
 
-  <script src="js/app.js?v=20260613-181500"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js?v=20260613-184500"></script>
+  <script src="js/app.js?v=20260613-184500"></script>
 </body>
 </html>
