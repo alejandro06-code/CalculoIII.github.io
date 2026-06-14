@@ -17,6 +17,9 @@ create table if not exists public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists user_profiles_full_name_unique
+on public.user_profiles (lower(full_name));
+
 insert into public.course_editors (email)
 values ('maira2004hernandez@gmail.com')
 on conflict (email) do nothing;
@@ -34,6 +37,22 @@ as $$
     where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
   );
 $$;
+
+create or replace function public.email_for_login(login_identifier text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select email
+  from public.user_profiles
+  where lower(email) = lower(trim(login_identifier))
+     or lower(full_name) = lower(trim(login_identifier))
+  limit 1;
+$$;
+
+grant execute on function public.email_for_login(text) to anon, authenticated;
 
 alter table public.course_state enable row level security;
 alter table public.course_editors enable row level security;

@@ -1131,10 +1131,15 @@ async function loginEditor() {
     alert('Supabase aun no esta configurado.');
     return;
   }
-  const email = dom.loginEmail.value.trim();
+  const identifier = dom.loginEmail.value.trim();
   const password = dom.loginPassword.value;
-  if (!email || !password) {
-    alert('Escribe correo y contrasena.');
+  if (!identifier || !password) {
+    alert('Escribe correo o nombre de usuario, y contrasena.');
+    return;
+  }
+  const email = await resolveLoginEmail(identifier);
+  if (!email) {
+    alert('No se encontro una cuenta con ese correo o nombre de usuario.');
     return;
   }
   const { error } = await cloudClient.auth.signInWithPassword({
@@ -1152,6 +1157,17 @@ async function loginEditor() {
   await refreshEditorStatus();
 }
 
+async function resolveLoginEmail(identifier) {
+  if (identifier.includes('@')) return identifier;
+  const { data, error } = await cloudClient.rpc('email_for_login', {
+    login_identifier: identifier,
+  });
+  if (error) {
+    return identifier;
+  }
+  return data;
+}
+
 async function signupEditor() {
   if (!cloudClient) {
     alert('Supabase aun no esta configurado.');
@@ -1166,6 +1182,11 @@ async function signupEditor() {
   }
   if (name.length > 80 || password.length > 72) {
     alert('El nombre o la contrasena superan el maximo permitido.');
+    return;
+  }
+  const existingEmail = await resolveLoginEmail(name);
+  if (existingEmail && existingEmail !== name) {
+    alert('Ese nombre de usuario ya esta registrado. Escoge otro.');
     return;
   }
   const { data, error } = await cloudClient.auth.signUp({
