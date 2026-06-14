@@ -17,11 +17,14 @@ Pasos obligatorios en Supabase:
    `https://alejandro06-code.github.io/CalculoIII.github.io/`
 5. Agregar también como Redirect URL:
    `https://alejandro06-code.github.io/CalculoIII.github.io/`
+6. En Authentication > Sign In / Providers, dejar habilitado Email.
 
 Notas:
 
 - Cualquier persona podra ver recursos y descargar archivos.
 - Solo los correos registrados en `course_editors` podran editar, guardar y subir archivos.
+- Cada editor debe registrarse o iniciar sesion desde la pagina con su correo y contrasena.
+- Registrar una cuenta no da permiso de editor por si solo; el correo debe estar autorizado por un editor existente.
 - Los archivos se guardan en Supabase Storage, bucket `resource-files`.
 - La pagina oficial sera:
   `https://alejandro06-code.github.io/CalculoIII.github.io/`

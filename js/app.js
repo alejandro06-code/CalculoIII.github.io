@@ -89,7 +89,10 @@ const dom = {
   cancelDelete: document.querySelector('#cancel-delete'),
   cloudStatus: document.querySelector('#cloud-status'),
   loginEmail: document.querySelector('#login-email'),
+  loginPassword: document.querySelector('#login-password'),
   loginButton: document.querySelector('#login-button'),
+  signupButton: document.querySelector('#signup-button'),
+  resetPasswordButton: document.querySelector('#reset-password-button'),
   logoutButton: document.querySelector('#logout-button'),
   courseTitleInput: document.querySelector('#course-title-input'),
   courseDescriptionInput: document.querySelector('#course-description-input'),
@@ -117,10 +120,13 @@ function setCloudStatus(message, mode = 'local') {
 }
 
 function updateAuthUi() {
-  if (!dom.loginEmail || !dom.loginButton || !dom.logoutButton) return;
+  if (!dom.loginEmail || !dom.loginPassword || !dom.loginButton || !dom.signupButton || !dom.resetPasswordButton || !dom.logoutButton) return;
   const signedIn = Boolean(state.session?.user);
   dom.loginEmail.hidden = signedIn;
+  dom.loginPassword.hidden = signedIn;
   dom.loginButton.hidden = signedIn;
+  dom.signupButton.hidden = signedIn;
+  dom.resetPasswordButton.hidden = signedIn;
   dom.logoutButton.hidden = !signedIn;
   if (signedIn) {
     dom.logoutButton.textContent = state.isEditor
@@ -1113,18 +1119,72 @@ async function loginEditor() {
     return;
   }
   const email = dom.loginEmail.value.trim();
-  if (!email) return;
-  const { error } = await cloudClient.auth.signInWithOtp({
+  const password = dom.loginPassword.value;
+  if (!email || !password) {
+    alert('Escribe correo y contrasena.');
+    return;
+  }
+  const { error } = await cloudClient.auth.signInWithPassword({
     email,
+    password,
+  });
+  if (error) {
+    alert(`No se pudo iniciar sesion: ${error.message}`);
+    return;
+  }
+  dom.loginPassword.value = '';
+  setCloudStatus('Sesion iniciada. Verificando permisos...', 'pending');
+  await refreshEditorStatus();
+}
+
+async function signupEditor() {
+  if (!cloudClient) {
+    alert('Supabase aun no esta configurado.');
+    return;
+  }
+  const email = dom.loginEmail.value.trim();
+  const password = dom.loginPassword.value;
+  if (!email || !password) {
+    alert('Escribe correo y contrasena para registrarte.');
+    return;
+  }
+  if (password.length < 6) {
+    alert('La contrasena debe tener al menos 6 caracteres.');
+    return;
+  }
+  const { error } = await cloudClient.auth.signUp({
+    email,
+    password,
     options: {
       emailRedirectTo: window.location.href.split('#')[0],
     },
   });
   if (error) {
-    alert(`No se pudo enviar el enlace de acceso: ${error.message}`);
+    alert(`No se pudo registrar la cuenta: ${error.message}`);
     return;
   }
-  setCloudStatus('Revisa tu correo para confirmar el acceso de editor.', 'pending');
+  dom.loginPassword.value = '';
+  setCloudStatus('Cuenta creada. Si Supabase pide confirmacion, revisa el correo antes de entrar.', 'pending');
+}
+
+async function resetPassword() {
+  if (!cloudClient) {
+    alert('Supabase aun no esta configurado.');
+    return;
+  }
+  const email = dom.loginEmail.value.trim();
+  if (!email) {
+    alert('Escribe el correo para recuperar la contrasena.');
+    return;
+  }
+  const { error } = await cloudClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href.split('#')[0],
+  });
+  if (error) {
+    alert(`No se pudo enviar la recuperacion: ${error.message}`);
+    return;
+  }
+  setCloudStatus('Revisa el correo para recuperar la contrasena.', 'pending');
 }
 
 async function logoutEditor() {
@@ -1249,7 +1309,15 @@ function wireEvents() {
   document.querySelector('#clear-form').addEventListener('click', clearForm);
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
   dom.loginButton.addEventListener('click', loginEditor);
+  dom.signupButton.addEventListener('click', signupEditor);
+  dom.resetPasswordButton.addEventListener('click', resetPassword);
   dom.logoutButton.addEventListener('click', logoutEditor);
+  dom.loginPassword.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      loginEditor();
+    }
+  });
   document.querySelector('#save-course-settings').addEventListener('click', updateCourseSettings);
   document.querySelector('#add-module').addEventListener('click', addModule);
   document.querySelector('#update-module').addEventListener('click', updateModule);
