@@ -25,6 +25,11 @@ Notas:
 - Los usuarios registrados sin permiso pueden ver la estructura y los recursos, pero no pueden editar, abrir enlaces ni descargar archivos.
 - Solo los correos registrados en `course_editors` podran editar, guardar, subir archivos, abrir enlaces y descargar archivos.
 - Solo la cuenta principal `maira2004hernandez@gmail.com` puede ver la lista de editores, autorizar nuevos editores o quitar permisos.
+- La tabla `course_editors` ahora usa perfiles:
+  - `owner`: acceso completo para la cuenta principal.
+  - `manager`: edita recursos, estructura, archivos y puede borrar, pero no administra usuarios.
+  - `contributor`: puede crear recursos y subir archivos, pero no borrar ni modificar la estructura.
+  - `viewer`: solo lectura.
 - Cada usuario debe registrarse desde la pagina con nombre, correo y contrasena.
 - Para iniciar sesion puede usar correo o nombre de usuario, siempre con su contrasena.
 - Los nombres de usuario aceptan espacios y deben ser unicos.

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260613-210000">
+  <link rel="stylesheet" href="css/styles.css?v=20260620-210000">
 </head>
 <body>
   <header class="app-header">
@@ -53,7 +53,13 @@
   </section>
 
   <main class="app-shell">
-    <section class="workspace" aria-label="Area de trabajo">
+    <nav class="page-tabs" aria-label="Vistas del organizador">
+      <button class="page-tab active" data-view="module" type="button">Modulo actual</button>
+      <button class="page-tab" data-view="structure" type="button">Estructura</button>
+      <button class="page-tab" data-view="admin" type="button">Administracion</button>
+    </nav>
+
+    <section class="workspace" data-view-panel="module" aria-label="Area de trabajo">
       <div class="workspace-header">
         <div>
           <p class="eyebrow" id="current-module-label">Modulo</p>
@@ -68,13 +74,13 @@
             <p class="eyebrow">Estructura general</p>
             <h3>Mapa del curso</h3>
           </div>
-          <p class="muted">Cada leccion despliega sus cuatro partes para saltar directo al punto que se quiera revisar.</p>
+          <p class="muted">Vista compacta del modulo seleccionado. Usa el indice lateral para saltar entre modulos y lecciones.</p>
         </div>
         <div id="course-map" class="course-map"></div>
       </section>
     </section>
 
-    <section class="workbench" aria-label="Herramientas y recursos">
+    <section class="workbench" data-view-panel="module" aria-label="Herramientas y recursos">
       <aside class="sidebar" aria-label="Navegacion del curso">
         <div class="search-box">
           <label for="search">Buscar recurso</label>
@@ -236,7 +242,7 @@
       </section>
     </section>
 
-    <section class="structure-row" aria-label="Estructura">
+    <section class="structure-row" data-view-panel="structure" aria-label="Estructura">
       <div>
         <p class="eyebrow">Edicion de lecciones</p>
         <h2>Lecciones</h2>
@@ -260,10 +266,34 @@
           <input id="lesson-edit-title-input" placeholder="Nombre actualizado">
         </label>
         <button class="btn ghost" id="update-lesson" type="button">Renombrar</button>
+        <label>
+          Ordenar leccion
+          <select id="lesson-order-select"></select>
+        </label>
+        <div class="form-actions">
+          <button class="btn ghost" id="lesson-up" type="button">Subir</button>
+          <button class="btn ghost" id="lesson-down" type="button">Bajar</button>
+        </div>
+        <label>
+          Ordenar modulo
+          <select id="module-order-select"></select>
+        </label>
+        <div class="form-actions">
+          <button class="btn ghost" id="module-up" type="button">Subir</button>
+          <button class="btn ghost" id="module-down" type="button">Bajar</button>
+        </div>
+        <label>
+          Ordenar parte
+          <select id="section-order-select"></select>
+        </label>
+        <div class="form-actions">
+          <button class="btn ghost" id="section-up" type="button">Subir</button>
+          <button class="btn ghost" id="section-down" type="button">Bajar</button>
+        </div>
       </form>
     </section>
 
-    <section class="admin-row" aria-label="Administracion del curso">
+    <section class="admin-row" data-view-panel="admin" aria-label="Administracion del curso">
       <div class="admin-heading">
         <div>
           <p class="eyebrow">Administracion</p>
@@ -273,7 +303,7 @@
       </div>
 
       <div class="admin-grid">
-        <section class="admin-card editor-admin-card">
+        <section class="admin-card">
           <h3>Curso</h3>
           <label>
             Titulo principal
@@ -324,14 +354,23 @@
           <button class="btn secondary" id="update-section" type="button">Guardar parte</button>
         </section>
 
-        <section class="admin-card">
+        <section class="admin-card admin-users-card">
           <h3>Editores</h3>
-          <p class="muted">Los editores pueden crear recursos, subir archivos y modificar la estructura.</p>
+          <p class="muted">Solo el acceso completo puede asignar perfiles. Los perfiles controlan que puede hacer cada cuenta.</p>
           <label>
-            Nuevo editor
+            Correo
             <input id="editor-email-input" type="email" placeholder="correo@ejemplo.com">
           </label>
-          <button class="btn ghost" id="add-editor" type="button">Autorizar editor</button>
+          <label>
+            Perfil
+            <select id="editor-role-input">
+              <option value="manager">Editor avanzado</option>
+              <option value="contributor">Creador de recursos</option>
+              <option value="viewer">Solo lectura</option>
+              <option value="owner">Acceso completo</option>
+            </select>
+          </label>
+          <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
           <div class="editor-list" id="editor-list"></div>
         </section>
       </div>
@@ -372,7 +411,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260613-210000"></script>
-  <script src="js/app.js?v=20260613-210000"></script>
+  <script src="js/supabase-config.js?v=20260620-210000"></script>
+  <script src="js/app.js?v=20260620-210000"></script>
 </body>
 </html>

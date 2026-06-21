@@ -6,8 +6,19 @@ create table if not exists public.course_state (
 
 create table if not exists public.course_editors (
   email text primary key,
+  role text not null default 'manager',
   created_at timestamptz not null default now()
 );
+
+alter table public.course_editors
+add column if not exists role text not null default 'manager';
+
+alter table public.course_editors
+drop constraint if exists course_editors_role_check;
+
+alter table public.course_editors
+add constraint course_editors_role_check
+check (role in ('owner', 'manager', 'contributor', 'viewer'));
 
 create table if not exists public.user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -20,9 +31,9 @@ create table if not exists public.user_profiles (
 create unique index if not exists user_profiles_full_name_unique
 on public.user_profiles (lower(full_name));
 
-insert into public.course_editors (email)
-values ('maira2004hernandez@gmail.com')
-on conflict (email) do nothing;
+insert into public.course_editors (email, role)
+values ('maira2004hernandez@gmail.com', 'owner')
+on conflict (email) do update set role = 'owner';
 
 create or replace function public.is_course_editor()
 returns boolean
@@ -48,6 +59,34 @@ as $$
   select lower(coalesce(auth.jwt() ->> 'email', '')) = 'maira2004hernandez@gmail.com';
 $$;
 
+create or replace function public.current_course_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select role
+      from public.course_editors
+      where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      limit 1
+    ),
+    'viewer'
+  );
+$$;
+
+create or replace function public.can_edit_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'contributor');
+$$;
+
 create or replace function public.email_for_login(login_identifier text)
 returns text
 language sql
@@ -67,6 +106,13 @@ grant execute on function public.email_for_login(text) to anon, authenticated;
 alter table public.course_state enable row level security;
 alter table public.course_editors enable row level security;
 alter table public.user_profiles enable row level security;
+
+grant usage on schema public to anon, authenticated;
+grant select on public.course_state to anon, authenticated;
+grant insert, update on public.course_state to authenticated;
+grant select on public.course_editors to authenticated;
+grant insert, update, delete on public.course_editors to authenticated;
+grant select, insert, update on public.user_profiles to authenticated;
 
 drop policy if exists "user_profiles own read" on public.user_profiles;
 create policy "user_profiles own read"
@@ -107,6 +153,14 @@ for insert
 to authenticated
 with check (public.is_main_editor());
 
+drop policy if exists "course_editors editor update" on public.course_editors;
+create policy "course_editors editor update"
+on public.course_editors
+for update
+to authenticated
+using (public.is_main_editor())
+with check (public.is_main_editor());
+
 drop policy if exists "course_editors editor delete" on public.course_editors;
 create policy "course_editors editor delete"
 on public.course_editors
@@ -126,15 +180,15 @@ create policy "course_state authenticated insert"
 on public.course_state
 for insert
 to authenticated
-with check (id = 'main' and public.is_course_editor());
+with check (id = 'main' and public.can_edit_course());
 
 drop policy if exists "course_state authenticated update" on public.course_state;
 create policy "course_state authenticated update"
 on public.course_state
 for update
 to authenticated
-using (id = 'main' and public.is_course_editor())
-with check (id = 'main' and public.is_course_editor());
+using (id = 'main' and public.can_edit_course())
+with check (id = 'main' and public.can_edit_course());
 
 insert into public.course_state (id, data)
 values (
@@ -317,19 +371,19 @@ create policy "resource_files authenticated upload"
 on storage.objects
 for insert
 to authenticated
-with check (bucket_id = 'resource-files' and public.is_course_editor());
+with check (bucket_id = 'resource-files' and public.can_edit_course());
 
 drop policy if exists "resource_files authenticated update" on storage.objects;
 create policy "resource_files authenticated update"
 on storage.objects
 for update
 to authenticated
-using (bucket_id = 'resource-files' and public.is_course_editor())
-with check (bucket_id = 'resource-files' and public.is_course_editor());
+using (bucket_id = 'resource-files' and public.can_edit_course())
+with check (bucket_id = 'resource-files' and public.can_edit_course());
 
 drop policy if exists "resource_files authenticated delete" on storage.objects;
 create policy "resource_files authenticated delete"
 on storage.objects
 for delete
 to authenticated
-using (bucket_id = 'resource-files' and public.is_course_editor());
+using (bucket_id = 'resource-files' and public.can_edit_course());

@@ -24,6 +24,35 @@ const labels = {
   high: 'Alta',
   medium: 'Media',
   low: 'Baja',
+  owner: 'Acceso completo',
+  manager: 'Editor avanzado',
+  contributor: 'Creador de recursos',
+  viewer: 'Solo lectura',
+};
+
+const roleCapabilities = {
+  owner: {
+    manageUsers: true,
+    manageStructure: true,
+    manageResources: true,
+    createResources: true,
+    deleteResources: true,
+    moveResources: true,
+    openAssets: true,
+  },
+  manager: {
+    manageStructure: true,
+    manageResources: true,
+    createResources: true,
+    deleteResources: true,
+    moveResources: true,
+    openAssets: true,
+  },
+  contributor: {
+    createResources: true,
+    openAssets: true,
+  },
+  viewer: {},
 };
 
 function plural(count, singular, pluralText) {
@@ -44,13 +73,17 @@ const state = {
   session: null,
   isEditor: false,
   isMainEditor: false,
+  userRole: 'viewer',
   authMode: 'login',
+  currentView: 'module',
   cloudReady: false,
   cloudStatus: 'local',
 };
 
 const dom = {
   nav: document.querySelector('#course-nav'),
+  viewButtons: document.querySelectorAll('[data-view]'),
+  viewPanels: document.querySelectorAll('[data-view-panel]'),
   map: document.querySelector('#course-map'),
   tabs: document.querySelector('#section-tabs'),
   list: document.querySelector('#resource-list'),
@@ -84,6 +117,9 @@ const dom = {
   resourceNotes: document.querySelector('#resource-notes'),
   lessonModuleSelect: document.querySelector('#lesson-module-select'),
   lessonEditSelect: document.querySelector('#lesson-edit-select'),
+  lessonOrderSelect: document.querySelector('#lesson-order-select'),
+  moduleOrderSelect: document.querySelector('#module-order-select'),
+  sectionOrderSelect: document.querySelector('#section-order-select'),
   lessonTitleInput: document.querySelector('#lesson-title-input'),
   lessonEditTitleInput: document.querySelector('#lesson-edit-title-input'),
   deleteConfirm: document.querySelector('#delete-confirm'),
@@ -114,6 +150,7 @@ const dom = {
   sectionTitleInput: document.querySelector('#section-title-input'),
   sectionDescriptionInput: document.querySelector('#section-description-input'),
   editorEmailInput: document.querySelector('#editor-email-input'),
+  editorRoleInput: document.querySelector('#editor-role-input'),
   editorList: document.querySelector('#editor-list'),
   template: document.querySelector('#resource-template'),
 };
@@ -135,7 +172,10 @@ function updateAuthUi() {
   const signedIn = Boolean(state.session?.user);
   const signupMode = state.authMode === 'signup';
   document.body.classList.toggle('signed-out', !signedIn);
-  document.body.classList.toggle('can-edit', state.isEditor || !remoteEditingActive());
+  document.body.classList.toggle('can-edit', canEdit());
+  document.body.classList.toggle('can-create-resource', hasCapability('createResources'));
+  document.body.classList.toggle('can-manage-structure', hasCapability('manageStructure'));
+  document.body.classList.toggle('can-manage-users', hasCapability('manageUsers'));
   document.body.classList.toggle('main-editor', state.isMainEditor || !remoteEditingActive());
   document.body.classList.toggle('auth-login-mode', !signupMode);
   document.body.classList.toggle('auth-signup-mode', signupMode);
@@ -167,7 +207,7 @@ function updateAuthUi() {
     dom.logoutButton.textContent = state.isMainEditor
       ? `Salir (${state.session.user.email}, principal)`
       : state.isEditor
-        ? `Salir (${state.session.user.email})`
+        ? `Salir (${state.session.user.email}, ${labels[state.userRole] ?? state.userRole})`
         : `Salir (${state.session.user.email}, sin permiso)`;
   }
 }
@@ -177,13 +217,23 @@ function remoteEditingActive() {
 }
 
 function canEdit() {
-  return !remoteEditingActive() || state.isEditor;
+  return !remoteEditingActive() || hasCapability('createResources') || hasCapability('manageStructure') || hasCapability('manageUsers');
+}
+
+function hasCapability(capability) {
+  if (!remoteEditingActive()) return true;
+  if (capability === 'manageUsers') return state.isMainEditor;
+  return Boolean(roleCapabilities[state.userRole]?.[capability]);
+}
+
+function requireCapability(capability, message) {
+  if (hasCapability(capability)) return true;
+  alert(message || 'Tu perfil no tiene permiso para realizar esta accion.');
+  return false;
 }
 
 function requireEditPermission() {
-  if (canEdit()) return true;
-  alert('Para editar, subir archivos o guardar cambios debes iniciar sesion con un correo autorizado como editor.');
-  return false;
+  return requireCapability('createResources', 'Para editar o crear recursos debes tener un perfil autorizado.');
 }
 
 function setAuthMode(mode) {
@@ -191,8 +241,30 @@ function setAuthMode(mode) {
   updateAuthUi();
 }
 
+function setView(view) {
+  if (view === 'structure' && !hasCapability('manageStructure')) view = 'module';
+  if (view === 'admin' && !hasCapability('manageUsers')) view = 'module';
+  state.currentView = view;
+  renderView();
+}
+
+function renderView() {
+  if (state.currentView === 'structure' && !hasCapability('manageStructure')) state.currentView = 'module';
+  if (state.currentView === 'admin' && !hasCapability('manageUsers')) state.currentView = 'module';
+  dom.viewButtons.forEach((button) => {
+    const active = button.dataset.view === state.currentView;
+    button.classList.toggle('active', active);
+    button.hidden =
+      (button.dataset.view === 'structure' && !hasCapability('manageStructure')) ||
+      (button.dataset.view === 'admin' && !hasCapability('manageUsers'));
+  });
+  dom.viewPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.viewPanel !== state.currentView;
+  });
+}
+
 function canManageEditors() {
-  return !remoteEditingActive() || state.isMainEditor;
+  return hasCapability('manageUsers');
 }
 
 function requireMainEditorPermission() {
@@ -398,10 +470,19 @@ function renderNavigation() {
   state.data.modules.forEach((module, moduleIndex) => {
     const moduleNode = document.createElement('section');
     moduleNode.className = 'module-group';
+    if (module.id === state.selectedModuleId) moduleNode.classList.add('active');
     moduleNode.innerHTML = `
       <p class="nav-kicker">Modulo ${moduleIndex + 1}</p>
-      <h3>${module.title}</h3>
+      <button class="module-nav-button" type="button">${module.title}</button>
     `;
+    moduleNode.querySelector('.module-nav-button').addEventListener('click', () => {
+      state.selectedModuleId = module.id;
+      state.selectedLessonId = module.lessons[0]?.id ?? null;
+      state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
+      setView('module');
+      clearForm();
+      render();
+    });
 
     module.lessons.forEach((lesson, lessonIndex) => {
       const resources = lesson.resources || [];
@@ -420,6 +501,7 @@ function renderNavigation() {
       button.addEventListener('click', () => {
         state.selectedModuleId = module.id;
         state.selectedLessonId = lesson.id;
+        setView('module');
         clearForm();
         render();
       });
@@ -458,7 +540,8 @@ function renderCourseMap() {
     return;
   }
 
-  state.data.modules.forEach((module, moduleIndex) => {
+  const module = currentModule() ?? state.data.modules[0];
+  const moduleIndex = state.data.modules.findIndex((item) => item.id === module.id);
     const totals = module.lessons.reduce(
       (acc, lesson) => {
         const stats = lessonStats(lesson);
@@ -555,8 +638,7 @@ function renderCourseMap() {
     });
 
     card.appendChild(lessons);
-    dom.map.appendChild(card);
-  });
+  dom.map.appendChild(card);
 }
 
 function renderTabs() {
@@ -627,7 +709,13 @@ function renderResources() {
       ${resource.owner ? `<span class="badge neutral">${resource.owner}</span>` : ''}
     `;
 
-    node.querySelector('.resource-actions').hidden = remoteEditingActive() && !state.isEditor;
+    const actions = node.querySelector('.resource-actions');
+    const canManageResource = hasCapability('manageResources');
+    actions.hidden = !canManageResource && !hasCapability('deleteResources') && !hasCapability('moveResources');
+    node.querySelector('.edit').hidden = !canManageResource;
+    node.querySelector('.delete').hidden = !hasCapability('deleteResources');
+    node.querySelector('.move-up').hidden = !hasCapability('moveResources');
+    node.querySelector('.move-down').hidden = !hasCapability('moveResources');
     node.querySelector('.edit').addEventListener('click', () => editResource(resource.id));
     node.querySelector('.delete').addEventListener('click', () => deleteResource(resource.id));
     node.querySelector('.move-up').addEventListener('click', () => moveResource(resource.id, -1));
@@ -665,14 +753,15 @@ function renderResourceAssets(container, resource) {
     title.textContent = 'Enlaces';
     group.appendChild(title);
     links.forEach((link) => {
-      const item = document.createElement(state.isEditor ? 'a' : 'span');
-      item.className = `asset-chip link-chip${state.isEditor ? '' : ' locked-asset'}`;
-      if (state.isEditor) {
+      const canOpen = hasCapability('openAssets');
+      const item = document.createElement(canOpen ? 'a' : 'span');
+      item.className = `asset-chip link-chip${canOpen ? '' : ' locked-asset'}`;
+      if (canOpen) {
         item.href = normalizeUrl(link.url);
         item.target = '_blank';
         item.rel = 'noopener noreferrer';
       }
-      item.textContent = state.isEditor ? link.label || link.url : `${link.label || 'Enlace'} (solo editores)`;
+      item.textContent = canOpen ? link.label || link.url : `${link.label || 'Enlace'} (requiere permiso)`;
       group.appendChild(item);
     });
     container.appendChild(group);
@@ -686,13 +775,14 @@ function renderResourceAssets(container, resource) {
     title.textContent = 'Archivos';
     group.appendChild(title);
     files.forEach((file) => {
-      const item = document.createElement(state.isEditor ? 'a' : 'span');
-      item.className = `asset-chip file-chip${state.isEditor ? '' : ' locked-asset'}`;
-      if (state.isEditor) {
+      const canOpen = hasCapability('openAssets');
+      const item = document.createElement(canOpen ? 'a' : 'span');
+      item.className = `asset-chip file-chip${canOpen ? '' : ' locked-asset'}`;
+      if (canOpen) {
         item.href = file.publicUrl || file.dataUrl || file.path || '#';
         item.download = file.name;
       }
-      item.textContent = `${file.name} (${formatFileSize(file.size)})${state.isEditor ? '' : ' - solo editores'}`;
+      item.textContent = `${file.name} (${formatFileSize(file.size)})${canOpen ? '' : ' - requiere permiso'}`;
       group.appendChild(item);
     });
     container.appendChild(group);
@@ -718,23 +808,37 @@ function renderTargets() {
 function renderLessonControls() {
   dom.lessonModuleSelect.innerHTML = '';
   dom.lessonEditSelect.innerHTML = '';
+  dom.lessonOrderSelect.innerHTML = '';
+  dom.moduleOrderSelect.innerHTML = '';
+  dom.sectionOrderSelect.innerHTML = '';
 
   state.data.modules.forEach((module, moduleIndex) => {
     const moduleOption = document.createElement('option');
     moduleOption.value = module.id;
     moduleOption.textContent = `Modulo ${moduleIndex + 1}: ${module.title}`;
     dom.lessonModuleSelect.appendChild(moduleOption);
+    dom.moduleOrderSelect.appendChild(moduleOption.cloneNode(true));
 
     module.lessons.forEach((lesson, lessonIndex) => {
       const lessonOption = document.createElement('option');
       lessonOption.value = `${module.id}|${lesson.id}`;
       lessonOption.textContent = `Modulo ${moduleIndex + 1} / Leccion ${lessonIndex + 1}: ${lesson.title}`;
       dom.lessonEditSelect.appendChild(lessonOption);
+      dom.lessonOrderSelect.appendChild(lessonOption.cloneNode(true));
     });
   });
 
   dom.lessonModuleSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
   dom.lessonEditSelect.value = `${state.selectedModuleId}|${state.selectedLessonId}`;
+  dom.lessonOrderSelect.value = `${state.selectedModuleId}|${state.selectedLessonId}`;
+  dom.moduleOrderSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
+  state.data.sections.forEach((section, index) => {
+    const option = document.createElement('option');
+    option.value = section.id;
+    option.textContent = `Parte ${index + 1}: ${section.title}`;
+    dom.sectionOrderSelect.appendChild(option);
+  });
+  dom.sectionOrderSelect.value = state.selectedSectionId ?? state.data.sections[0]?.id ?? '';
   const selectedLesson = currentLesson();
   if (selectedLesson && !dom.lessonEditTitleInput.value) {
     dom.lessonEditTitleInput.placeholder = selectedLesson.title;
@@ -771,6 +875,7 @@ function renderAdminControls() {
 }
 
 function render() {
+  renderView();
   renderSummary();
   renderNavigation();
   renderCourseMap();
@@ -794,12 +899,30 @@ function renderDraftLinks() {
   }
   state.draftLinks.forEach((link) => {
     const row = document.createElement('div');
-    row.className = 'asset-row';
-    const anchor = document.createElement('a');
-    anchor.href = normalizeUrl(link.url);
-    anchor.target = '_blank';
-    anchor.rel = 'noopener noreferrer';
-    anchor.textContent = link.label || link.url;
+    row.className = 'asset-row editable-asset-row';
+    const fields = document.createElement('div');
+    fields.className = 'asset-edit-fields';
+    const labelInput = document.createElement('input');
+    labelInput.value = link.label || '';
+    labelInput.placeholder = 'Nombre del enlace';
+    labelInput.addEventListener('input', () => {
+      link.label = labelInput.value;
+    });
+    const urlInput = document.createElement('input');
+    urlInput.value = link.url || '';
+    urlInput.placeholder = 'https://...';
+    urlInput.addEventListener('input', () => {
+      link.url = urlInput.value;
+    });
+    fields.append(labelInput, urlInput);
+    const actions = document.createElement('div');
+    actions.className = 'asset-row-actions';
+    const open = document.createElement('a');
+    open.className = 'mini-btn';
+    open.href = normalizeUrl(link.url);
+    open.target = '_blank';
+    open.rel = 'noopener noreferrer';
+    open.textContent = 'Abrir';
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
@@ -808,7 +931,8 @@ function renderDraftLinks() {
       state.draftLinks = state.draftLinks.filter((item) => item.id !== link.id);
       renderDraftLinks();
     });
-    row.append(anchor, remove);
+    actions.append(open, remove);
+    row.append(fields, actions);
     dom.linksList.appendChild(row);
   });
 }
@@ -821,11 +945,25 @@ function renderDraftFiles() {
   }
   state.draftFiles.forEach((file) => {
     const row = document.createElement('div');
-    row.className = 'asset-row';
+    row.className = 'asset-row editable-asset-row';
+    const fields = document.createElement('div');
+    fields.className = 'asset-edit-fields';
+    const nameInput = document.createElement('input');
+    nameInput.value = file.name || '';
+    nameInput.placeholder = 'Nombre visible del archivo';
+    nameInput.addEventListener('input', () => {
+      file.name = nameInput.value;
+    });
+    const detail = document.createElement('small');
+    detail.textContent = `${formatFileSize(file.size)}${file.type ? ` · ${file.type}` : ''}`;
+    fields.append(nameInput, detail);
+    const actions = document.createElement('div');
+    actions.className = 'asset-row-actions';
     const anchor = document.createElement('a');
+    anchor.className = 'mini-btn';
     anchor.href = file.publicUrl || file.dataUrl || file.path || '#';
     anchor.download = file.name;
-    anchor.textContent = `${file.name} (${formatFileSize(file.size)})`;
+    anchor.textContent = 'Abrir';
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
@@ -834,7 +972,8 @@ function renderDraftFiles() {
       state.draftFiles = state.draftFiles.filter((item) => item.id !== file.id);
       renderDraftFiles();
     });
-    row.append(anchor, remove);
+    actions.append(anchor, remove);
+    row.append(fields, actions);
     dom.filesList.appendChild(row);
   });
 }
@@ -901,7 +1040,6 @@ function formResource() {
 
 async function saveResource(event) {
   event.preventDefault();
-  if (!requireEditPermission()) return;
   if (!dom.resourceTitle.value.trim()) return;
   const [targetModuleId, targetLessonId, targetSectionId] = dom.resourceTarget.value.split('|');
   const targetLesson = findLesson(targetModuleId, targetLessonId);
@@ -912,6 +1050,11 @@ async function saveResource(event) {
 
   const sourceLesson = currentLesson();
   const existingIndex = sourceLesson?.resources.findIndex((item) => item.id === resource.id) ?? -1;
+  if (existingIndex >= 0) {
+    if (!requireCapability('manageResources', 'Tu perfil puede crear recursos, pero no editar recursos existentes.')) return;
+  } else if (!requireCapability('createResources', 'Tu perfil no puede crear recursos.')) {
+    return;
+  }
   if (existingIndex >= 0) {
     sourceLesson.resources.splice(existingIndex, 1);
   }
@@ -927,7 +1070,7 @@ async function saveResource(event) {
 }
 
 function addLink() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('createResources', 'Tu perfil no puede agregar enlaces a recursos.')) return;
   const url = normalizeUrl(dom.linkUrl.value);
   if (!url) return;
   state.draftLinks.push({
@@ -941,7 +1084,7 @@ function addLink() {
 }
 
 async function addFiles(event) {
-  if (!requireEditPermission()) {
+  if (!requireCapability('createResources', 'Tu perfil no puede agregar archivos a recursos.')) {
     dom.resourceFiles.value = '';
     return;
   }
@@ -968,7 +1111,7 @@ function duplicateResource() {
 }
 
 function deleteResource(resourceId) {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('deleteResources', 'Tu perfil no puede eliminar recursos.')) return;
   const lesson = currentLesson();
   if (!lesson) return;
   const resource = (lesson.resources || []).find((item) => item.id === resourceId);
@@ -1000,7 +1143,7 @@ async function confirmDeleteResource() {
 }
 
 async function moveResource(resourceId, direction) {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('moveResources', 'Tu perfil no puede reordenar recursos.')) return;
   const lesson = currentLesson();
   if (!lesson) return;
   const resources = lesson.resources || [];
@@ -1016,7 +1159,7 @@ async function moveResource(resourceId, direction) {
 }
 
 async function addLesson() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
   const module = state.data.modules.find((item) => item.id === dom.lessonModuleSelect.value);
   const title = dom.lessonTitleInput.value.trim();
   if (!module || !title) return;
@@ -1031,7 +1174,7 @@ async function addLesson() {
 }
 
 async function updateLesson() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
   const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
   const lesson = findLesson(moduleId, lessonId);
   const title = dom.lessonEditTitleInput.value.trim();
@@ -1045,7 +1188,7 @@ async function updateLesson() {
 }
 
 async function updateCourseSettings() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la configuracion del curso.')) return;
   state.data.course = state.data.course || {};
   state.data.course.title = dom.courseTitleInput.value.trim() || 'Calculo III';
   state.data.course.description = dom.courseDescriptionInput.value.trim();
@@ -1055,7 +1198,7 @@ async function updateCourseSettings() {
 }
 
 async function addModule() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede crear modulos.')) return;
   const title = dom.newModuleTitleInput.value.trim();
   if (!title) return;
   const module = { id: uid('m'), title, lessons: [] };
@@ -1068,7 +1211,7 @@ async function addModule() {
 }
 
 async function updateModule() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar modulos.')) return;
   const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
   const title = dom.moduleTitleInput.value.trim();
   if (!module || !title) return;
@@ -1079,7 +1222,7 @@ async function updateModule() {
 }
 
 async function deleteModule() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar modulos.')) return;
   const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
   if (!module) return;
   const lessonCount = module.lessons?.length ?? 0;
@@ -1092,13 +1235,50 @@ async function deleteModule() {
 }
 
 async function updateSection() {
-  if (!requireEditPermission()) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar las partes de las lecciones.')) return;
   const section = state.data.sections.find((item) => item.id === dom.sectionEditSelect.value);
   const title = dom.sectionTitleInput.value.trim();
   if (!section || !title) return;
   section.title = title;
   section.description = dom.sectionDescriptionInput.value.trim();
   state.selectedSectionId = section.id;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function moveModuleOrder(direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede reordenar modulos.')) return;
+  const index = state.data.modules.findIndex((module) => module.id === dom.moduleOrderSelect.value);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= state.data.modules.length) return;
+  [state.data.modules[index], state.data.modules[targetIndex]] = [state.data.modules[targetIndex], state.data.modules[index]];
+  state.selectedModuleId = state.data.modules[targetIndex].id;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function moveLessonOrder(direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede reordenar lecciones.')) return;
+  const [moduleId, lessonId] = dom.lessonOrderSelect.value.split('|');
+  const module = state.data.modules.find((item) => item.id === moduleId);
+  if (!module) return;
+  const index = module.lessons.findIndex((lesson) => lesson.id === lessonId);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= module.lessons.length) return;
+  [module.lessons[index], module.lessons[targetIndex]] = [module.lessons[targetIndex], module.lessons[index]];
+  state.selectedModuleId = module.id;
+  state.selectedLessonId = module.lessons[targetIndex].id;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function moveSectionOrder(direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede reordenar las partes de las lecciones.')) return;
+  const index = state.data.sections.findIndex((section) => section.id === dom.sectionOrderSelect.value);
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= state.data.sections.length) return;
+  [state.data.sections[index], state.data.sections[targetIndex]] = [state.data.sections[targetIndex], state.data.sections[index]];
+  state.selectedSectionId = state.data.sections[targetIndex].id;
   if (!(await saveData())) return;
   render();
 }
@@ -1295,6 +1475,7 @@ async function logoutEditor() {
   state.session = null;
   state.isEditor = false;
   state.isMainEditor = false;
+  state.userRole = 'viewer';
   updateAuthUi();
   renderEditorList([]);
   setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
@@ -1319,7 +1500,7 @@ function renderEditorList(editors = []) {
     const row = document.createElement('div');
     row.className = 'editor-row';
     const email = document.createElement('span');
-    email.textContent = editor.email;
+    email.textContent = `${editor.email} · ${labels[editor.role || 'manager'] ?? editor.role}`;
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
@@ -1334,6 +1515,7 @@ async function refreshEditorStatus() {
   if (!cloudClient || !state.session?.user || !state.cloudReady) {
     state.isEditor = false;
     state.isMainEditor = false;
+    state.userRole = 'viewer';
     updateAuthUi();
     renderEditorList([]);
     return;
@@ -1342,13 +1524,14 @@ async function refreshEditorStatus() {
   state.isMainEditor = email.toLowerCase() === MAIN_EDITOR_EMAIL;
   const { data, error } = await cloudClient
     .from('course_editors')
-    .select('email')
+    .select('email, role')
     .eq('email', email)
     .maybeSingle();
-  state.isEditor = Boolean(data?.email && !error);
+  state.userRole = state.isMainEditor ? 'owner' : data?.role || 'viewer';
+  state.isEditor = state.userRole !== 'viewer' && !error;
   updateAuthUi();
   setCloudStatus(
-    state.isEditor ? 'Sesion de editor activa.' : 'Sesion iniciada, pero este correo no esta autorizado para editar.',
+    state.isEditor ? `Sesion activa: ${labels[state.userRole] ?? state.userRole}.` : 'Sesion iniciada, pero este correo no esta autorizado para editar.',
     state.isEditor ? 'ok' : 'pending'
   );
   await loadEditors();
@@ -1362,7 +1545,7 @@ async function loadEditors() {
   }
   const { data, error } = await cloudClient
     .from('course_editors')
-    .select('email, created_at')
+    .select('email, role, created_at')
     .order('email');
   if (error) {
     renderEditorList([]);
@@ -1374,8 +1557,9 @@ async function loadEditors() {
 async function addEditor() {
   if (!requireMainEditorPermission()) return;
   const email = dom.editorEmailInput.value.trim().toLowerCase();
+  const role = dom.editorRoleInput.value;
   if (!email) return;
-  const { error } = await cloudClient.from('course_editors').insert({ email });
+  const { error } = await cloudClient.from('course_editors').upsert({ email, role });
   if (error) {
     alert(`No se pudo autorizar este correo: ${error.message}`);
     return;
@@ -1396,6 +1580,9 @@ async function removeEditor(email) {
 }
 
 function wireEvents() {
+  dom.viewButtons.forEach((button) => {
+    button.addEventListener('click', () => setView(button.dataset.view));
+  });
   dom.search.addEventListener('input', (event) => {
     state.search = event.target.value;
     renderResources();
@@ -1407,6 +1594,12 @@ function wireEvents() {
   });
   document.querySelector('#save-lesson').addEventListener('click', addLesson);
   document.querySelector('#update-lesson').addEventListener('click', updateLesson);
+  document.querySelector('#lesson-up').addEventListener('click', () => moveLessonOrder(-1));
+  document.querySelector('#lesson-down').addEventListener('click', () => moveLessonOrder(1));
+  document.querySelector('#module-up').addEventListener('click', () => moveModuleOrder(-1));
+  document.querySelector('#module-down').addEventListener('click', () => moveModuleOrder(1));
+  document.querySelector('#section-up').addEventListener('click', () => moveSectionOrder(-1));
+  document.querySelector('#section-down').addEventListener('click', () => moveSectionOrder(1));
   dom.lessonEditSelect.addEventListener('change', () => {
     const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
     const lesson = findLesson(moduleId, lessonId);
