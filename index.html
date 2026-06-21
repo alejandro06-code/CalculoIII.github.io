@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260620-210000">
+  <link rel="stylesheet" href="css/styles.css?v=20260620-214500">
 </head>
 <body>
   <header class="app-header">
@@ -54,12 +54,13 @@
 
   <main class="app-shell">
     <nav class="page-tabs" aria-label="Vistas del organizador">
-      <button class="page-tab active" data-view="module" type="button">Modulo actual</button>
+      <button class="page-tab active" data-view="course" type="button">Mapa del curso</button>
+      <button class="page-tab" data-view="module" type="button">Modulo actual</button>
       <button class="page-tab" data-view="structure" type="button">Estructura</button>
       <button class="page-tab" data-view="admin" type="button">Administracion</button>
     </nav>
 
-    <section class="workspace" data-view-panel="module" aria-label="Area de trabajo">
+    <section class="workspace" data-view-panel="course module" aria-label="Area de trabajo">
       <div class="workspace-header">
         <div>
           <p class="eyebrow" id="current-module-label">Modulo</p>
@@ -72,9 +73,9 @@
         <div class="map-heading">
           <div>
             <p class="eyebrow">Estructura general</p>
-            <h3>Mapa del curso</h3>
+            <h3 id="map-title">Mapa del curso</h3>
           </div>
-          <p class="muted">Vista compacta del modulo seleccionado. Usa el indice lateral para saltar entre modulos y lecciones.</p>
+          <p class="muted" id="map-description">Primero escoge un modulo. Luego veras sus lecciones y partes sin cargar toda la informacion a la vez.</p>
         </div>
         <div id="course-map" class="course-map"></div>
       </section>
@@ -87,7 +88,7 @@
           <input id="search" type="search" placeholder="Titulo, enlace, nota...">
         </div>
 
-        <section class="summary-grid" aria-label="Resumen">
+        <section class="summary-grid" aria-label="Resumen" hidden>
           <article>
             <strong id="total-resources">0</strong>
             <span>recursos</span>
@@ -235,7 +236,7 @@
           <div class="form-actions">
             <button class="btn primary" type="submit">Guardar</button>
             <button class="btn secondary" id="duplicate-resource" type="button">Duplicar</button>
-            <button class="btn ghost" id="clear-form" type="button">Limpiar</button>
+            <button class="btn ghost" id="clear-form" type="button">Cancelar</button>
           </div>
           </form>
         </aside>
@@ -291,6 +292,7 @@
           <button class="btn ghost" id="section-down" type="button">Bajar</button>
         </div>
       </form>
+      <div id="structure-list" class="structure-list" aria-label="Lista editable de estructura"></div>
     </section>
 
     <section class="admin-row" data-view-panel="admin" aria-label="Administracion del curso">
@@ -411,7 +413,7 @@
   </template>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js?v=20260620-210000"></script>
-  <script src="js/app.js?v=20260620-210000"></script>
+  <script src="js/supabase-config.js?v=20260620-214500"></script>
+  <script src="js/app.js?v=20260620-214500"></script>
 </body>
 </html>

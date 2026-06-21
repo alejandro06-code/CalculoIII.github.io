@@ -75,7 +75,7 @@ const state = {
   isMainEditor: false,
   userRole: 'viewer',
   authMode: 'login',
-  currentView: 'module',
+  currentView: 'course',
   cloudReady: false,
   cloudStatus: 'local',
 };
@@ -94,6 +94,8 @@ const dom = {
   moduleLabel: document.querySelector('#current-module-label'),
   lessonTitle: document.querySelector('#current-lesson-title'),
   lessonMeta: document.querySelector('#current-lesson-meta'),
+  mapTitle: document.querySelector('#map-title'),
+  mapDescription: document.querySelector('#map-description'),
   sectionHeading: document.querySelector('#section-heading'),
   sectionDescription: document.querySelector('#section-description'),
   statusFilter: document.querySelector('#status-filter'),
@@ -122,6 +124,7 @@ const dom = {
   sectionOrderSelect: document.querySelector('#section-order-select'),
   lessonTitleInput: document.querySelector('#lesson-title-input'),
   lessonEditTitleInput: document.querySelector('#lesson-edit-title-input'),
+  structureList: document.querySelector('#structure-list'),
   deleteConfirm: document.querySelector('#delete-confirm'),
   deleteConfirmResource: document.querySelector('#delete-confirm-resource'),
   confirmDelete: document.querySelector('#confirm-delete'),
@@ -259,7 +262,8 @@ function renderView() {
       (button.dataset.view === 'admin' && !hasCapability('manageUsers'));
   });
   dom.viewPanels.forEach((panel) => {
-    panel.hidden = panel.dataset.viewPanel !== state.currentView;
+    const panelViews = (panel.dataset.viewPanel || '').split(/\s+/);
+    panel.hidden = !panelViews.includes(state.currentView);
   });
 }
 
@@ -479,14 +483,12 @@ function renderNavigation() {
       state.selectedModuleId = module.id;
       state.selectedLessonId = module.lessons[0]?.id ?? null;
       state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
-      setView('module');
       clearForm();
+      setView('module');
       render();
     });
 
     module.lessons.forEach((lesson, lessonIndex) => {
-      const resources = lesson.resources || [];
-      const missing = resources.filter((resource) => resource.status === 'missing').length;
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'lesson-button';
@@ -496,13 +498,12 @@ function renderNavigation() {
       button.innerHTML = `
         <small>Leccion ${lessonIndex + 1}</small>
         <span>${lesson.title}</span>
-        <small>${resources.length} recursos registrados${missing ? ` · ${missing} faltan` : ''}</small>
       `;
       button.addEventListener('click', () => {
         state.selectedModuleId = module.id;
         state.selectedLessonId = lesson.id;
-        setView('module');
         clearForm();
+        setView('module');
         render();
       });
       moduleNode.appendChild(button);
@@ -540,8 +541,50 @@ function renderCourseMap() {
     return;
   }
 
+  if (state.currentView === 'course') {
+    dom.moduleLabel.textContent = 'Estructura general';
+    dom.lessonTitle.textContent = 'Mapa del curso';
+    dom.lessonMeta.textContent = 'Escoge un modulo para revisar sus lecciones, partes y recursos.';
+    dom.mapTitle.textContent = 'Modulos';
+    dom.mapDescription.textContent = 'Cada modulo se abre como una pagina compacta con sus lecciones y partes.';
+    state.data.modules.forEach((module, moduleIndex) => {
+      const totals = module.lessons.reduce(
+        (acc, lesson) => {
+          const stats = lessonStats(lesson);
+          acc.total += stats.total;
+          acc.missing += stats.missing;
+          acc.review += stats.review;
+          acc.approved += stats.approved;
+          return acc;
+        },
+        { total: 0, missing: 0, review: 0, approved: 0 }
+      );
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'module-overview-card';
+      if (module.id === state.selectedModuleId) card.classList.add('active');
+      card.innerHTML = `
+        <span class="map-kicker">Modulo ${moduleIndex + 1}</span>
+        <strong>${module.title}</strong>
+        <span class="module-overview-meta">${plural(module.lessons.length, 'leccion', 'lecciones')} · ${plural(totals.total, 'recurso', 'recursos')}</span>
+      `;
+      card.addEventListener('click', () => {
+        state.selectedModuleId = module.id;
+        state.selectedLessonId = module.lessons[0]?.id ?? null;
+        state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
+        clearForm();
+        setView('module');
+        render();
+      });
+      dom.map.appendChild(card);
+    });
+    return;
+  }
+
   const module = currentModule() ?? state.data.modules[0];
   const moduleIndex = state.data.modules.findIndex((item) => item.id === module.id);
+  dom.mapTitle.textContent = `Modulo ${moduleIndex + 1}`;
+  dom.mapDescription.textContent = 'Selecciona una leccion o una parte para trabajar sus recursos.';
     const totals = module.lessons.reduce(
       (acc, lesson) => {
         const stats = lessonStats(lesson);
@@ -671,6 +714,7 @@ function resourceMatches(resource) {
 }
 
 function renderResources() {
+  if (state.currentView === 'course') return;
   const module = currentModule();
   const lesson = currentLesson();
   const section = currentSection();
@@ -874,6 +918,56 @@ function renderAdminControls() {
   dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
 }
 
+function renderStructureList() {
+  if (!dom.structureList || !state.data) return;
+  dom.structureList.innerHTML = '';
+  state.data.modules.forEach((module, moduleIndex) => {
+    const card = document.createElement('article');
+    card.className = 'structure-module-card';
+    card.innerHTML = `
+      <div class="structure-module-head">
+        <div>
+          <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
+          <input class="structure-title-input" value="${module.title}" aria-label="Nombre del modulo">
+        </div>
+        <div class="structure-actions">
+          <button class="mini-btn" data-action="module-up" type="button">Subir</button>
+          <button class="mini-btn" data-action="module-down" type="button">Bajar</button>
+          <button class="mini-btn delete" data-action="module-delete" type="button">Eliminar</button>
+        </div>
+      </div>
+      <div class="structure-lessons"></div>
+    `;
+    const moduleInput = card.querySelector('.structure-title-input');
+    moduleInput.addEventListener('change', () => updateModuleTitleInline(module.id, moduleInput.value));
+    card.querySelector('[data-action="module-up"]').addEventListener('click', () => moveModuleById(module.id, -1));
+    card.querySelector('[data-action="module-down"]').addEventListener('click', () => moveModuleById(module.id, 1));
+    card.querySelector('[data-action="module-delete"]').addEventListener('click', () => deleteModuleById(module.id));
+
+    const lessons = card.querySelector('.structure-lessons');
+    module.lessons.forEach((lesson, lessonIndex) => {
+      const row = document.createElement('div');
+      row.className = 'structure-lesson-row';
+      row.innerHTML = `
+        <span class="structure-index">Leccion ${lessonIndex + 1}</span>
+        <input value="${lesson.title}" aria-label="Nombre de la leccion">
+        <div class="structure-actions">
+          <button class="mini-btn" data-action="lesson-up" type="button">Subir</button>
+          <button class="mini-btn" data-action="lesson-down" type="button">Bajar</button>
+          <button class="mini-btn delete" data-action="lesson-delete" type="button">Eliminar</button>
+        </div>
+      `;
+      const input = row.querySelector('input');
+      input.addEventListener('change', () => updateLessonTitleInline(module.id, lesson.id, input.value));
+      row.querySelector('[data-action="lesson-up"]').addEventListener('click', () => moveLessonById(module.id, lesson.id, -1));
+      row.querySelector('[data-action="lesson-down"]').addEventListener('click', () => moveLessonById(module.id, lesson.id, 1));
+      row.querySelector('[data-action="lesson-delete"]').addEventListener('click', () => deleteLessonById(module.id, lesson.id));
+      lessons.appendChild(row);
+    });
+    dom.structureList.appendChild(card);
+  });
+}
+
 function render() {
   renderView();
   renderSummary();
@@ -883,6 +977,7 @@ function render() {
   renderTargets();
   renderLessonControls();
   renderAdminControls();
+  renderStructureList();
   renderResources();
 }
 
@@ -1006,6 +1101,8 @@ function editResource(resourceId) {
   state.draftLinks = normalizeLinks(resource).map((link) => ({ ...link }));
   state.draftFiles = normalizeFiles(resource).map((file) => ({ ...file }));
   renderDraftAssets();
+  setView('module');
+  dom.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function findLesson(moduleId, lessonId) {
@@ -1280,6 +1377,67 @@ async function moveSectionOrder(direction) {
   [state.data.sections[index], state.data.sections[targetIndex]] = [state.data.sections[targetIndex], state.data.sections[index]];
   state.selectedSectionId = state.data.sections[targetIndex].id;
   if (!(await saveData())) return;
+  render();
+}
+
+async function updateModuleTitleInline(moduleId, titleValue) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar modulos.')) return;
+  const module = state.data.modules.find((item) => item.id === moduleId);
+  const title = titleValue.trim();
+  if (!module || !title) return render();
+  module.title = title;
+  state.selectedModuleId = module.id;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function updateLessonTitleInline(moduleId, lessonId, titleValue) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar lecciones.')) return;
+  const lesson = findLesson(moduleId, lessonId);
+  const title = titleValue.trim();
+  if (!lesson || !title) return render();
+  lesson.title = title;
+  state.selectedModuleId = moduleId;
+  state.selectedLessonId = lessonId;
+  if (!(await saveData())) return;
+  render();
+}
+
+async function moveModuleById(moduleId, direction) {
+  dom.moduleOrderSelect.value = moduleId;
+  await moveModuleOrder(direction);
+}
+
+async function moveLessonById(moduleId, lessonId, direction) {
+  dom.lessonOrderSelect.value = `${moduleId}|${lessonId}`;
+  await moveLessonOrder(direction);
+}
+
+async function deleteModuleById(moduleId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar modulos.')) return;
+  const module = state.data.modules.find((item) => item.id === moduleId);
+  if (!module) return;
+  const lessonCount = module.lessons?.length ?? 0;
+  if (!confirm(`Eliminar el modulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
+  state.data.modules = state.data.modules.filter((item) => item.id !== module.id);
+  selectFirstAvailable();
+  if (!(await saveData())) return;
+  clearForm();
+  render();
+}
+
+async function deleteLessonById(moduleId, lessonId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar lecciones.')) return;
+  const module = state.data.modules.find((item) => item.id === moduleId);
+  const lesson = module?.lessons.find((item) => item.id === lessonId);
+  if (!module || !lesson) return;
+  const resourceCount = lesson.resources?.length ?? 0;
+  if (!confirm(`Eliminar la leccion "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
+  module.lessons = module.lessons.filter((item) => item.id !== lesson.id);
+  state.selectedModuleId = module.id;
+  state.selectedLessonId = module.lessons[0]?.id ?? null;
+  if (!(await saveData())) return;
+  clearForm();
   render();
 }
 
