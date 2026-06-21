@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260620-214500">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-115500">
 </head>
 <body>
   <header class="app-header">
@@ -55,10 +55,17 @@
   <main class="app-shell">
     <nav class="page-tabs" aria-label="Vistas del organizador">
       <button class="page-tab active" data-view="course" type="button">Mapa del curso</button>
-      <button class="page-tab" data-view="module" type="button">Modulo actual</button>
       <button class="page-tab" data-view="structure" type="button">Estructura</button>
       <button class="page-tab" data-view="admin" type="button">Administracion</button>
     </nav>
+
+    <section class="module-strip" data-view-panel="course module" aria-label="Modulos del curso">
+      <div class="route-controls" aria-label="Navegacion">
+        <button class="mini-btn" id="route-back" type="button" aria-label="Volver">&lt;</button>
+        <button class="mini-btn" id="route-forward" type="button" aria-label="Adelante">&gt;</button>
+      </div>
+      <div id="module-strip" class="module-strip-list"></div>
+    </section>
 
     <section class="workspace" data-view-panel="course module" aria-label="Area de trabajo">
       <div class="workspace-header">
@@ -414,6 +421,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260620-214500"></script>
+  <script src="js/app.js?v=20260621-115500"></script>
 </body>
 </html>

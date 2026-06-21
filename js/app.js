@@ -85,6 +85,9 @@ const dom = {
   viewButtons: document.querySelectorAll('[data-view]'),
   viewPanels: document.querySelectorAll('[data-view-panel]'),
   map: document.querySelector('#course-map'),
+  moduleStrip: document.querySelector('#module-strip'),
+  routeBack: document.querySelector('#route-back'),
+  routeForward: document.querySelector('#route-forward'),
   tabs: document.querySelector('#section-tabs'),
   list: document.querySelector('#resource-list'),
   totalResources: document.querySelector('#total-resources'),
@@ -244,18 +247,72 @@ function setAuthMode(mode) {
   updateAuthUi();
 }
 
-function setView(view) {
-  if (view === 'structure' && !hasCapability('manageStructure')) view = 'module';
-  if (view === 'admin' && !hasCapability('manageUsers')) view = 'module';
-  state.currentView = view;
-  renderView();
+function normalizeView(view) {
+  if (view === 'structure' && !hasCapability('manageStructure')) return 'course';
+  if (view === 'admin' && !hasCapability('manageUsers')) return 'course';
+  if (!['course', 'module', 'structure', 'admin'].includes(view)) return 'course';
+  return view;
+}
+
+function routeForCurrentState() {
+  if (state.currentView === 'structure') return '#/estructura';
+  if (state.currentView === 'admin') return '#/admin';
+  if (state.currentView === 'module' && state.selectedModuleId) return `#/modulo/${encodeURIComponent(state.selectedModuleId)}`;
+  return '#/mapa';
+}
+
+function syncRouteFromState({ replace = false } = {}) {
+  const route = routeForCurrentState();
+  if (window.location.hash !== route) {
+    if (replace) {
+      history.replaceState(null, '', route);
+    } else {
+      history.pushState(null, '', route);
+    }
+  }
+}
+
+function applyRouteFromLocation({ renderNow = true } = {}) {
+  if (!state.data) return;
+  const route = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const [page, rawId] = route;
+
+  if (page === 'estructura') {
+    state.currentView = normalizeView('structure');
+  } else if (page === 'admin') {
+    state.currentView = normalizeView('admin');
+  } else if (page === 'modulo') {
+    const moduleId = rawId ? decodeURIComponent(rawId) : null;
+    const module = state.data.modules.find((item) => item.id === moduleId) ?? state.data.modules[0];
+    state.selectedModuleId = module?.id ?? null;
+    state.selectedLessonId = module?.lessons.some((lesson) => lesson.id === state.selectedLessonId)
+      ? state.selectedLessonId
+      : module?.lessons[0]?.id ?? null;
+    state.selectedSectionId = state.selectedSectionId || state.data.sections[0]?.id || 'preparacion';
+    state.currentView = 'module';
+  } else {
+    state.currentView = 'course';
+  }
+
+  state.currentView = normalizeView(state.currentView);
+  syncRouteFromState({ replace: true });
+  if (renderNow) render();
+}
+
+function setView(view, { updateRoute = true, renderNow = false } = {}) {
+  state.currentView = normalizeView(view);
+  if (updateRoute) syncRouteFromState();
+  if (renderNow) {
+    render();
+  } else {
+    renderView();
+  }
 }
 
 function renderView() {
-  if (state.currentView === 'structure' && !hasCapability('manageStructure')) state.currentView = 'module';
-  if (state.currentView === 'admin' && !hasCapability('manageUsers')) state.currentView = 'module';
+  state.currentView = normalizeView(state.currentView);
   dom.viewButtons.forEach((button) => {
-    const active = button.dataset.view === state.currentView;
+    const active = button.dataset.view === state.currentView || (button.dataset.view === 'course' && state.currentView === 'module');
     button.classList.toggle('active', active);
     button.hidden =
       (button.dataset.view === 'structure' && !hasCapability('manageStructure')) ||
@@ -513,6 +570,35 @@ function renderNavigation() {
   });
 }
 
+function renderModuleStrip() {
+  if (!dom.moduleStrip) return;
+  dom.moduleStrip.innerHTML = '';
+
+  if (!state.data.modules.length) {
+    dom.moduleStrip.innerHTML = '<p class="empty-state">No hay modulos cargados.</p>';
+    return;
+  }
+
+  state.data.modules.forEach((module, moduleIndex) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'module-strip-button';
+    if (state.currentView === 'module' && module.id === state.selectedModuleId) button.classList.add('active');
+    button.innerHTML = `
+      <span>Modulo ${moduleIndex + 1}</span>
+      <strong>${module.title}</strong>
+    `;
+    button.addEventListener('click', () => {
+      state.selectedModuleId = module.id;
+      state.selectedLessonId = module.lessons[0]?.id ?? null;
+      state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
+      clearForm();
+      setView('module', { renderNow: true });
+    });
+    dom.moduleStrip.appendChild(button);
+  });
+}
+
 function lessonStats(lesson) {
   const resources = lesson.resources || [];
   return {
@@ -544,9 +630,43 @@ function renderCourseMap() {
   if (state.currentView === 'course') {
     dom.moduleLabel.textContent = 'Estructura general';
     dom.lessonTitle.textContent = 'Mapa del curso';
-    dom.lessonMeta.textContent = 'Escoge un modulo para revisar sus lecciones, partes y recursos.';
-    dom.mapTitle.textContent = 'Modulos';
-    dom.mapDescription.textContent = 'Cada modulo se abre como una pagina compacta con sus lecciones y partes.';
+    dom.lessonMeta.textContent = 'Escoge un modulo en la fila superior para revisar sus lecciones, partes y recursos.';
+    dom.mapTitle.textContent = 'Mapa del curso';
+    dom.mapDescription.textContent = 'Los cuatro modulos quedan siempre arriba para navegar sin cargar toda la informacion a la vez.';
+    const courseTotals = state.data.modules.reduce(
+      (acc, module) => {
+        acc.modules += 1;
+        acc.lessons += module.lessons.length;
+        module.lessons.forEach((lesson) => {
+          const stats = lessonStats(lesson);
+          acc.resources += stats.total;
+          acc.missing += stats.missing;
+          acc.review += stats.review;
+          acc.approved += stats.approved;
+        });
+        return acc;
+      },
+      { modules: 0, lessons: 0, resources: 0, missing: 0, review: 0, approved: 0 }
+    );
+    const overview = document.createElement('article');
+    overview.className = 'course-overview-panel';
+    overview.innerHTML = `
+      <div>
+        <p class="map-kicker">Vista general</p>
+        <h4>Selecciona un modulo para abrir su pagina de trabajo</h4>
+        <p class="muted">El mapa mantiene la vision general limpia; cada modulo concentra sus lecciones, partes y recursos en una pagina propia.</p>
+      </div>
+      <div class="course-overview-stats">
+        <span><strong>${courseTotals.modules}</strong> modulos</span>
+        <span><strong>${courseTotals.lessons}</strong> lecciones</span>
+        <span><strong>${courseTotals.resources}</strong> recursos</span>
+        <span><strong>${courseTotals.missing}</strong> faltantes</span>
+        <span><strong>${courseTotals.review}</strong> por revisar</span>
+        <span><strong>${courseTotals.approved}</strong> aprobados</span>
+      </div>
+    `;
+    dom.map.appendChild(overview);
+    return;
     state.data.modules.forEach((module, moduleIndex) => {
       const totals = module.lessons.reduce(
         (acc, lesson) => {
@@ -971,6 +1091,7 @@ function renderStructureList() {
 function render() {
   renderView();
   renderSummary();
+  renderModuleStrip();
   renderNavigation();
   renderCourseMap();
   renderTabs();
@@ -1739,8 +1860,11 @@ async function removeEditor(email) {
 
 function wireEvents() {
   dom.viewButtons.forEach((button) => {
-    button.addEventListener('click', () => setView(button.dataset.view));
+    button.addEventListener('click', () => setView(button.dataset.view, { renderNow: true }));
   });
+  dom.routeBack?.addEventListener('click', () => history.back());
+  dom.routeForward?.addEventListener('click', () => history.forward());
+  window.addEventListener('hashchange', () => applyRouteFromLocation());
   dom.search.addEventListener('input', (event) => {
     state.search = event.target.value;
     renderResources();
@@ -1891,7 +2015,9 @@ async function init(forceDefault = false) {
     await saveData();
   }
   selectFirstAvailable();
+  applyRouteFromLocation({ renderNow: false });
   clearForm();
+  syncRouteFromState();
   render();
   if (state.cloudReady) await loadEditors();
 }

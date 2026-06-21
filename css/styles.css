@@ -279,6 +279,70 @@ h4 {
   border-color: var(--brand);
 }
 
+.module-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.route-controls {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.route-controls .mini-btn {
+  min-width: 42px;
+  min-height: 100%;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+
+.module-strip-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.module-strip-button {
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  text-align: left;
+}
+
+.module-strip-button span {
+  color: var(--brand-2);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.module-strip-button strong {
+  color: var(--brand);
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.module-strip-button:hover,
+.module-strip-button.active {
+  background: var(--surface-3);
+  border-color: #8fc6bd;
+  box-shadow: inset 4px 0 0 var(--brand-2);
+}
+
 [data-view-panel][hidden] {
   display: none;
 }
@@ -624,6 +688,47 @@ textarea {
 .module-overview-meta {
   color: var(--muted);
   font-weight: 800;
+}
+
+.course-overview-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 520px);
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+  background: #fff;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+}
+
+.course-overview-panel h4 {
+  margin-bottom: 6px;
+  font-size: 1.15rem;
+}
+
+.course-overview-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.course-overview-stats span {
+  display: grid;
+  gap: 2px;
+  min-height: 64px;
+  padding: 10px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.course-overview-stats strong {
+  color: var(--brand-2);
+  font-size: 1.45rem;
+  line-height: 1;
 }
 
 .map-module {
@@ -1360,7 +1465,8 @@ body:not(.can-manage-users) .admin-users-card {
 }
 
 @media (max-width: 1180px) {
-  .course-map {
+  .course-map,
+  .module-strip-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1387,6 +1493,10 @@ body:not(.can-manage-users) .admin-users-card {
   .app-shell,
   .auth-gate,
   .course-map,
+  .module-strip,
+  .module-strip-list,
+  .course-overview-panel,
+  .course-overview-stats,
   .admin-grid,
   .structure-row,
   .structure-form,
