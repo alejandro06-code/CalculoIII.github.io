@@ -75,11 +75,14 @@ const state = {
   isMainEditor: false,
   userRole: 'viewer',
   authMode: 'login',
+  returnRoute: '#/mapa',
+  recoveringPassword: false,
   currentView: 'course',
   cloudReady: false,
   cloudStatus: 'local',
   structureDraft: null,
   structureDirty: false,
+  loadedEditors: [],
 };
 
 const dom = {
@@ -140,11 +143,17 @@ const dom = {
   loginName: document.querySelector('#login-name'),
   loginEmail: document.querySelector('#login-email'),
   loginIdentifierLabel: document.querySelector('#login-identifier-label'),
+  loginEmailField: document.querySelector('#login-email-field'),
+  loginPasswordField: document.querySelector('#login-password-field'),
+  loginPasswordLabel: document.querySelector('#login-password-label'),
   loginPassword: document.querySelector('#login-password'),
+  confirmPassword: document.querySelector('#confirm-password'),
   loginButton: document.querySelector('#login-button'),
   signupButton: document.querySelector('#signup-button'),
+  updatePasswordButton: document.querySelector('#update-password-button'),
   authLoginMode: document.querySelector('#auth-login-mode'),
   authSignupMode: document.querySelector('#auth-signup-mode'),
+  authModeNote: document.querySelector('#auth-mode-note'),
   authTitle: document.querySelector('#auth-title'),
   authDescription: document.querySelector('#auth-description'),
   resetPasswordButton: document.querySelector('#reset-password-button'),
@@ -166,6 +175,7 @@ const dom = {
   editorEmailInput: document.querySelector('#editor-email-input'),
   editorRoleInput: document.querySelector('#editor-role-input'),
   editorList: document.querySelector('#editor-list'),
+  registeredUserList: document.querySelector('#registered-user-list'),
   structureStatus: document.querySelector('#structure-status'),
   saveStructure: document.querySelector('#save-structure'),
   discardStructure: document.querySelector('#discard-structure'),
@@ -190,37 +200,67 @@ function updateAuthUi() {
   if (!dom.loginName || !dom.loginEmail || !dom.loginPassword || !dom.loginButton || !dom.signupButton || !dom.resetPasswordButton || !dom.logoutButton) return;
   const signedIn = Boolean(state.session?.user);
   const signupMode = state.authMode === 'signup';
+  const resetMode = state.authMode === 'reset';
+  const updateMode = state.authMode === 'update';
   document.body.classList.toggle('signed-out', !signedIn);
   document.body.classList.toggle('can-edit', canEdit());
   document.body.classList.toggle('can-create-resource', hasCapability('createResources'));
   document.body.classList.toggle('can-manage-structure', hasCapability('manageStructure'));
   document.body.classList.toggle('can-manage-users', hasCapability('manageUsers'));
   document.body.classList.toggle('main-editor', state.isMainEditor || !remoteEditingActive());
-  document.body.classList.toggle('auth-login-mode', !signupMode);
+  document.body.classList.toggle('auth-login-mode', state.authMode === 'login');
   document.body.classList.toggle('auth-signup-mode', signupMode);
-  dom.authGate.hidden = signedIn;
-  dom.appShell.hidden = !signedIn;
-  dom.loginName.hidden = signedIn;
-  dom.loginEmail.hidden = signedIn;
-  dom.loginPassword.hidden = signedIn;
-  dom.loginButton.hidden = signedIn || signupMode;
+  document.body.classList.toggle('auth-reset-mode', resetMode);
+  document.body.classList.toggle('auth-update-mode', updateMode);
+  dom.authGate.hidden = signedIn && !updateMode;
+  dom.appShell.hidden = !signedIn || updateMode;
+  dom.loginName.hidden = signedIn || !signupMode;
+  dom.loginEmail.hidden = signedIn || updateMode;
+  dom.loginPassword.hidden = signedIn && !updateMode;
+  dom.loginButton.hidden = signedIn || state.authMode !== 'login';
   dom.signupButton.hidden = signedIn || !signupMode;
-  dom.resetPasswordButton.hidden = signedIn || signupMode;
+  dom.resetPasswordButton.hidden = signedIn || !resetMode;
+  if (dom.updatePasswordButton) dom.updatePasswordButton.hidden = !updateMode;
   dom.logoutButton.hidden = !signedIn;
   if (dom.loginIdentifierLabel) {
-    dom.loginIdentifierLabel.textContent = signupMode ? 'Correo' : 'Correo o nombre de usuario';
+    dom.loginIdentifierLabel.textContent = signupMode || resetMode ? 'Correo' : 'Correo o nombre de usuario';
   }
-  dom.loginEmail.placeholder = signupMode ? 'Correo' : 'Correo o nombre de usuario';
-  dom.loginPassword.autocomplete = signupMode ? 'new-password' : 'current-password';
+  if (dom.loginPasswordLabel) {
+    dom.loginPasswordLabel.textContent = updateMode ? 'Nueva contrasena' : 'Contrasena';
+  }
+  dom.loginEmail.placeholder = signupMode || resetMode ? 'Correo' : 'Correo o nombre de usuario';
+  dom.loginPassword.autocomplete = signupMode || updateMode ? 'new-password' : 'current-password';
   dom.authLoginMode?.classList.toggle('active', !signupMode);
   dom.authSignupMode?.classList.toggle('active', signupMode);
   if (dom.authTitle) {
-    dom.authTitle.textContent = signupMode ? 'Registrate para entrar al organizador' : 'Inicia sesion para ver el organizador';
+    dom.authTitle.textContent =
+      state.authMode === 'signup'
+        ? 'Registrate para entrar al organizador'
+        : state.authMode === 'reset'
+          ? 'Recupera tu contrasena'
+          : state.authMode === 'update'
+            ? 'Crea una nueva contrasena'
+            : 'Inicia sesion para ver el organizador';
   }
   if (dom.authDescription) {
-    dom.authDescription.textContent = signupMode
-      ? 'Crea un usuario con correo y contrasena. Despues la cuenta principal podra darte permiso de editor si corresponde.'
-      : 'Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.';
+    dom.authDescription.textContent =
+      state.authMode === 'signup'
+        ? 'Crea un usuario con nombre, correo y contrasena. Luego podras iniciar sesion para ver el organizador.'
+        : state.authMode === 'reset'
+          ? 'Escribe el correo registrado. Te enviaremos un enlace para elegir una contrasena nueva.'
+          : state.authMode === 'update'
+            ? 'Escribe y confirma la nueva contrasena que reemplazara la anterior.'
+            : 'Debes iniciar sesion para ver modulos, lecciones, recursos y administracion.';
+  }
+  if (dom.authModeNote) {
+    dom.authModeNote.textContent =
+      state.authMode === 'signup'
+        ? 'El nombre de usuario puede tener espacios. El correo debe ser unico.'
+        : state.authMode === 'reset'
+          ? 'Solo se enviara el enlace si el correo ya esta registrado.'
+          : state.authMode === 'update'
+            ? 'La nueva contrasena puede tener hasta 72 caracteres.'
+            : 'Usa tu correo o nombre de usuario y tu contrasena.';
   }
   if (signedIn) {
     dom.logoutButton.textContent = state.isMainEditor
@@ -255,8 +295,39 @@ function requireEditPermission() {
   return requireCapability('createResources', 'Para editar o crear recursos debes tener un perfil autorizado.');
 }
 
-function setAuthMode(mode) {
+function authModeForRoute(page) {
+  if (page === 'login' || page === 'iniciar-sesion') return 'login';
+  if (page === 'registro' || page === 'registrarse') return 'signup';
+  if (page === 'recuperar' || page === 'recuperar-contrasena') return state.recoveringPassword ? 'update' : 'reset';
+  return '';
+}
+
+function routeForAuthMode(mode) {
+  if (mode === 'signup') return '#/registro';
+  if (mode === 'reset' || mode === 'update') return '#/recuperar';
+  return '#/login';
+}
+
+function requiresSignIn() {
+  return Boolean(cloudClient);
+}
+
+function currentHashRoute() {
+  return window.location.hash || '#/mapa';
+}
+
+function setAuthMode(mode, { updateRoute = false, replace = false } = {}) {
   state.authMode = mode;
+  if (updateRoute) {
+    const route = routeForAuthMode(mode);
+    if (window.location.hash !== route) {
+      if (replace) {
+        history.replaceState(null, '', route);
+      } else {
+        history.pushState(null, '', route);
+      }
+    }
+  }
   updateAuthUi();
 }
 
@@ -289,6 +360,25 @@ function applyRouteFromLocation({ renderNow = true } = {}) {
   if (!state.data) return;
   const route = window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const [page, rawId] = route;
+  const authMode = authModeForRoute(page);
+  const signedIn = Boolean(state.session?.user);
+
+  if (authMode) {
+    setAuthMode(authMode, { updateRoute: false });
+    if (signedIn && authMode !== 'update') {
+      state.currentView = normalizeView(state.currentView || 'course');
+      syncRouteFromState({ replace: true });
+    }
+    if (renderNow) render();
+    return;
+  }
+
+  if (requiresSignIn() && !signedIn) {
+    state.returnRoute = currentHashRoute();
+    setAuthMode('login', { updateRoute: true, replace: true });
+    if (renderNow) render();
+    return;
+  }
 
   if (page === 'estructura') {
     state.currentView = normalizeView('structure');
@@ -491,16 +581,31 @@ async function uploadResourceFile(file) {
       contentType: file.type || 'application/octet-stream',
     });
   if (error) throw error;
-  const { data } = cloudClient.storage.from(cloudConfig.storageBucket).getPublicUrl(path);
   return {
     id: uid('file'),
     name: file.name,
     type: file.type || 'application/octet-stream',
     size: file.size,
     path,
-    publicUrl: data.publicUrl,
     addedAt: new Date().toISOString(),
   };
+}
+
+async function openResourceFile(file) {
+  if (!hasCapability('openAssets')) return;
+  if (remoteEditingActive() && file.path) {
+    const { data, error } = await cloudClient.storage
+      .from(cloudConfig.storageBucket)
+      .createSignedUrl(file.path, 120);
+    if (error) {
+      alert(`No se pudo abrir el archivo: ${error.message}`);
+      return;
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  const url = file.publicUrl || file.dataUrl || file.path;
+  if (url) window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 function currentModule() {
@@ -969,8 +1074,14 @@ function renderResourceAssets(container, resource) {
       const item = document.createElement(canOpen ? 'a' : 'span');
       item.className = `asset-chip file-chip${canOpen ? '' : ' locked-asset'}`;
       if (canOpen) {
-        item.href = file.publicUrl || file.dataUrl || file.path || '#';
-        item.download = file.name;
+        item.href = file.dataUrl || file.publicUrl || '#';
+        item.addEventListener('click', (event) => {
+          if (file.path && remoteEditingActive()) {
+            event.preventDefault();
+            openResourceFile(file);
+          }
+        });
+        if (!file.path) item.download = file.name;
       }
       item.textContent = `${file.name} (${formatFileSize(file.size)})${canOpen ? '' : ' - requiere permiso'}`;
       group.appendChild(item);
@@ -1363,9 +1474,15 @@ function renderDraftFiles() {
     actions.className = 'asset-row-actions';
     const anchor = document.createElement('a');
     anchor.className = 'mini-btn';
-    anchor.href = file.publicUrl || file.dataUrl || file.path || '#';
-    anchor.download = file.name;
+    anchor.href = file.dataUrl || file.publicUrl || '#';
     anchor.textContent = 'Abrir';
+    anchor.addEventListener('click', (event) => {
+      if (file.path && remoteEditingActive()) {
+        event.preventDefault();
+        openResourceFile(file);
+      }
+    });
+    if (!file.path) anchor.download = file.name;
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
@@ -2002,18 +2119,25 @@ async function loginEditor() {
   setCloudStatus('Sesion iniciada. Verificando permisos...', 'pending');
   const { data } = await cloudClient.auth.getUser();
   if (data.user) await upsertUserProfile(data.user);
+  await reloadCloudDataAfterSignIn();
   await refreshEditorStatus();
+  dom.loginEmail.value = '';
+  setViewFromReturnRoute();
 }
 
-async function resolveLoginEmail(identifier) {
-  if (identifier.includes('@')) return identifier;
+async function lookupRegisteredEmail(identifier) {
+  if (!identifier || !cloudClient) return null;
   const { data, error } = await cloudClient.rpc('email_for_login', {
     login_identifier: identifier,
   });
   if (error) {
-    return identifier;
+    return null;
   }
   return data;
+}
+
+async function resolveLoginEmail(identifier) {
+  return lookupRegisteredEmail(identifier);
 }
 
 async function signupEditor() {
@@ -2032,9 +2156,18 @@ async function signupEditor() {
     alert('El nombre o la contrasena superan el maximo permitido.');
     return;
   }
-  const existingEmail = await resolveLoginEmail(name);
-  if (existingEmail && existingEmail !== name) {
+  const existingEmail = await lookupRegisteredEmail(email);
+  if (existingEmail) {
+    alert('Ese correo ya esta registrado. Inicia sesion o recupera la contrasena.');
+    return;
+  }
+  const existingName = await lookupRegisteredEmail(name);
+  if (existingName) {
     alert('Ese nombre de usuario ya esta registrado. Escoge otro.');
+    return;
+  }
+  if (dom.confirmPassword && dom.confirmPassword.value !== password) {
+    alert('Las contrasenas no coinciden.');
     return;
   }
   const { data, error } = await cloudClient.auth.signUp({
@@ -2056,6 +2189,7 @@ async function signupEditor() {
   }
   dom.loginName.value = '';
   dom.loginPassword.value = '';
+  if (dom.confirmPassword) dom.confirmPassword.value = '';
   setCloudStatus('Cuenta creada. Si Supabase pide confirmacion, revisa el correo antes de entrar.', 'pending');
 }
 
@@ -2069,14 +2203,70 @@ async function resetPassword() {
     alert('Escribe el correo para recuperar la contrasena.');
     return;
   }
+  const registeredEmail = await lookupRegisteredEmail(email);
+  if (!registeredEmail) {
+    alert('No hay una cuenta registrada con ese correo.');
+    return;
+  }
   const { error } = await cloudClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href.split('#')[0],
+    redirectTo: `${window.location.href.split('#')[0]}#/recuperar`,
   });
   if (error) {
     alert(`No se pudo enviar la recuperacion: ${error.message}`);
     return;
   }
   setCloudStatus('Revisa el correo para recuperar la contrasena.', 'pending');
+}
+
+async function updatePasswordFromRecovery() {
+  if (!cloudClient) {
+    alert('Supabase aun no esta configurado.');
+    return;
+  }
+  const password = dom.loginPassword.value;
+  const confirmation = dom.confirmPassword?.value || '';
+  if (!password || !confirmation) {
+    alert('Escribe y confirma la nueva contrasena.');
+    return;
+  }
+  if (password.length > 72) {
+    alert('La contrasena supera el maximo de 72 caracteres.');
+    return;
+  }
+  if (password !== confirmation) {
+    alert('Las contrasenas no coinciden.');
+    return;
+  }
+  const { error } = await cloudClient.auth.updateUser({ password });
+  if (error) {
+    alert(`No se pudo cambiar la contrasena: ${error.message}`);
+    return;
+  }
+  dom.loginPassword.value = '';
+  if (dom.confirmPassword) dom.confirmPassword.value = '';
+  state.recoveringPassword = false;
+  setCloudStatus('Contrasena actualizada. Ya puedes usar tu cuenta.', 'ok');
+  await reloadCloudDataAfterSignIn();
+  await refreshEditorStatus();
+  setViewFromReturnRoute();
+}
+
+async function reloadCloudDataAfterSignIn() {
+  const cloudData = await loadCloudData();
+  if (cloudData) {
+    state.data = cloudData;
+    selectFirstAvailable();
+    clearForm();
+  }
+}
+
+function setViewFromReturnRoute() {
+  const target = state.returnRoute && !['#/login', '#/registro', '#/recuperar'].includes(state.returnRoute)
+    ? state.returnRoute
+    : '#/mapa';
+  history.replaceState(null, '', target);
+  applyRouteFromLocation({ renderNow: false });
+  render();
 }
 
 async function upsertUserProfile(user, name = '') {
@@ -2100,8 +2290,10 @@ async function logoutEditor() {
   state.isEditor = false;
   state.isMainEditor = false;
   state.userRole = 'viewer';
-  updateAuthUi();
+  state.returnRoute = '#/mapa';
+  setAuthMode('login', { updateRoute: true, replace: true });
   renderEditorList([]);
+  renderRegisteredUsers([]);
   setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
 }
 
@@ -2148,6 +2340,41 @@ function renderEditorList(editors = []) {
   });
 }
 
+function renderRegisteredUsers(users = []) {
+  if (!dom.registeredUserList) return;
+  if (!remoteEditingActive()) {
+    dom.registeredUserList.innerHTML = '<p class="asset-empty">Activa Supabase para ver usuarios registrados.</p>';
+    return;
+  }
+  if (!state.isMainEditor) {
+    dom.registeredUserList.innerHTML = '<p class="asset-empty">Solo la cuenta principal puede ver usuarios registrados.</p>';
+    return;
+  }
+  if (!users.length) {
+    dom.registeredUserList.innerHTML = '<p class="asset-empty">No hay usuarios registrados cargados.</p>';
+    return;
+  }
+  const editorRoles = new Map((state.loadedEditors || []).map((editor) => [editor.email.toLowerCase(), editor.role || 'manager']));
+  dom.registeredUserList.innerHTML = '';
+  users.forEach((user) => {
+    const row = document.createElement('div');
+    row.className = 'registered-user-row';
+    const account = document.createElement('div');
+    account.className = 'editor-account';
+    const name = document.createElement('strong');
+    name.textContent = user.full_name || user.email;
+    const email = document.createElement('small');
+    email.textContent = user.email;
+    account.append(name, email);
+    const role = document.createElement('span');
+    const roleValue = user.email?.toLowerCase() === MAIN_EDITOR_EMAIL ? 'owner' : editorRoles.get(user.email.toLowerCase()) || 'viewer';
+    role.className = `role-pill role-${roleValue}`;
+    role.textContent = labels[roleValue] ?? roleValue;
+    row.append(account, role);
+    dom.registeredUserList.appendChild(row);
+  });
+}
+
 async function refreshEditorStatus() {
   if (!cloudClient || !state.session?.user || !state.cloudReady) {
     state.isEditor = false;
@@ -2155,6 +2382,7 @@ async function refreshEditorStatus() {
     state.userRole = 'viewer';
     updateAuthUi();
     renderEditorList([]);
+    renderRegisteredUsers([]);
     return;
   }
   const email = state.session.user.email;
@@ -2178,6 +2406,7 @@ async function refreshEditorStatus() {
 async function loadEditors() {
   if (!cloudClient || !state.isMainEditor) {
     renderEditorList([]);
+    renderRegisteredUsers([]);
     return;
   }
   const { data, error } = await cloudClient
@@ -2186,9 +2415,28 @@ async function loadEditors() {
     .order('email');
   if (error) {
     renderEditorList([]);
+    renderRegisteredUsers([]);
     return;
   }
+  state.loadedEditors = data || [];
   renderEditorList(data);
+  await loadRegisteredUsers();
+}
+
+async function loadRegisteredUsers() {
+  if (!cloudClient || !state.isMainEditor) {
+    renderRegisteredUsers([]);
+    return;
+  }
+  const { data, error } = await cloudClient
+    .from('user_profiles')
+    .select('email, full_name, created_at, updated_at')
+    .order('created_at', { ascending: false });
+  if (error) {
+    dom.registeredUserList.innerHTML = `<p class="asset-empty">No se pudieron cargar usuarios registrados: ${error.message}</p>`;
+    return;
+  }
+  renderRegisteredUsers(data || []);
 }
 
 async function addEditor() {
@@ -2196,6 +2444,11 @@ async function addEditor() {
   const email = dom.editorEmailInput.value.trim().toLowerCase();
   const role = dom.editorRoleInput.value;
   if (!email) return;
+  const registeredEmail = await lookupRegisteredEmail(email);
+  if (!registeredEmail) {
+    alert('Ese correo todavia no esta registrado. Primero debe crear una cuenta en la pagina.');
+    return;
+  }
   const { error } = await cloudClient.from('course_editors').upsert({ email, role });
   if (error) {
     alert(`No se pudo autorizar este correo: ${error.message}`);
@@ -2258,14 +2511,34 @@ function wireEvents() {
   document.querySelector('#duplicate-resource').addEventListener('click', duplicateResource);
   dom.loginButton.addEventListener('click', loginEditor);
   dom.signupButton.addEventListener('click', signupEditor);
-  dom.authLoginMode.addEventListener('click', () => setAuthMode('login'));
-  dom.authSignupMode.addEventListener('click', () => setAuthMode('signup'));
+  dom.updatePasswordButton?.addEventListener('click', updatePasswordFromRecovery);
+  dom.authLoginMode?.addEventListener('click', () => setAuthMode('login', { updateRoute: true }));
+  dom.authSignupMode?.addEventListener('click', () => setAuthMode('signup', { updateRoute: true }));
   dom.resetPasswordButton.addEventListener('click', resetPassword);
   dom.logoutButton.addEventListener('click', logoutEditor);
   dom.loginPassword.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      loginEditor();
+      if (state.authMode === 'signup') {
+        signupEditor();
+      } else if (state.authMode === 'update') {
+        updatePasswordFromRecovery();
+      } else {
+        loginEditor();
+      }
+    }
+  });
+  dom.loginEmail.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && state.authMode === 'reset') {
+      event.preventDefault();
+      resetPassword();
+    }
+  });
+  dom.confirmPassword?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (state.authMode === 'signup') signupEditor();
+      if (state.authMode === 'update') updatePasswordFromRecovery();
     }
   });
   document.querySelector('#save-course-settings').addEventListener('click', updateCourseSettings);
@@ -2332,13 +2605,17 @@ function resetMultiFilter(kind) {
 
 async function loadCloudData() {
   if (!cloudClient) return null;
+  if (!state.session?.user) {
+    setCloudStatus('Inicia sesion para cargar los datos compartidos.', 'pending');
+    return null;
+  }
   const { data, error } = await cloudClient
     .from('course_state')
     .select('data, updated_at')
     .eq('id', cloudConfig.courseStateId)
     .single();
   if (error) {
-    setCloudStatus('Falta ejecutar la configuracion de Supabase. Usando modo local.', 'local');
+    setCloudStatus('No se pudieron cargar los datos compartidos. Revisa la configuracion de Supabase.', 'local');
     return null;
   }
   state.cloudReady = true;
@@ -2354,11 +2631,27 @@ async function initCloudSession() {
   }
   const { data } = await cloudClient.auth.getSession();
   state.session = data.session;
+  if (window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')) {
+    state.recoveringPassword = true;
+    state.authMode = 'update';
+    history.replaceState(null, '', '#/recuperar');
+  }
   updateAuthUi();
-  cloudClient.auth.onAuthStateChange(async (_event, session) => {
+  cloudClient.auth.onAuthStateChange(async (event, session) => {
     state.session = session;
+    if (event === 'PASSWORD_RECOVERY') {
+      state.recoveringPassword = true;
+      setAuthMode('update', { updateRoute: true, replace: true });
+      updateAuthUi();
+      return;
+    }
     updateAuthUi();
-    await refreshEditorStatus();
+    if (session) {
+      await reloadCloudDataAfterSignIn();
+      await refreshEditorStatus();
+    } else {
+      await refreshEditorStatus();
+    }
     if (state.cloudReady) {
       if (!session) setCloudStatus('Modo lectura. Inicia sesion para editar.', 'pending');
     }
@@ -2384,7 +2677,7 @@ async function init(forceDefault = false) {
   selectFirstAvailable();
   applyRouteFromLocation({ renderNow: false });
   clearForm();
-  syncRouteFromState();
+  if (!requiresSignIn() || state.session?.user) syncRouteFromState();
   render();
   if (state.cloudReady) await loadEditors();
 }

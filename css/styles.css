@@ -132,27 +132,10 @@ p {
   border-radius: 8px;
 }
 
-.auth-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.auth-tab {
-  min-height: 42px;
-  padding: 8px 10px;
-  color: var(--brand);
+.auth-mode-note {
+  margin: 0;
+  color: var(--muted);
   font-weight: 800;
-  background: #fff;
-  border: 1px solid #bfd0e4;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.auth-tab.active {
-  color: #fff;
-  background: var(--brand);
-  border-color: var(--brand);
 }
 
 .auth-field {
@@ -178,7 +161,52 @@ p {
   cursor: pointer;
 }
 
-body.auth-login-mode .signup-only {
+body.auth-login-mode .signup-only,
+body.auth-login-mode .confirm-only,
+body.auth-login-mode #signup-button,
+body.auth-login-mode #reset-password-button,
+body.auth-login-mode #update-password-button,
+body.auth-signup-mode #login-button,
+body.auth-signup-mode #reset-password-button,
+body.auth-signup-mode #update-password-button,
+body.auth-reset-mode .signup-only,
+body.auth-reset-mode .confirm-only,
+body.auth-reset-mode #login-password-field,
+body.auth-reset-mode #login-button,
+body.auth-reset-mode #signup-button,
+body.auth-reset-mode #update-password-button,
+body.auth-update-mode .signup-only,
+body.auth-update-mode #login-email-field,
+body.auth-update-mode #login-button,
+body.auth-update-mode #signup-button,
+body.auth-update-mode #reset-password-button {
+  display: none;
+}
+
+body.auth-signup-mode #signup-button,
+body.auth-reset-mode #reset-password-button,
+body.auth-update-mode #update-password-button {
+  display: inline-flex;
+}
+
+.auth-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.auth-switches a {
+  color: var(--brand);
+  font-size: 0.88rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+body.auth-login-mode #auth-login-link,
+body.auth-signup-mode #auth-signup-link,
+body.auth-reset-mode #auth-reset-link,
+body.auth-update-mode .auth-switches {
   display: none;
 }
 
@@ -1477,6 +1505,23 @@ body:not(.can-manage-users) .admin-users-card {
   gap: 6px;
 }
 
+.registered-users {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.registered-users h4 {
+  font-size: 0.98rem;
+}
+
+.registered-user-list {
+  display: grid;
+  gap: 6px;
+}
+
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1511,7 +1556,8 @@ body:not(.can-manage-users) .admin-users-card {
 }
 
 .editor-list-header,
-.editor-row {
+.editor-row,
+.registered-user-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(140px, 190px) auto;
   gap: 8px;
@@ -1526,7 +1572,8 @@ body:not(.can-manage-users) .admin-users-card {
   text-transform: uppercase;
 }
 
-.editor-row {
+.editor-row,
+.registered-user-row {
   padding: 8px;
   background: var(--surface-2);
   border: 1px solid var(--line);
@@ -1554,6 +1601,10 @@ body:not(.can-manage-users) .admin-users-card {
 .editor-account small {
   color: var(--muted);
   font-weight: 800;
+}
+
+.registered-user-row {
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 190px);
 }
 
 .role-pill {
@@ -1727,6 +1778,7 @@ body:not(.can-manage-users) .admin-users-card {
   .editor-form-row,
   .editor-list-header,
   .editor-row,
+  .registered-user-row,
   .structure-row,
   .structure-heading,
   .structure-create-module,

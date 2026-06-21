@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-124500">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-190000">
 </head>
 <body>
   <header class="app-header">
@@ -31,25 +31,32 @@
       <p id="auth-description">Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.</p>
     </div>
     <div class="auth-card" aria-label="Acceso al organizador">
-      <div class="auth-tabs" role="tablist" aria-label="Modo de acceso">
-        <button class="auth-tab active" id="auth-login-mode" type="button">Iniciar sesion</button>
-        <button class="auth-tab" id="auth-signup-mode" type="button">Registro</button>
-      </div>
+      <p class="auth-mode-note" id="auth-mode-note">Usa tu correo o nombre de usuario y tu contrasena.</p>
       <label class="auth-field signup-only" id="login-name-field">
         Nombre de usuario
         <input id="login-name" maxlength="80" autocomplete="name" placeholder="Nombre de usuario">
       </label>
-      <label class="auth-field">
+      <label class="auth-field" id="login-email-field">
         <span id="login-identifier-label">Correo o nombre de usuario</span>
         <input id="login-email" autocomplete="username" placeholder="Correo o nombre de usuario">
       </label>
-      <label class="auth-field">
-        Contrasena
+      <label class="auth-field" id="login-password-field">
+        <span id="login-password-label">Contrasena</span>
         <input id="login-password" type="password" maxlength="72" autocomplete="current-password" placeholder="contrasena">
+      </label>
+      <label class="auth-field confirm-only" id="confirm-password-field">
+        Confirmar contrasena
+        <input id="confirm-password" type="password" maxlength="72" autocomplete="new-password" placeholder="Repite la contrasena">
       </label>
       <button class="btn primary" id="login-button" type="button">Entrar</button>
       <button class="btn primary" id="signup-button" type="button" hidden>Registrarse</button>
-      <button class="auth-link" id="reset-password-button" type="button">Recuperar contrasena</button>
+      <button class="btn primary" id="reset-password-button" type="button" hidden>Enviar enlace de recuperacion</button>
+      <button class="btn primary" id="update-password-button" type="button" hidden>Cambiar contrasena</button>
+      <nav class="auth-switches" aria-label="Enlaces de acceso">
+        <a id="auth-login-link" href="#/login">Iniciar sesion</a>
+        <a id="auth-signup-link" href="#/registro">Crear cuenta</a>
+        <a id="auth-reset-link" href="#/recuperar">Recuperar contrasena</a>
+      </nav>
     </div>
   </section>
 
@@ -354,6 +361,11 @@
             <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
           </div>
           <div class="editor-list" id="editor-list"></div>
+          <section class="registered-users">
+            <h4>Usuarios registrados</h4>
+            <p class="muted">Correos que ya crearon cuenta y pueden iniciar sesion para ver el organizador.</p>
+            <div class="registered-user-list" id="registered-user-list"></div>
+          </section>
         </section>
       </div>
     </section>
@@ -394,6 +406,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-124500"></script>
+  <script src="js/app.js?v=20260621-190000"></script>
 </body>
 </html>

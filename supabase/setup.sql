@@ -108,7 +108,8 @@ alter table public.course_editors enable row level security;
 alter table public.user_profiles enable row level security;
 
 grant usage on schema public to anon, authenticated;
-grant select on public.course_state to anon, authenticated;
+revoke select on public.course_state from anon;
+grant select on public.course_state to authenticated;
 grant insert, update on public.course_state to authenticated;
 grant select on public.course_editors to authenticated;
 grant insert, update, delete on public.course_editors to authenticated;
@@ -119,7 +120,7 @@ create policy "user_profiles own read"
 on public.user_profiles
 for select
 to authenticated
-using (id = auth.uid() or public.is_course_editor());
+using (id = auth.uid() or public.is_main_editor());
 
 drop policy if exists "user_profiles own insert" on public.user_profiles;
 create policy "user_profiles own insert"
@@ -133,8 +134,8 @@ create policy "user_profiles own update"
 on public.user_profiles
 for update
 to authenticated
-using (id = auth.uid() or public.is_course_editor())
-with check (id = auth.uid() or public.is_course_editor());
+using (id = auth.uid() or public.is_main_editor())
+with check (id = auth.uid() or public.is_main_editor());
 
 drop policy if exists "course_editors editor read" on public.course_editors;
 create policy "course_editors editor read"
@@ -169,10 +170,11 @@ to authenticated
 using (public.is_main_editor());
 
 drop policy if exists "course_state public read" on public.course_state;
-create policy "course_state public read"
+drop policy if exists "course_state authenticated read" on public.course_state;
+create policy "course_state authenticated read"
 on public.course_state
 for select
-to anon, authenticated
+to authenticated
 using (id = 'main');
 
 drop policy if exists "course_state authenticated insert" on public.course_state;
@@ -354,17 +356,18 @@ $course$::jsonb
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('resource-files', 'resource-files', true, 52428800)
+values ('resource-files', 'resource-files', false, 52428800)
 on conflict (id) do update
 set public = excluded.public,
     file_size_limit = excluded.file_size_limit;
 
 drop policy if exists "resource_files public read" on storage.objects;
-create policy "resource_files public read"
+drop policy if exists "resource_files authenticated read" on storage.objects;
+create policy "resource_files authenticated read"
 on storage.objects
 for select
-to anon, authenticated
-using (bucket_id = 'resource-files');
+to authenticated
+using (bucket_id = 'resource-files' and public.can_edit_course());
 
 drop policy if exists "resource_files authenticated upload" on storage.objects;
 create policy "resource_files authenticated upload"
