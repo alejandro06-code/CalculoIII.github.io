@@ -1334,6 +1334,51 @@ body:not(.can-manage-users) .admin-users-card {
   padding: 18px;
 }
 
+.structure-heading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.structure-heading .muted {
+  margin-top: 6px;
+}
+
+.structure-savebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.structure-savebar span {
+  padding: 8px 10px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.structure-savebar span[data-dirty="true"] {
+  color: #7b4a00;
+  background: #fff1cf;
+  border-color: #f2d391;
+}
+
+.structure-create-module {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .admin-row {
   grid-column: 1 / -1;
   display: grid;
@@ -1403,13 +1448,6 @@ body:not(.can-manage-users) .admin-users-card {
   overflow-wrap: anywhere;
 }
 
-.structure-form {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
-  gap: 10px;
-  align-items: end;
-}
-
 .structure-list {
   display: grid;
   gap: 12px;
@@ -1417,15 +1455,14 @@ body:not(.can-manage-users) .admin-users-card {
 
 .structure-module-card {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
 
-.structure-module-head,
-.structure-lesson-row {
+.structure-module-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
@@ -1439,15 +1476,24 @@ body:not(.can-manage-users) .admin-users-card {
 
 .structure-lessons {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
-.structure-lesson-row {
-  grid-template-columns: 92px minmax(0, 1fr) auto;
-  padding: 8px;
+.structure-lesson-block {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.structure-lesson-row,
+.structure-part-row {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
 }
 
 .structure-index {
@@ -1457,6 +1503,47 @@ body:not(.can-manage-users) .admin-users-card {
   text-transform: uppercase;
 }
 
+.structure-subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.structure-parts {
+  display: grid;
+  gap: 7px;
+  padding-left: 12px;
+  border-left: 3px solid #d6e8e5;
+}
+
+.structure-part-row {
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.structure-part-fields {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.7fr) minmax(220px, 1fr);
+  gap: 8px;
+}
+
+.structure-create-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 8px;
+  background: #fff;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+}
+
+.structure-parts .structure-create-row {
+  grid-template-columns: minmax(120px, 0.7fr) minmax(160px, 1fr) auto;
+}
+
 .structure-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1464,15 +1551,16 @@ body:not(.can-manage-users) .admin-users-card {
   justify-content: flex-end;
 }
 
+.mini-btn.accent {
+  color: #fff;
+  background: var(--brand-2);
+  border-color: var(--brand-2);
+}
+
 @media (max-width: 1180px) {
   .course-map,
   .module-strip-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .structure-row,
-  .structure-form {
-    grid-template-columns: 1fr 1fr;
   }
 
   .admin-grid {
@@ -1499,9 +1587,14 @@ body:not(.can-manage-users) .admin-users-card {
   .course-overview-stats,
   .admin-grid,
   .structure-row,
-  .structure-form,
+  .structure-heading,
+  .structure-create-module,
   .structure-module-head,
   .structure-lesson-row,
+  .structure-part-row,
+  .structure-part-fields,
+  .structure-create-row,
+  .structure-parts .structure-create-row,
   .editor-panel {
     grid-template-columns: 1fr;
   }

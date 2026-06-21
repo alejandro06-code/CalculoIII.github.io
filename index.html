@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-115500">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-121500">
 </head>
 <body>
   <header class="app-header">
@@ -251,54 +251,22 @@
     </section>
 
     <section class="structure-row" data-view-panel="structure" aria-label="Estructura">
-      <div>
-        <p class="eyebrow">Edicion de lecciones</p>
-        <h2>Lecciones</h2>
+      <div class="structure-heading">
+        <div>
+          <p class="eyebrow">Edicion de estructura</p>
+          <h2>Estructura del curso</h2>
+          <p class="muted">Edita modulos, lecciones y partes en esta lista. Los cambios quedan en borrador hasta guardar.</p>
+        </div>
+        <div class="structure-savebar">
+          <span id="structure-status">Sin cambios pendientes</span>
+          <button class="btn ghost" id="discard-structure" type="button">Descartar</button>
+          <button class="btn primary" id="save-structure" type="button">Guardar cambios</button>
+        </div>
       </div>
-      <form id="structure-form" class="structure-form">
-        <label>
-          Crear en modulo
-          <select id="lesson-module-select"></select>
-        </label>
-        <label>
-          Nueva leccion
-          <input id="lesson-title-input" placeholder="Nombre de la nueva leccion">
-        </label>
-        <button class="btn secondary" id="save-lesson" type="button">Crear leccion</button>
-        <label>
-          Editar leccion
-          <select id="lesson-edit-select"></select>
-        </label>
-        <label>
-          Nuevo nombre
-          <input id="lesson-edit-title-input" placeholder="Nombre actualizado">
-        </label>
-        <button class="btn ghost" id="update-lesson" type="button">Renombrar</button>
-        <label>
-          Ordenar leccion
-          <select id="lesson-order-select"></select>
-        </label>
-        <div class="form-actions">
-          <button class="btn ghost" id="lesson-up" type="button">Subir</button>
-          <button class="btn ghost" id="lesson-down" type="button">Bajar</button>
-        </div>
-        <label>
-          Ordenar modulo
-          <select id="module-order-select"></select>
-        </label>
-        <div class="form-actions">
-          <button class="btn ghost" id="module-up" type="button">Subir</button>
-          <button class="btn ghost" id="module-down" type="button">Bajar</button>
-        </div>
-        <label>
-          Ordenar parte
-          <select id="section-order-select"></select>
-        </label>
-        <div class="form-actions">
-          <button class="btn ghost" id="section-up" type="button">Subir</button>
-          <button class="btn ghost" id="section-down" type="button">Bajar</button>
-        </div>
-      </form>
+      <div class="structure-create-module">
+        <input id="structure-new-module-title" placeholder="Nombre del nuevo modulo">
+        <button class="btn secondary" id="structure-add-module" type="button">Crear modulo</button>
+      </div>
       <div id="structure-list" class="structure-list" aria-label="Lista editable de estructura"></div>
     </section>
 
@@ -421,6 +389,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-115500"></script>
+  <script src="js/app.js?v=20260621-121500"></script>
 </body>
 </html>

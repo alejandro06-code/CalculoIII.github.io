@@ -78,6 +78,8 @@ const state = {
   currentView: 'course',
   cloudReady: false,
   cloudStatus: 'local',
+  structureDraft: null,
+  structureDirty: false,
 };
 
 const dom = {
@@ -158,6 +160,11 @@ const dom = {
   editorEmailInput: document.querySelector('#editor-email-input'),
   editorRoleInput: document.querySelector('#editor-role-input'),
   editorList: document.querySelector('#editor-list'),
+  structureStatus: document.querySelector('#structure-status'),
+  saveStructure: document.querySelector('#save-structure'),
+  discardStructure: document.querySelector('#discard-structure'),
+  structureNewModuleTitle: document.querySelector('#structure-new-module-title'),
+  structureAddModule: document.querySelector('#structure-add-module'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -970,6 +977,15 @@ function renderTargets() {
 }
 
 function renderLessonControls() {
+  if (
+    !dom.lessonModuleSelect ||
+    !dom.lessonEditSelect ||
+    !dom.lessonOrderSelect ||
+    !dom.moduleOrderSelect ||
+    !dom.sectionOrderSelect
+  ) {
+    return;
+  }
   dom.lessonModuleSelect.innerHTML = '';
   dom.lessonEditSelect.innerHTML = '';
   dom.lessonOrderSelect.innerHTML = '';
@@ -1038,52 +1054,194 @@ function renderAdminControls() {
   dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
 }
 
+function cloneCourseData(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function ensureStructureDraft({ reset = false } = {}) {
+  if (!state.data) return null;
+  if (reset || !state.structureDraft) {
+    state.structureDraft = cloneCourseData(state.data);
+    state.structureDirty = false;
+  }
+  return state.structureDraft;
+}
+
+function setStructureDirty(isDirty = true) {
+  state.structureDirty = isDirty;
+  if (!dom.structureStatus) return;
+  dom.structureStatus.textContent = isDirty ? 'Cambios pendientes sin guardar' : 'Sin cambios pendientes';
+  dom.structureStatus.dataset.dirty = isDirty ? 'true' : 'false';
+}
+
+function updateStructureStatus() {
+  setStructureDirty(state.structureDirty);
+}
+
+function structureDraftModule(moduleId) {
+  return state.structureDraft?.modules.find((module) => module.id === moduleId);
+}
+
+function structureDraftLesson(moduleId, lessonId) {
+  return structureDraftModule(moduleId)?.lessons.find((lesson) => lesson.id === lessonId);
+}
+
+function moveDraftItem(items, index, direction) {
+  const targetIndex = index + direction;
+  if (index < 0 || targetIndex < 0 || targetIndex >= items.length) return false;
+  [items[index], items[targetIndex]] = [items[targetIndex], items[index]];
+  return true;
+}
+
+function normalizeStructureSelection() {
+  const modules = state.data.modules;
+  const module = modules.find((item) => item.id === state.selectedModuleId) ?? modules[0];
+  state.selectedModuleId = module?.id ?? null;
+  const lesson = module?.lessons.find((item) => item.id === state.selectedLessonId) ?? module?.lessons[0];
+  state.selectedLessonId = lesson?.id ?? null;
+  const section = state.data.sections.find((item) => item.id === state.selectedSectionId) ?? state.data.sections[0];
+  state.selectedSectionId = section?.id ?? 'preparacion';
+}
+
+function createStructureButton(label, className, onClick) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function createStructureInput(value, placeholder, onInput) {
+  const input = document.createElement('input');
+  input.value = value || '';
+  input.placeholder = placeholder;
+  input.addEventListener('input', () => {
+    onInput(input.value);
+    setStructureDirty(true);
+  });
+  return input;
+}
+
+function renderStructureParts(lessonBlock) {
+  const parts = document.createElement('div');
+  parts.className = 'structure-parts';
+  const title = document.createElement('p');
+  title.className = 'structure-subtitle';
+  title.textContent = 'Partes comunes de la leccion';
+  parts.appendChild(title);
+
+  state.structureDraft.sections.forEach((section, sectionIndex) => {
+    const row = document.createElement('div');
+    row.className = 'structure-part-row';
+    const label = document.createElement('span');
+    label.className = 'structure-index';
+    label.textContent = `Parte ${sectionIndex + 1}`;
+    const fields = document.createElement('div');
+    fields.className = 'structure-part-fields';
+    fields.append(
+      createStructureInput(section.title, 'Nombre de la parte', (value) => {
+        section.title = value;
+      }),
+      createStructureInput(section.description, 'Descripcion breve', (value) => {
+        section.description = value;
+      })
+    );
+    const actions = document.createElement('div');
+    actions.className = 'structure-actions';
+    actions.append(
+      createStructureButton('Subir', 'mini-btn', () => moveStructureSection(section.id, -1)),
+      createStructureButton('Bajar', 'mini-btn', () => moveStructureSection(section.id, 1)),
+      createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureSection(section.id))
+    );
+    row.append(label, fields, actions);
+    parts.appendChild(row);
+  });
+
+  const creator = document.createElement('div');
+  creator.className = 'structure-create-row';
+  const titleInput = document.createElement('input');
+  titleInput.placeholder = 'Nueva parte';
+  const descriptionInput = document.createElement('input');
+  descriptionInput.placeholder = 'Descripcion';
+  creator.append(
+    titleInput,
+    descriptionInput,
+    createStructureButton('Crear parte', 'mini-btn accent', () => {
+      addStructureSection(titleInput.value, descriptionInput.value);
+    })
+  );
+  parts.appendChild(creator);
+  lessonBlock.appendChild(parts);
+}
+
 function renderStructureList() {
   if (!dom.structureList || !state.data) return;
+  ensureStructureDraft({ reset: !state.structureDirty });
+  updateStructureStatus();
   dom.structureList.innerHTML = '';
-  state.data.modules.forEach((module, moduleIndex) => {
+
+  state.structureDraft.modules.forEach((module, moduleIndex) => {
     const card = document.createElement('article');
     card.className = 'structure-module-card';
-    card.innerHTML = `
-      <div class="structure-module-head">
-        <div>
-          <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
-          <input class="structure-title-input" value="${module.title}" aria-label="Nombre del modulo">
-        </div>
-        <div class="structure-actions">
-          <button class="mini-btn" data-action="module-up" type="button">Subir</button>
-          <button class="mini-btn" data-action="module-down" type="button">Bajar</button>
-          <button class="mini-btn delete" data-action="module-delete" type="button">Eliminar</button>
-        </div>
-      </div>
-      <div class="structure-lessons"></div>
-    `;
-    const moduleInput = card.querySelector('.structure-title-input');
-    moduleInput.addEventListener('change', () => updateModuleTitleInline(module.id, moduleInput.value));
-    card.querySelector('[data-action="module-up"]').addEventListener('click', () => moveModuleById(module.id, -1));
-    card.querySelector('[data-action="module-down"]').addEventListener('click', () => moveModuleById(module.id, 1));
-    card.querySelector('[data-action="module-delete"]').addEventListener('click', () => deleteModuleById(module.id));
 
-    const lessons = card.querySelector('.structure-lessons');
+    const head = document.createElement('div');
+    head.className = 'structure-module-head';
+    const moduleFields = document.createElement('div');
+    const kicker = document.createElement('p');
+    kicker.className = 'map-kicker';
+    kicker.textContent = `Modulo ${moduleIndex + 1}`;
+    moduleFields.append(kicker, createStructureInput(module.title, 'Nombre del modulo', (value) => {
+      module.title = value;
+    }));
+    const moduleActions = document.createElement('div');
+    moduleActions.className = 'structure-actions';
+    moduleActions.append(
+      createStructureButton('Subir', 'mini-btn', () => moveStructureModule(module.id, -1)),
+      createStructureButton('Bajar', 'mini-btn', () => moveStructureModule(module.id, 1)),
+      createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureModule(module.id))
+    );
+    head.append(moduleFields, moduleActions);
+    card.appendChild(head);
+
+    const lessons = document.createElement('div');
+    lessons.className = 'structure-lessons';
     module.lessons.forEach((lesson, lessonIndex) => {
+      const lessonBlock = document.createElement('section');
+      lessonBlock.className = 'structure-lesson-block';
       const row = document.createElement('div');
       row.className = 'structure-lesson-row';
-      row.innerHTML = `
-        <span class="structure-index">Leccion ${lessonIndex + 1}</span>
-        <input value="${lesson.title}" aria-label="Nombre de la leccion">
-        <div class="structure-actions">
-          <button class="mini-btn" data-action="lesson-up" type="button">Subir</button>
-          <button class="mini-btn" data-action="lesson-down" type="button">Bajar</button>
-          <button class="mini-btn delete" data-action="lesson-delete" type="button">Eliminar</button>
-        </div>
-      `;
-      const input = row.querySelector('input');
-      input.addEventListener('change', () => updateLessonTitleInline(module.id, lesson.id, input.value));
-      row.querySelector('[data-action="lesson-up"]').addEventListener('click', () => moveLessonById(module.id, lesson.id, -1));
-      row.querySelector('[data-action="lesson-down"]').addEventListener('click', () => moveLessonById(module.id, lesson.id, 1));
-      row.querySelector('[data-action="lesson-delete"]').addEventListener('click', () => deleteLessonById(module.id, lesson.id));
-      lessons.appendChild(row);
+      const label = document.createElement('span');
+      label.className = 'structure-index';
+      label.textContent = `Leccion ${lessonIndex + 1}`;
+      const input = createStructureInput(lesson.title, 'Nombre de la leccion', (value) => {
+        lesson.title = value;
+      });
+      const actions = document.createElement('div');
+      actions.className = 'structure-actions';
+      actions.append(
+        createStructureButton('Subir', 'mini-btn', () => moveStructureLesson(module.id, lesson.id, -1)),
+        createStructureButton('Bajar', 'mini-btn', () => moveStructureLesson(module.id, lesson.id, 1)),
+        createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureLesson(module.id, lesson.id))
+      );
+      row.append(label, input, actions);
+      lessonBlock.appendChild(row);
+      renderStructureParts(lessonBlock);
+      lessons.appendChild(lessonBlock);
     });
+
+    const creator = document.createElement('div');
+    creator.className = 'structure-create-row';
+    const lessonInput = document.createElement('input');
+    lessonInput.placeholder = 'Nueva leccion en este modulo';
+    creator.append(
+      lessonInput,
+      createStructureButton('Crear leccion', 'mini-btn accent', () => {
+        addStructureLesson(module.id, lessonInput.value);
+      })
+    );
+    lessons.appendChild(creator);
+    card.appendChild(lessons);
     dom.structureList.appendChild(card);
   });
 }
@@ -1562,6 +1720,156 @@ async function deleteLessonById(moduleId, lessonId) {
   render();
 }
 
+function addStructureModule() {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  const title = dom.structureNewModuleTitle?.value.trim();
+  if (!title) return;
+  state.structureDraft.modules.push({ id: uid('m'), title, lessons: [] });
+  if (dom.structureNewModuleTitle) dom.structureNewModuleTitle.value = '';
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function addStructureLesson(moduleId, titleValue) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  const module = structureDraftModule(moduleId);
+  const title = titleValue.trim();
+  if (!module || !title) return;
+  module.lessons.push({ id: uid('l'), title, resources: [] });
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function addStructureSection(titleValue, descriptionValue) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  const title = titleValue.trim();
+  if (!title) return;
+  state.structureDraft.sections.push({
+    id: uid('s'),
+    title,
+    description: descriptionValue.trim(),
+  });
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function moveStructureModule(moduleId, direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  const index = state.structureDraft.modules.findIndex((module) => module.id === moduleId);
+  if (!moveDraftItem(state.structureDraft.modules, index, direction)) return;
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function moveStructureLesson(moduleId, lessonId, direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  const module = structureDraftModule(moduleId);
+  if (!module) return;
+  const index = module.lessons.findIndex((lesson) => lesson.id === lessonId);
+  if (!moveDraftItem(module.lessons, index, direction)) return;
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function moveStructureSection(sectionId, direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  const index = state.structureDraft.sections.findIndex((section) => section.id === sectionId);
+  if (!moveDraftItem(state.structureDraft.sections, index, direction)) return;
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function deleteStructureModule(moduleId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  const module = structureDraftModule(moduleId);
+  if (!module) return;
+  const resourceCount = module.lessons.reduce((total, lesson) => total + (lesson.resources?.length ?? 0), 0);
+  if (!confirm(`Eliminar el modulo "${module.title}" con ${module.lessons.length} lecciones y ${resourceCount} recursos?`)) return;
+  state.structureDraft.modules = state.structureDraft.modules.filter((item) => item.id !== moduleId);
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function deleteStructureLesson(moduleId, lessonId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  const module = structureDraftModule(moduleId);
+  const lesson = structureDraftLesson(moduleId, lessonId);
+  if (!module || !lesson) return;
+  const resourceCount = lesson.resources?.length ?? 0;
+  if (!confirm(`Eliminar la leccion "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
+  module.lessons = module.lessons.filter((item) => item.id !== lessonId);
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function deleteStructureSection(sectionId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  if (state.structureDraft.sections.length <= 1) {
+    alert('Debe quedar al menos una parte en las lecciones.');
+    return;
+  }
+  const section = state.structureDraft.sections.find((item) => item.id === sectionId);
+  if (!section) return;
+  const fallback = state.structureDraft.sections.find((item) => item.id !== sectionId);
+  const affectedResources = state.structureDraft.modules.reduce((total, module) => (
+    total + module.lessons.reduce((lessonTotal, lesson) => (
+      lessonTotal + (lesson.resources || []).filter((resource) => resource.section === sectionId).length
+    ), 0)
+  ), 0);
+  if (!confirm(`Eliminar la parte "${section.title}"? ${affectedResources} recursos se moveran a "${fallback.title}".`)) return;
+  state.structureDraft.modules.forEach((module) => {
+    module.lessons.forEach((lesson) => {
+      (lesson.resources || []).forEach((resource) => {
+        if (resource.section === sectionId) resource.section = fallback.id;
+      });
+    });
+  });
+  state.structureDraft.sections = state.structureDraft.sections.filter((item) => item.id !== sectionId);
+  setStructureDirty(true);
+  renderStructureList();
+}
+
+function validateStructureDraft() {
+  const data = state.structureDraft;
+  if (!data.modules.length) return 'Debe quedar al menos un modulo.';
+  if (!data.sections.length) return 'Debe quedar al menos una parte.';
+  const emptyModule = data.modules.find((module) => !module.title.trim());
+  if (emptyModule) return 'Todos los modulos deben tener nombre.';
+  const emptyLesson = data.modules.flatMap((module) => module.lessons).find((lesson) => !lesson.title.trim());
+  if (emptyLesson) return 'Todas las lecciones deben tener nombre.';
+  const emptySection = data.sections.find((section) => !section.title.trim());
+  if (emptySection) return 'Todas las partes deben tener nombre.';
+  return '';
+}
+
+async function saveStructureDraft() {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  ensureStructureDraft();
+  const error = validateStructureDraft();
+  if (error) {
+    alert(error);
+    return;
+  }
+  state.data = cloneCourseData(state.structureDraft);
+  normalizeStructureSelection();
+  if (!(await saveData())) return;
+  ensureStructureDraft({ reset: true });
+  clearForm();
+  render();
+}
+
+function discardStructureDraft() {
+  if (!state.structureDirty || confirm('Descartar los cambios de estructura sin guardar?')) {
+    ensureStructureDraft({ reset: true });
+    renderStructureList();
+  }
+}
+
 function exportJson() {
   downloadFile('organizador-calculo-iii.json', JSON.stringify(state.data, null, 2), 'application/json');
 }
@@ -1874,15 +2182,24 @@ function wireEvents() {
   document.querySelectorAll('[data-filter-reset]').forEach((button) => {
     button.addEventListener('click', () => resetMultiFilter(button.dataset.filterReset));
   });
-  document.querySelector('#save-lesson').addEventListener('click', addLesson);
-  document.querySelector('#update-lesson').addEventListener('click', updateLesson);
-  document.querySelector('#lesson-up').addEventListener('click', () => moveLessonOrder(-1));
-  document.querySelector('#lesson-down').addEventListener('click', () => moveLessonOrder(1));
-  document.querySelector('#module-up').addEventListener('click', () => moveModuleOrder(-1));
-  document.querySelector('#module-down').addEventListener('click', () => moveModuleOrder(1));
-  document.querySelector('#section-up').addEventListener('click', () => moveSectionOrder(-1));
-  document.querySelector('#section-down').addEventListener('click', () => moveSectionOrder(1));
-  dom.lessonEditSelect.addEventListener('change', () => {
+  onOptional('#save-lesson', 'click', addLesson);
+  onOptional('#update-lesson', 'click', updateLesson);
+  onOptional('#lesson-up', 'click', () => moveLessonOrder(-1));
+  onOptional('#lesson-down', 'click', () => moveLessonOrder(1));
+  onOptional('#module-up', 'click', () => moveModuleOrder(-1));
+  onOptional('#module-down', 'click', () => moveModuleOrder(1));
+  onOptional('#section-up', 'click', () => moveSectionOrder(-1));
+  onOptional('#section-down', 'click', () => moveSectionOrder(1));
+  dom.saveStructure?.addEventListener('click', saveStructureDraft);
+  dom.discardStructure?.addEventListener('click', discardStructureDraft);
+  dom.structureAddModule?.addEventListener('click', addStructureModule);
+  dom.structureNewModuleTitle?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addStructureModule();
+    }
+  });
+  dom.lessonEditSelect?.addEventListener('change', () => {
     const [moduleId, lessonId] = dom.lessonEditSelect.value.split('|');
     const lesson = findLesson(moduleId, lessonId);
     dom.lessonEditTitleInput.value = lesson?.title ?? '';
