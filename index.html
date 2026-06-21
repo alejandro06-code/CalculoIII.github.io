@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-121500">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-124500">
 </head>
 <body>
   <header class="app-header">
     <div>
-      <p class="eyebrow">Propuesta de organizador Moodle</p>
+      <p class="eyebrow" id="course-eyebrow-display">Propuesta de organizador Moodle</p>
       <h1>Calculo III</h1>
+      <p class="header-description" id="course-description-display">Organizador de recursos para construir y revisar un curso en Moodle.</p>
     </div>
     <section class="cloud-panel" aria-label="Sincronizacion">
       <div>
@@ -280,74 +281,78 @@
       </div>
 
       <div class="admin-grid">
-        <section class="admin-card">
-          <h3>Curso</h3>
+        <section class="admin-card admin-course-card">
+          <h3>Datos generales del curso</h3>
+          <label>
+            Texto superior del banner
+            <input id="course-eyebrow-input" placeholder="Propuesta de organizador Moodle">
+          </label>
           <label>
             Titulo principal
             <input id="course-title-input" placeholder="Calculo III">
           </label>
           <label>
-            Descripcion
+            Descripcion visible
             <textarea id="course-description-input" rows="3" placeholder="Descripcion del organizador"></textarea>
           </label>
-          <button class="btn primary" id="save-course-settings" type="button">Guardar curso</button>
-        </section>
-
-        <section class="admin-card">
-          <h3>Modulos</h3>
-          <label>
-            Modulo actual
-            <select id="module-edit-select"></select>
-          </label>
-          <label>
-            Nombre del modulo
-            <input id="module-title-input" placeholder="Nombre del modulo">
-          </label>
-          <div class="form-actions">
-            <button class="btn secondary" id="update-module" type="button">Renombrar modulo</button>
-            <button class="btn danger" id="delete-module" type="button">Eliminar modulo</button>
+          <div class="two-col">
+            <label>
+              Periodo
+              <input id="course-period-input" placeholder="2026-1">
+            </label>
+            <label>
+              Responsable
+              <input id="course-owner-input" placeholder="Nombre del profesor o equipo">
+            </label>
           </div>
           <label>
-            Nuevo modulo
-            <input id="new-module-title-input" placeholder="Nombre del nuevo modulo">
+            Enlace del curso en Moodle
+            <input id="course-moodle-url-input" placeholder="https://...">
           </label>
-          <button class="btn ghost" id="add-module" type="button">Crear modulo</button>
-        </section>
-
-        <section class="admin-card">
-          <h3>Partes de cada leccion</h3>
-          <label>
-            Parte
-            <select id="section-edit-select"></select>
-          </label>
-          <label>
-            Nombre
-            <input id="section-title-input" placeholder="Preparacion">
-          </label>
-          <label>
-            Descripcion
-            <textarea id="section-description-input" rows="3" placeholder="Descripcion visible en recursos"></textarea>
-          </label>
-          <button class="btn secondary" id="update-section" type="button">Guardar parte</button>
+          <button class="btn primary" id="save-course-settings" type="button">Guardar datos generales</button>
         </section>
 
         <section class="admin-card admin-users-card">
-          <h3>Editores</h3>
-          <p class="muted">Solo el acceso completo puede asignar perfiles. Los perfiles controlan que puede hacer cada cuenta.</p>
-          <label>
-            Correo
-            <input id="editor-email-input" type="email" placeholder="correo@ejemplo.com">
-          </label>
-          <label>
-            Perfil
-            <select id="editor-role-input">
-              <option value="manager">Editor avanzado</option>
-              <option value="contributor">Creador de recursos</option>
-              <option value="viewer">Solo lectura</option>
-              <option value="owner">Acceso completo</option>
-            </select>
-          </label>
-          <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
+          <div class="admin-card-heading">
+            <div>
+              <h3>Editores y permisos</h3>
+              <p class="muted">Solo la cuenta principal puede asignar perfiles. Los permisos controlan que puede hacer cada cuenta.</p>
+            </div>
+          </div>
+          <div class="permission-grid">
+            <article>
+              <strong>Acceso completo</strong>
+              <span>Administra usuarios, estructura y recursos.</span>
+            </article>
+            <article>
+              <strong>Editor avanzado</strong>
+              <span>Edita estructura y recursos, sin autorizar usuarios.</span>
+            </article>
+            <article>
+              <strong>Creador de recursos</strong>
+              <span>Crea recursos, enlaces y archivos sin eliminar.</span>
+            </article>
+            <article>
+              <strong>Solo lectura</strong>
+              <span>Revisa la estructura sin modificar ni descargar.</span>
+            </article>
+          </div>
+          <div class="editor-form-row">
+            <label>
+              Correo
+              <input id="editor-email-input" type="email" placeholder="correo@ejemplo.com">
+            </label>
+            <label>
+              Perfil
+              <select id="editor-role-input">
+                <option value="manager">Editor avanzado</option>
+                <option value="contributor">Creador de recursos</option>
+                <option value="viewer">Solo lectura</option>
+                <option value="owner">Acceso completo</option>
+              </select>
+            </label>
+            <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
+          </div>
           <div class="editor-list" id="editor-list"></div>
         </section>
       </div>
@@ -389,6 +394,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-121500"></script>
+  <script src="js/app.js?v=20260621-124500"></script>
 </body>
 </html>

@@ -1,7 +1,11 @@
 {
   "course": {
     "title": "Calculo III",
-    "description": "Organizador de recursos para construir y revisar un curso en Moodle."
+    "eyebrow": "Propuesta de organizador Moodle",
+    "description": "Organizador de recursos para construir y revisar un curso en Moodle.",
+    "period": "2026-1",
+    "owner": "",
+    "moodleUrl": ""
   },
   "sections": [
     {

@@ -206,6 +206,14 @@ h1 {
   line-height: 1;
 }
 
+.header-description {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: #d7e6f6;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
 h2,
 h3,
 h4 {
@@ -729,6 +737,34 @@ textarea {
   color: var(--brand-2);
   font-size: 1.45rem;
   line-height: 1;
+}
+
+.course-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.course-facts span,
+.course-facts a {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding: 8px 10px;
+  color: var(--brand);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.course-facts strong {
+  color: var(--brand-2);
+  font-size: 0.72rem;
+  text-transform: uppercase;
 }
 
 .map-module {
@@ -1401,8 +1437,8 @@ body:not(.can-manage-users) .admin-users-card {
 
 .admin-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.4fr);
+  gap: 14px;
 }
 
 .admin-card {
@@ -1415,6 +1451,17 @@ body:not(.can-manage-users) .admin-users-card {
 
 .admin-card h3 {
   font-size: 1rem;
+}
+
+.admin-course-card {
+  gap: 12px;
+}
+
+.admin-card-heading {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 .admin-card label {
@@ -1430,22 +1477,112 @@ body:not(.can-manage-users) .admin-users-card {
   gap: 6px;
 }
 
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.permission-grid article {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.permission-grid strong {
+  color: var(--brand);
+  font-size: 0.88rem;
+}
+
+.permission-grid span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.editor-form-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 220px) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.editor-list-header,
 .editor-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 190px) auto;
   gap: 8px;
   align-items: center;
+}
+
+.editor-list-header {
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.editor-row {
   padding: 8px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
 
-.editor-row span {
+.editor-row.main-account {
+  background: #f2fbf8;
+  border-color: #a9d8ce;
+}
+
+.editor-account {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.editor-account strong {
   color: var(--brand);
   font-size: 0.86rem;
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.editor-account small {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.role-pill {
+  width: fit-content;
+  padding: 5px 8px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border: 1px solid #cce0f1;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.role-owner {
+  color: #075f45;
+  background: #dff7ed;
+  border-color: #a9dfc8;
+}
+
+.role-contributor {
+  color: #7b4a00;
+  background: #fff1cf;
+  border-color: #f2d391;
+}
+
+.role-viewer {
+  color: #44546a;
+  background: #edf1f5;
+  border-color: #d6dde6;
 }
 
 .structure-list {
@@ -1564,7 +1701,7 @@ body:not(.can-manage-users) .admin-users-card {
   }
 
   .admin-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1586,6 +1723,10 @@ body:not(.can-manage-users) .admin-users-card {
   .course-overview-panel,
   .course-overview-stats,
   .admin-grid,
+  .permission-grid,
+  .editor-form-row,
+  .editor-list-header,
+  .editor-row,
   .structure-row,
   .structure-heading,
   .structure-create-module,

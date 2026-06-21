@@ -149,8 +149,14 @@ const dom = {
   authDescription: document.querySelector('#auth-description'),
   resetPasswordButton: document.querySelector('#reset-password-button'),
   logoutButton: document.querySelector('#logout-button'),
+  courseEyebrowDisplay: document.querySelector('#course-eyebrow-display'),
+  courseDescriptionDisplay: document.querySelector('#course-description-display'),
+  courseEyebrowInput: document.querySelector('#course-eyebrow-input'),
   courseTitleInput: document.querySelector('#course-title-input'),
   courseDescriptionInput: document.querySelector('#course-description-input'),
+  coursePeriodInput: document.querySelector('#course-period-input'),
+  courseOwnerInput: document.querySelector('#course-owner-input'),
+  courseMoodleUrlInput: document.querySelector('#course-moodle-url-input'),
   moduleEditSelect: document.querySelector('#module-edit-select'),
   moduleTitleInput: document.querySelector('#module-title-input'),
   newModuleTitleInput: document.querySelector('#new-module-title-input'),
@@ -520,7 +526,13 @@ function selectFirstAvailable() {
 
 function renderSummary() {
   const resources = allResources().map((item) => item.resource);
-  document.querySelector('h1').textContent = state.data.course?.title ?? 'Calculo III';
+  const course = state.data.course || {};
+  document.querySelector('h1').textContent = course.title ?? 'Calculo III';
+  if (dom.courseEyebrowDisplay) dom.courseEyebrowDisplay.textContent = course.eyebrow || 'Propuesta de organizador Moodle';
+  if (dom.courseDescriptionDisplay) {
+    dom.courseDescriptionDisplay.textContent = course.description || 'Organizador de recursos para construir y revisar un curso en Moodle.';
+    dom.courseDescriptionDisplay.hidden = !dom.courseDescriptionDisplay.textContent.trim();
+  }
   dom.totalResources.textContent = resources.length;
   dom.missingResources.textContent = resources.filter((resource) => resource.status === 'missing').length;
   dom.approvedResources.textContent = resources.filter((resource) => resource.status === 'approved').length;
@@ -657,11 +669,18 @@ function renderCourseMap() {
     );
     const overview = document.createElement('article');
     overview.className = 'course-overview-panel';
+    const course = state.data.course || {};
+    const courseFacts = [
+      course.period ? `<span><strong>Periodo</strong>${course.period}</span>` : '',
+      course.owner ? `<span><strong>Responsable</strong>${course.owner}</span>` : '',
+      course.moodleUrl ? `<a href="${normalizeUrl(course.moodleUrl)}" target="_blank" rel="noopener noreferrer"><strong>Moodle</strong>Abrir curso</a>` : '',
+    ].filter(Boolean).join('');
     overview.innerHTML = `
       <div>
         <p class="map-kicker">Vista general</p>
         <h4>Selecciona un modulo para abrir su pagina de trabajo</h4>
-        <p class="muted">El mapa mantiene la vision general limpia; cada modulo concentra sus lecciones, partes y recursos en una pagina propia.</p>
+        <p class="muted">${course.description || 'El mapa mantiene la vision general limpia; cada modulo concentra sus lecciones, partes y recursos en una pagina propia.'}</p>
+        ${courseFacts ? `<div class="course-facts">${courseFacts}</div>` : ''}
       </div>
       <div class="course-overview-stats">
         <span><strong>${courseTotals.modules}</strong> modulos</span>
@@ -1027,31 +1046,40 @@ function renderLessonControls() {
 
 function renderAdminControls() {
   if (!state.data) return;
-  dom.courseTitleInput.value = state.data.course?.title ?? '';
-  dom.courseDescriptionInput.value = state.data.course?.description ?? '';
+  const course = state.data.course || {};
+  if (dom.courseEyebrowInput) dom.courseEyebrowInput.value = course.eyebrow || 'Propuesta de organizador Moodle';
+  if (dom.courseTitleInput) dom.courseTitleInput.value = course.title ?? '';
+  if (dom.courseDescriptionInput) dom.courseDescriptionInput.value = course.description ?? '';
+  if (dom.coursePeriodInput) dom.coursePeriodInput.value = course.period ?? '';
+  if (dom.courseOwnerInput) dom.courseOwnerInput.value = course.owner ?? '';
+  if (dom.courseMoodleUrlInput) dom.courseMoodleUrlInput.value = course.moodleUrl ?? '';
 
-  dom.moduleEditSelect.innerHTML = '';
-  state.data.modules.forEach((module, index) => {
-    const option = document.createElement('option');
-    option.value = module.id;
-    option.textContent = `Modulo ${index + 1}: ${module.title}`;
-    dom.moduleEditSelect.appendChild(option);
-  });
-  dom.moduleEditSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
-  const selectedModule = state.data.modules.find((module) => module.id === dom.moduleEditSelect.value);
-  dom.moduleTitleInput.value = selectedModule?.title ?? '';
+  if (dom.moduleEditSelect) {
+    dom.moduleEditSelect.innerHTML = '';
+    state.data.modules.forEach((module, index) => {
+      const option = document.createElement('option');
+      option.value = module.id;
+      option.textContent = `Modulo ${index + 1}: ${module.title}`;
+      dom.moduleEditSelect.appendChild(option);
+    });
+    dom.moduleEditSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
+    const selectedModule = state.data.modules.find((module) => module.id === dom.moduleEditSelect.value);
+    dom.moduleTitleInput.value = selectedModule?.title ?? '';
+  }
 
-  dom.sectionEditSelect.innerHTML = '';
-  state.data.sections.forEach((section, index) => {
-    const option = document.createElement('option');
-    option.value = section.id;
-    option.textContent = `Parte ${index + 1}: ${section.title}`;
-    dom.sectionEditSelect.appendChild(option);
-  });
-  dom.sectionEditSelect.value = state.selectedSectionId ?? state.data.sections[0]?.id ?? '';
-  const selectedSection = state.data.sections.find((section) => section.id === dom.sectionEditSelect.value);
-  dom.sectionTitleInput.value = selectedSection?.title ?? '';
-  dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
+  if (dom.sectionEditSelect) {
+    dom.sectionEditSelect.innerHTML = '';
+    state.data.sections.forEach((section, index) => {
+      const option = document.createElement('option');
+      option.value = section.id;
+      option.textContent = `Parte ${index + 1}: ${section.title}`;
+      dom.sectionEditSelect.appendChild(option);
+    });
+    dom.sectionEditSelect.value = state.selectedSectionId ?? state.data.sections[0]?.id ?? '';
+    const selectedSection = state.data.sections.find((section) => section.id === dom.sectionEditSelect.value);
+    dom.sectionTitleInput.value = selectedSection?.title ?? '';
+    dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
+  }
 }
 
 function cloneCourseData(data) {
@@ -1566,9 +1594,18 @@ async function updateLesson() {
 async function updateCourseSettings() {
   if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la configuracion del curso.')) return;
   state.data.course = state.data.course || {};
+  state.data.course.eyebrow = dom.courseEyebrowInput?.value.trim() || 'Propuesta de organizador Moodle';
   state.data.course.title = dom.courseTitleInput.value.trim() || 'Calculo III';
   state.data.course.description = dom.courseDescriptionInput.value.trim();
+  state.data.course.period = dom.coursePeriodInput?.value.trim() || '';
+  state.data.course.owner = dom.courseOwnerInput?.value.trim() || '';
+  state.data.course.moodleUrl = dom.courseMoodleUrlInput?.value.trim() || '';
   document.querySelector('h1').textContent = state.data.course.title;
+  if (dom.courseEyebrowDisplay) dom.courseEyebrowDisplay.textContent = state.data.course.eyebrow;
+  if (dom.courseDescriptionDisplay) {
+    dom.courseDescriptionDisplay.textContent = state.data.course.description;
+    dom.courseDescriptionDisplay.hidden = !state.data.course.description;
+  }
   if (!(await saveData())) return;
   render();
 }
@@ -2083,17 +2120,30 @@ function renderEditorList(editors = []) {
     return;
   }
   dom.editorList.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'editor-list-header';
+  header.innerHTML = '<span>Cuenta</span><span>Perfil</span><span>Accion</span>';
+  dom.editorList.appendChild(header);
   editors.forEach((editor) => {
     const row = document.createElement('div');
     row.className = 'editor-row';
-    const email = document.createElement('span');
-    email.textContent = `${editor.email} · ${labels[editor.role || 'manager'] ?? editor.role}`;
+    if (editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL) row.classList.add('main-account');
+    const account = document.createElement('div');
+    account.className = 'editor-account';
+    const email = document.createElement('strong');
+    email.textContent = editor.email;
+    const meta = document.createElement('small');
+    meta.textContent = editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL ? 'Cuenta principal' : 'Cuenta autorizada';
+    account.append(email, meta);
+    const role = document.createElement('span');
+    role.className = `role-pill role-${editor.role || 'manager'}`;
+    role.textContent = labels[editor.role || 'manager'] ?? editor.role;
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
     remove.textContent = 'Quitar';
     remove.addEventListener('click', () => removeEditor(editor.email));
-    row.append(email, remove);
+    row.append(account, role, remove);
     dom.editorList.appendChild(row);
   });
 }
@@ -2219,16 +2269,16 @@ function wireEvents() {
     }
   });
   document.querySelector('#save-course-settings').addEventListener('click', updateCourseSettings);
-  document.querySelector('#add-module').addEventListener('click', addModule);
-  document.querySelector('#update-module').addEventListener('click', updateModule);
-  document.querySelector('#delete-module').addEventListener('click', deleteModule);
-  document.querySelector('#update-section').addEventListener('click', updateSection);
+  onOptional('#add-module', 'click', addModule);
+  onOptional('#update-module', 'click', updateModule);
+  onOptional('#delete-module', 'click', deleteModule);
+  onOptional('#update-section', 'click', updateSection);
   document.querySelector('#add-editor').addEventListener('click', addEditor);
-  dom.moduleEditSelect.addEventListener('change', () => {
+  dom.moduleEditSelect?.addEventListener('change', () => {
     const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
     dom.moduleTitleInput.value = module?.title ?? '';
   });
-  dom.sectionEditSelect.addEventListener('change', () => {
+  dom.sectionEditSelect?.addEventListener('change', () => {
     const section = state.data.sections.find((item) => item.id === dom.sectionEditSelect.value);
     dom.sectionTitleInput.value = section?.title ?? '';
     dom.sectionDescriptionInput.value = section?.description ?? '';
