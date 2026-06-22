@@ -1053,6 +1053,14 @@ textarea {
   font-size: 1.05rem;
 }
 
+.resource-people {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .resource-notes {
   margin: 10px 0 4px;
 }
@@ -1479,6 +1487,73 @@ body:not(.can-manage-users) .admin-users-card {
 
 .admin-card h3 {
   font-size: 1rem;
+}
+
+.admin-audit-card {
+  grid-column: 1 / -1;
+}
+
+.audit-list {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-row {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.audit-row-head strong {
+  color: var(--brand);
+  overflow-wrap: anywhere;
+}
+
+.audit-meta,
+.audit-place,
+.audit-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.audit-summary {
+  color: var(--ink);
+}
+
+.audit-action-create {
+  color: #075f45;
+  background: #dff7ed;
+  border-color: #a9dfc8;
+}
+
+.audit-action-update {
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.audit-action-move {
+  color: #7b4a00;
+  background: #fff1cf;
+  border-color: #f2d391;
+}
+
+.audit-action-delete {
+  color: #9b2034;
+  background: #ffe5ea;
+  border-color: #f2b3c0;
 }
 
 .admin-course-card {

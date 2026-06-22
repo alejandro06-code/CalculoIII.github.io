@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-203500">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-204500">
 </head>
 <body>
   <header class="app-header">
@@ -373,6 +373,21 @@
           </section>
         </section>
       </div>
+      <section class="admin-card admin-audit-card">
+        <div class="admin-card-heading">
+          <div>
+            <h3>Historial de recursos</h3>
+            <p class="muted">Registro de creaciones, ediciones, movimientos y eliminaciones. Solo lo ve la cuenta con acceso completo.</p>
+          </div>
+          <button class="mini-btn" id="refresh-audit-log" type="button">Actualizar historial</button>
+        </div>
+        <label>
+          Buscar recurso, persona, correo o accion
+          <input id="audit-search" placeholder="Titulo, correo, nombre, crear, editar...">
+        </label>
+        <p class="asset-empty" id="audit-status"></p>
+        <div class="audit-list" id="audit-list"></div>
+      </section>
     </section>
   </main>
 
@@ -398,6 +413,7 @@
         </div>
         <div class="badges"></div>
       </div>
+      <p class="resource-people"></p>
       <p class="resource-notes"></p>
       <div class="resource-assets"></div>
       <div class="resource-actions">
@@ -411,6 +427,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-203500"></script>
+  <script src="js/app.js?v=20260621-204500"></script>
 </body>
 </html>

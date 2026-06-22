@@ -28,6 +28,38 @@ create table if not exists public.user_profiles (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.resource_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  resource_id text not null,
+  resource_title text not null default '',
+  action text not null,
+  actor_email text not null,
+  actor_name text not null default '',
+  module_id text not null default '',
+  module_title text not null default '',
+  lesson_id text not null default '',
+  lesson_title text not null default '',
+  section_id text not null default '',
+  section_title text not null default '',
+  summary text not null default '',
+  previous_data jsonb,
+  new_data jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.resource_audit_log
+drop constraint if exists resource_audit_log_action_check;
+
+alter table public.resource_audit_log
+add constraint resource_audit_log_action_check
+check (action in ('create', 'update', 'move', 'delete'));
+
+create index if not exists resource_audit_log_resource_idx
+on public.resource_audit_log (resource_id, created_at desc);
+
+create index if not exists resource_audit_log_created_idx
+on public.resource_audit_log (created_at desc);
+
 create unique index if not exists user_profiles_full_name_unique
 on public.user_profiles (lower(full_name));
 
@@ -386,6 +418,7 @@ set email = excluded.email,
 alter table public.course_state enable row level security;
 alter table public.course_editors enable row level security;
 alter table public.user_profiles enable row level security;
+alter table public.resource_audit_log enable row level security;
 
 grant usage on schema public to anon, authenticated;
 revoke select on public.course_state from anon;
@@ -394,6 +427,7 @@ grant insert, update on public.course_state to authenticated;
 grant select on public.course_editors to authenticated;
 grant insert, update, delete on public.course_editors to authenticated;
 grant select, insert, update on public.user_profiles to authenticated;
+grant select, insert on public.resource_audit_log to authenticated;
 
 drop policy if exists "user_profiles own read" on public.user_profiles;
 create policy "user_profiles own read"
@@ -448,6 +482,23 @@ on public.course_editors
 for delete
 to authenticated
 using (public.is_main_editor());
+
+drop policy if exists "resource_audit main read" on public.resource_audit_log;
+create policy "resource_audit main read"
+on public.resource_audit_log
+for select
+to authenticated
+using (public.is_main_editor());
+
+drop policy if exists "resource_audit editor insert" on public.resource_audit_log;
+create policy "resource_audit editor insert"
+on public.resource_audit_log
+for insert
+to authenticated
+with check (
+  public.can_edit_course()
+  and lower(actor_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+);
 
 drop policy if exists "course_state public read" on public.course_state;
 drop policy if exists "course_state authenticated read" on public.course_state;

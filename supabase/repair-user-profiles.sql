@@ -1,6 +1,59 @@
 -- Ejecutar en Supabase SQL Editor con la cuenta duena del proyecto.
 -- Repara cuentas creadas en Supabase Auth que no aparecen en public.user_profiles.
 
+create table if not exists public.resource_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  resource_id text not null,
+  resource_title text not null default '',
+  action text not null,
+  actor_email text not null,
+  actor_name text not null default '',
+  module_id text not null default '',
+  module_title text not null default '',
+  lesson_id text not null default '',
+  lesson_title text not null default '',
+  section_id text not null default '',
+  section_title text not null default '',
+  summary text not null default '',
+  previous_data jsonb,
+  new_data jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.resource_audit_log
+drop constraint if exists resource_audit_log_action_check;
+
+alter table public.resource_audit_log
+add constraint resource_audit_log_action_check
+check (action in ('create', 'update', 'move', 'delete'));
+
+create index if not exists resource_audit_log_resource_idx
+on public.resource_audit_log (resource_id, created_at desc);
+
+create index if not exists resource_audit_log_created_idx
+on public.resource_audit_log (created_at desc);
+
+alter table public.resource_audit_log enable row level security;
+
+grant select, insert on public.resource_audit_log to authenticated;
+
+drop policy if exists "resource_audit main read" on public.resource_audit_log;
+create policy "resource_audit main read"
+on public.resource_audit_log
+for select
+to authenticated
+using (public.is_main_editor());
+
+drop policy if exists "resource_audit editor insert" on public.resource_audit_log;
+create policy "resource_audit editor insert"
+on public.resource_audit_log
+for insert
+to authenticated
+with check (
+  public.can_edit_course()
+  and lower(actor_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+);
+
 create or replace function public.profile_name_for_auth(auth_id uuid, auth_email text, raw_metadata jsonb)
 returns text
 language plpgsql

@@ -93,6 +93,9 @@ const state = {
   structureDirty: false,
   loadedEditors: [],
   loadedRegisteredUsers: [],
+  currentUserProfile: null,
+  resourceAuditLog: [],
+  auditSearch: '',
 };
 
 const dom = {
@@ -187,6 +190,10 @@ const dom = {
   editorList: document.querySelector('#editor-list'),
   registeredUserList: document.querySelector('#registered-user-list'),
   syncRegisteredUsersButton: document.querySelector('#sync-registered-users'),
+  auditSearch: document.querySelector('#audit-search'),
+  auditStatus: document.querySelector('#audit-status'),
+  auditList: document.querySelector('#audit-list'),
+  refreshAuditLog: document.querySelector('#refresh-audit-log'),
   structureStatus: document.querySelector('#structure-status'),
   saveStructure: document.querySelector('#save-structure'),
   discardStructure: document.querySelector('#discard-structure'),
@@ -543,6 +550,67 @@ function formatFileSize(size = 0) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('es-CO', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+function currentActor() {
+  const email = state.session?.user?.email?.toLowerCase() || '';
+  return {
+    email,
+    name: state.currentUserProfile?.full_name || state.session?.user?.user_metadata?.full_name || email || 'Usuario',
+  };
+}
+
+function actorText(name, email) {
+  if (name && email && name.toLowerCase() !== email.toLowerCase()) return `${name} (${email})`;
+  return name || email || 'Sin registro';
+}
+
+function resourceAuditSnapshot(resource) {
+  if (!resource) return null;
+  return {
+    id: resource.id,
+    title: resource.title,
+    type: resource.type,
+    status: resource.status,
+    section: resource.section,
+    priority: resource.priority,
+    owner: resource.owner,
+    notes: resource.notes,
+    links: normalizeLinks(resource).map((link) => ({
+      id: link.id,
+      label: link.label,
+      url: link.url,
+    })),
+    files: normalizeFiles(resource).map((file) => ({
+      id: file.id,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      path: file.path || '',
+    })),
+    createdByName: resource.createdByName || '',
+    createdByEmail: resource.createdByEmail || '',
+    createdAt: resource.createdAt || '',
+    updatedByName: resource.updatedByName || '',
+    updatedByEmail: resource.updatedByEmail || '',
+    updatedAt: resource.updatedAt || '',
+    orderIndex: Number.isInteger(resource.orderIndex) ? resource.orderIndex : null,
+  };
 }
 
 function fileToResourceFile(file) {
@@ -970,9 +1038,30 @@ function resourceMatches(resource) {
   const typeMatch = !state.typeFilters.length || state.typeFilters.includes(resource.type);
   const linkText = normalizeLinks(resource).map((link) => `${link.label} ${link.url}`).join(' ');
   const fileText = normalizeFiles(resource).map((file) => file.name).join(' ');
-  const haystack = `${resource.title} ${resource.url} ${linkText} ${fileText} ${resource.owner} ${resource.notes}`.toLowerCase();
+  const auditText = `${resource.createdByName} ${resource.createdByEmail} ${resource.updatedByName} ${resource.updatedByEmail}`;
+  const haystack = `${resource.title} ${resource.url} ${linkText} ${fileText} ${resource.owner} ${resource.notes} ${auditText}`.toLowerCase();
   const searchMatch = !state.search || haystack.includes(state.search.toLowerCase());
   return sectionMatch && statusMatch && typeMatch && searchMatch;
+}
+
+function resourcePeopleText(resource) {
+  const parts = [];
+  if (resource.createdByName || resource.createdByEmail) {
+    const createdDate = formatDateTime(resource.createdAt);
+    parts.push(`Creado por ${actorText(resource.createdByName, resource.createdByEmail)}${createdDate ? `, ${createdDate}` : ''}`);
+  } else {
+    parts.push('Creacion sin registro');
+  }
+
+  const hasDistinctUpdate =
+    (resource.updatedByName || resource.updatedByEmail) &&
+    (resource.updatedAt !== resource.createdAt || resource.updatedByEmail !== resource.createdByEmail);
+  if (hasDistinctUpdate) {
+    const updatedDate = formatDateTime(resource.updatedAt);
+    parts.push(`Ultima edicion por ${actorText(resource.updatedByName, resource.updatedByEmail)}${updatedDate ? `, ${updatedDate}` : ''}`);
+  }
+
+  return parts.join(' | ');
 }
 
 function renderResources() {
@@ -1004,6 +1093,7 @@ function renderResources() {
     const node = dom.template.content.firstElementChild.cloneNode(true);
     node.dataset.resourceId = resource.id;
     node.querySelector('h4').textContent = resource.title;
+    node.querySelector('.resource-people').textContent = resourcePeopleText(resource);
     node.querySelector('.resource-meta').textContent = `${labels[resource.type] ?? resource.type} · Prioridad ${labels[resource.priority] ?? resource.priority}`;
     node.querySelector('.resource-notes').textContent = resource.notes || 'Sin notas.';
 
@@ -1570,6 +1660,79 @@ function formResource() {
   };
 }
 
+function resourceContext(moduleId, lessonId, sectionId) {
+  const module = state.data.modules.find((item) => item.id === moduleId);
+  const lesson = module?.lessons.find((item) => item.id === lessonId);
+  const section = state.data.sections.find((item) => item.id === sectionId);
+  return {
+    module,
+    lesson,
+    section,
+    moduleId,
+    lessonId,
+    sectionId,
+    moduleTitle: module?.title || '',
+    lessonTitle: lesson?.title || '',
+    sectionTitle: section?.title || '',
+  };
+}
+
+function applyResourceAuditFields(resource, existingResource = null) {
+  const actor = currentActor();
+  const now = new Date().toISOString();
+  if (existingResource) {
+    resource.createdByEmail = existingResource.createdByEmail || '';
+    resource.createdByName = existingResource.createdByName || '';
+    resource.createdAt = existingResource.createdAt || '';
+    resource.updatedByEmail = actor.email;
+    resource.updatedByName = actor.name;
+    resource.updatedAt = now;
+    return;
+  }
+  resource.createdByEmail = actor.email;
+  resource.createdByName = actor.name;
+  resource.createdAt = now;
+  resource.updatedByEmail = '';
+  resource.updatedByName = '';
+  resource.updatedAt = '';
+}
+
+function auditActionLabel(action) {
+  return {
+    create: 'Creacion',
+    update: 'Edicion',
+    move: 'Movimiento',
+    delete: 'Eliminacion',
+  }[action] || action;
+}
+
+async function logResourceAudit(action, resource, context, previousResource = null, summary = '') {
+  if (!remoteEditingActive() || !cloudClient || !state.session?.user || !resource) return;
+  const actor = currentActor();
+  const payload = {
+    resource_id: resource.id,
+    resource_title: resource.title || '',
+    action,
+    actor_email: actor.email,
+    actor_name: actor.name,
+    module_id: context?.moduleId || '',
+    module_title: context?.moduleTitle || '',
+    lesson_id: context?.lessonId || '',
+    lesson_title: context?.lessonTitle || '',
+    section_id: context?.sectionId || resource.section || '',
+    section_title: context?.sectionTitle || '',
+    summary: summary || auditActionLabel(action),
+    previous_data: previousResource ? resourceAuditSnapshot(previousResource) : null,
+    new_data: action === 'delete' ? null : resourceAuditSnapshot(resource),
+  };
+  const { error } = await cloudClient.from('resource_audit_log').insert(payload);
+  if (error) {
+    console.warn('No se pudo guardar el historial del recurso.', error.message);
+    return;
+  }
+  if (state.isMainEditor) await loadResourceAudit();
+}
+
 async function saveResource(event) {
   event.preventDefault();
   if (!dom.resourceTitle.value.trim()) return;
@@ -1582,11 +1745,13 @@ async function saveResource(event) {
 
   const sourceLesson = currentLesson();
   const existingIndex = sourceLesson?.resources.findIndex((item) => item.id === resource.id) ?? -1;
+  const existingResource = existingIndex >= 0 ? { ...sourceLesson.resources[existingIndex] } : null;
   if (existingIndex >= 0) {
     if (!requireCapability('manageResources', 'Tu perfil puede crear recursos, pero no editar recursos existentes.')) return;
   } else if (!requireCapability('createResources', 'Tu perfil no puede crear recursos.')) {
     return;
   }
+  applyResourceAuditFields(resource, existingResource);
   if (existingIndex >= 0) {
     sourceLesson.resources.splice(existingIndex, 1);
   }
@@ -1597,6 +1762,12 @@ async function saveResource(event) {
   state.selectedLessonId = targetLessonId;
   state.selectedSectionId = targetSectionId;
   if (!(await saveData())) return;
+  const context = resourceContext(targetModuleId, targetLessonId, targetSectionId);
+  const action = existingResource ? 'update' : 'create';
+  const summary = existingResource
+    ? `Edito el recurso en ${context.moduleTitle} / ${context.lessonTitle} / ${context.sectionTitle}`
+    : `Creo el recurso en ${context.moduleTitle} / ${context.lessonTitle} / ${context.sectionTitle}`;
+  await logResourceAudit(action, resource, context, existingResource, summary);
   clearForm();
   render();
 }
@@ -1667,8 +1838,13 @@ async function confirmDeleteResource() {
     return;
   }
   const resourceId = state.pendingDeleteResourceId;
+  const resource = (lesson.resources || []).find((item) => item.id === resourceId);
+  const context = resourceContext(state.selectedModuleId, state.selectedLessonId, resource?.section || state.selectedSectionId);
   lesson.resources = (lesson.resources || []).filter((resource) => resource.id !== resourceId);
   if (!(await saveData())) return;
+  if (resource) {
+    await logResourceAudit('delete', resource, context, resource, `Elimino el recurso de ${context.moduleTitle} / ${context.lessonTitle} / ${context.sectionTitle}`);
+  }
   clearForm();
   closeDeleteConfirm();
   render();
@@ -1685,8 +1861,19 @@ async function moveResource(resourceId, direction) {
   if (!neighbor) return;
   const indexA = resources.findIndex((resource) => resource.id === resourceId);
   const indexB = resources.findIndex((resource) => resource.id === neighbor.id);
+  const movingResource = resources[indexA];
+  const beforeMove = {
+    ...movingResource,
+    orderIndex: indexA,
+  };
   [resources[indexA], resources[indexB]] = [resources[indexB], resources[indexA]];
   if (!(await saveData())) return;
+  const afterMove = {
+    ...movingResource,
+    orderIndex: indexB,
+  };
+  const context = resourceContext(state.selectedModuleId, state.selectedLessonId, movingResource.section || state.selectedSectionId);
+  await logResourceAudit('move', afterMove, context, beforeMove, `Reordeno el recurso en ${context.moduleTitle} / ${context.lessonTitle} / ${context.sectionTitle}`);
   render();
 }
 
@@ -2307,12 +2494,34 @@ async function upsertUserProfile(user, name = '') {
         ...payload,
         full_name: user.email.toLowerCase(),
       });
-      if (!retryError) return;
+      if (!retryError) {
+        state.currentUserProfile = { email: payload.email, full_name: user.email.toLowerCase() };
+        return;
+      }
       console.warn('No se pudo guardar el perfil de usuario.', retryError.message);
       return;
     }
     console.warn('No se pudo guardar el perfil de usuario.', error.message);
+    return;
   }
+  state.currentUserProfile = { email: payload.email, full_name: payload.full_name };
+}
+
+async function loadCurrentUserProfile() {
+  if (!cloudClient || !state.session?.user) {
+    state.currentUserProfile = null;
+    return null;
+  }
+  const { data, error } = await cloudClient
+    .from('user_profiles')
+    .select('email, full_name')
+    .eq('id', state.session.user.id)
+    .maybeSingle();
+  if (!error && data) {
+    state.currentUserProfile = data;
+    return data;
+  }
+  return state.currentUserProfile;
 }
 
 async function logoutEditor() {
@@ -2324,10 +2533,13 @@ async function logoutEditor() {
   state.userRole = 'viewer';
   state.returnRoute = '#/mapa';
   state.currentView = 'course';
+  state.currentUserProfile = null;
+  state.resourceAuditLog = [];
   history.replaceState(null, '', '#/login');
   setAuthMode('login', { updateRoute: false });
   renderEditorList([]);
   renderRegisteredUsers([]);
+  renderResourceAudit();
   render();
   setCloudStatus('Sesion cerrada. Inicia sesion para entrar al organizador.', state.cloudReady ? 'pending' : 'local');
 }
@@ -2463,17 +2675,108 @@ function renderRegisteredUsers(users = []) {
   });
 }
 
+function renderResourceAudit() {
+  if (!dom.auditList || !dom.auditStatus) return;
+  if (!remoteEditingActive()) {
+    dom.auditStatus.textContent = 'Activa Supabase para guardar historial de recursos.';
+    dom.auditList.innerHTML = '';
+    return;
+  }
+  if (!state.isMainEditor) {
+    dom.auditStatus.textContent = 'Solo la cuenta principal puede ver el historial.';
+    dom.auditList.innerHTML = '';
+    return;
+  }
+
+  const search = state.auditSearch.trim().toLowerCase();
+  const entries = (state.resourceAuditLog || []).filter((entry) => {
+    if (!search) return true;
+    const haystack = [
+      entry.resource_title,
+      entry.action,
+      auditActionLabel(entry.action),
+      entry.actor_name,
+      entry.actor_email,
+      entry.module_title,
+      entry.lesson_title,
+      entry.section_title,
+      entry.summary,
+    ].join(' ').toLowerCase();
+    return haystack.includes(search);
+  });
+
+  dom.auditStatus.textContent = entries.length
+    ? `${entries.length} movimiento${entries.length === 1 ? '' : 's'} en el historial.`
+    : 'No hay movimientos que coincidan con la busqueda.';
+  dom.auditList.innerHTML = '';
+
+  entries.forEach((entry) => {
+    const row = document.createElement('article');
+    row.className = 'audit-row';
+    const head = document.createElement('div');
+    head.className = 'audit-row-head';
+    const title = document.createElement('strong');
+    title.textContent = entry.resource_title || 'Recurso sin titulo';
+    const action = document.createElement('span');
+    action.className = `role-pill audit-action-${entry.action || 'update'}`;
+    action.textContent = auditActionLabel(entry.action);
+    head.append(title, action);
+
+    const meta = document.createElement('p');
+    meta.className = 'audit-meta';
+    meta.textContent = `${actorText(entry.actor_name, entry.actor_email)} | ${formatDateTime(entry.created_at) || 'Sin fecha'}`;
+
+    const place = document.createElement('p');
+    place.className = 'audit-place';
+    place.textContent = [entry.module_title, entry.lesson_title, entry.section_title].filter(Boolean).join(' / ') || 'Ubicacion sin registro';
+
+    const summary = document.createElement('p');
+    summary.className = 'audit-summary';
+    summary.textContent = entry.summary || auditActionLabel(entry.action);
+
+    row.append(head, meta, place, summary);
+    dom.auditList.appendChild(row);
+  });
+}
+
+async function loadResourceAudit() {
+  if (!cloudClient || !state.isMainEditor) {
+    state.resourceAuditLog = [];
+    renderResourceAudit();
+    return;
+  }
+  const { data, error } = await cloudClient
+    .from('resource_audit_log')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(250);
+  if (error) {
+    state.resourceAuditLog = [];
+    if (dom.auditStatus) {
+      dom.auditStatus.textContent = `No se pudo cargar el historial. Ejecuta el SQL actualizado en Supabase. Detalle: ${error.message}`;
+    }
+    if (dom.auditList) dom.auditList.innerHTML = '';
+    return;
+  }
+  state.resourceAuditLog = data || [];
+  renderResourceAudit();
+}
+
 async function refreshEditorStatus() {
   if (!cloudClient || !state.session?.user || !state.cloudReady) {
     state.isEditor = false;
     state.isMainEditor = false;
     state.userRole = 'viewer';
+    state.currentUserProfile = null;
+    state.resourceAuditLog = [];
     updateAuthUi();
     renderEditorList([]);
     renderRegisteredUsers([]);
+    renderResourceAudit();
     return;
   }
   const email = state.session.user.email;
+  await loadCurrentUserProfile();
   state.isMainEditor = email.toLowerCase() === MAIN_EDITOR_EMAIL;
   const { data, error } = await cloudClient
     .from('course_editors')
@@ -2495,8 +2798,10 @@ async function loadEditors() {
   if (!cloudClient || !state.isMainEditor) {
     state.loadedEditors = [];
     state.loadedRegisteredUsers = [];
+    state.resourceAuditLog = [];
     renderEditorList([]);
     renderRegisteredUsers([]);
+    renderResourceAudit();
     return;
   }
   const { data, error } = await cloudClient
@@ -2506,13 +2811,16 @@ async function loadEditors() {
   if (error) {
     state.loadedEditors = [];
     state.loadedRegisteredUsers = [];
+    state.resourceAuditLog = [];
     renderEditorList([]);
     renderRegisteredUsers([]);
+    renderResourceAudit();
     return;
   }
   state.loadedEditors = data || [];
   renderEditorList(data);
   await loadRegisteredUsers();
+  await loadResourceAudit();
 }
 
 async function loadRegisteredUsers() {
@@ -2719,6 +3027,11 @@ function wireEvents() {
   onOptional('#update-section', 'click', updateSection);
   document.querySelector('#add-editor').addEventListener('click', addEditor);
   dom.syncRegisteredUsersButton?.addEventListener('click', syncRegisteredUsers);
+  dom.refreshAuditLog?.addEventListener('click', loadResourceAudit);
+  dom.auditSearch?.addEventListener('input', (event) => {
+    state.auditSearch = event.target.value;
+    renderResourceAudit();
+  });
   dom.moduleEditSelect?.addEventListener('change', () => {
     const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
     dom.moduleTitleInput.value = module?.title ?? '';
