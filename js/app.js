@@ -703,21 +703,56 @@ async function uploadResourceFile(file) {
   };
 }
 
-async function openResourceFile(file) {
+function triggerBrowserDownload(url, filename) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename || 'archivo';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  triggerBrowserDownload(url, filename);
+  URL.revokeObjectURL(url);
+}
+
+async function downloadResourceFile(file) {
   if (!hasCapability('openAssets')) return;
+  const filename = file.name || 'archivo';
   if (remoteEditingActive() && file.path) {
     const { data, error } = await cloudClient.storage
       .from(cloudConfig.storageBucket)
       .createSignedUrl(file.path, 120);
     if (error) {
-      alert(`No se pudo abrir el archivo: ${error.message}`);
+      alert(`No se pudo preparar la descarga: ${error.message}`);
       return;
     }
-    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    try {
+      const response = await fetch(data.signedUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      downloadBlob(filename, blob);
+    } catch {
+      alert('No se pudo descargar el archivo sin salir de la pagina. Intenta de nuevo.');
+    }
     return;
   }
   const url = file.publicUrl || file.dataUrl || file.path;
-  if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  if (!url) return;
+  if (url.startsWith('data:')) {
+    triggerBrowserDownload(url, filename);
+    return;
+  }
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const blob = await response.blob();
+    downloadBlob(filename, blob);
+  } catch {
+    alert('No se pudo descargar el archivo sin salir de la pagina. Intenta de nuevo.');
+  }
 }
 
 function currentModule() {
@@ -1208,14 +1243,11 @@ function renderResourceAssets(container, resource) {
       const item = document.createElement(canOpen ? 'a' : 'span');
       item.className = `asset-chip file-chip${canOpen ? '' : ' locked-asset'}`;
       if (canOpen) {
-        item.href = file.dataUrl || file.publicUrl || '#';
+        item.href = '#';
         item.addEventListener('click', (event) => {
-          if (file.path && remoteEditingActive()) {
-            event.preventDefault();
-            openResourceFile(file);
-          }
+          event.preventDefault();
+          downloadResourceFile(file);
         });
-        if (!file.path) item.download = file.name;
       }
       item.textContent = `${file.name} (${formatFileSize(file.size)})${canOpen ? '' : ' - requiere permiso'}`;
       group.appendChild(item);
@@ -1608,15 +1640,12 @@ function renderDraftFiles() {
     actions.className = 'asset-row-actions';
     const anchor = document.createElement('a');
     anchor.className = 'mini-btn';
-    anchor.href = file.dataUrl || file.publicUrl || '#';
-    anchor.textContent = 'Abrir';
+    anchor.href = '#';
+    anchor.textContent = 'Descargar';
     anchor.addEventListener('click', (event) => {
-      if (file.path && remoteEditingActive()) {
-        event.preventDefault();
-        openResourceFile(file);
-      }
+      event.preventDefault();
+      downloadResourceFile(file);
     });
-    if (!file.path) anchor.download = file.name;
     const remove = document.createElement('button');
     remove.className = 'mini-btn delete';
     remove.type = 'button';
