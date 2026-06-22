@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-213500">
+  <link rel="stylesheet" href="css/styles.css?v=20260622-001500">
 </head>
 <body>
   <header class="app-header">
@@ -323,13 +323,13 @@
           <div class="admin-card-heading">
             <div>
               <h3>Editores y permisos</h3>
-              <p class="muted">Solo la cuenta principal puede asignar perfiles. Los permisos controlan que puede hacer cada cuenta.</p>
+              <p class="muted">La cuenta principal y los administradores pueden asignar perfiles. Los permisos controlan que puede hacer cada cuenta.</p>
             </div>
           </div>
           <div class="permission-grid">
             <article>
-              <strong>Acceso completo</strong>
-              <span>Administra usuarios, estructura y recursos.</span>
+              <strong>Administrador</strong>
+              <span>Administra usuarios, estructura y recursos. No puede borrar la cuenta principal.</span>
             </article>
             <article>
               <strong>Editor avanzado</strong>
@@ -352,10 +352,10 @@
             <label>
               Perfil
               <select id="editor-role-input">
+                <option value="admin">Administrador</option>
                 <option value="manager">Editor avanzado</option>
                 <option value="contributor">Creador de recursos</option>
                 <option value="viewer">Solo lectura</option>
-                <option value="owner">Acceso completo</option>
               </select>
             </label>
             <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
@@ -377,7 +377,7 @@
         <div class="admin-card-heading">
           <div>
             <h3>Historial de recursos</h3>
-            <p class="muted">Registro de creaciones, ediciones, movimientos y eliminaciones. Solo lo ve la cuenta con acceso completo.</p>
+            <p class="muted">Registro de creaciones, ediciones, movimientos y eliminaciones. Los administradores pueden verlo; solo la cuenta principal puede borrar entradas.</p>
           </div>
           <button class="mini-btn" id="refresh-audit-log" type="button">Actualizar historial</button>
         </div>
@@ -396,7 +396,7 @@
     <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
       <p class="eyebrow">Confirmacion requerida</p>
       <h2 id="delete-confirm-title">Eliminar recurso</h2>
-      <p class="confirm-copy">Esta accion quitara el recurso del organizador.</p>
+      <p class="confirm-copy" id="delete-confirm-copy">Esta accion quitara el recurso del organizador.</p>
       <p class="confirm-resource" id="delete-confirm-resource"></p>
       <div class="confirm-actions">
         <button class="btn ghost" id="cancel-delete" type="button">Cancelar</button>
@@ -428,6 +428,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-213500"></script>
+  <script src="js/app.js?v=20260622-001500"></script>
 </body>
 </html>

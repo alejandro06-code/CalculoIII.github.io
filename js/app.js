@@ -24,7 +24,8 @@ const labels = {
   high: 'Alta',
   medium: 'Media',
   low: 'Baja',
-  owner: 'Acceso completo',
+  owner: 'Cuenta principal',
+  admin: 'Administrador',
   manager: 'Editor avanzado',
   contributor: 'Creador de recursos',
   viewer: 'Solo lectura',
@@ -37,10 +38,19 @@ const profileStatusLabels = {
   no_auth_user: 'Sin cuenta Auth',
 };
 
-const assignableRoles = ['owner', 'manager', 'contributor', 'viewer'];
+const assignableRoles = ['admin', 'manager', 'contributor', 'viewer'];
 
 const roleCapabilities = {
   owner: {
+    manageUsers: true,
+    manageStructure: true,
+    manageResources: true,
+    createResources: true,
+    deleteResources: true,
+    moveResources: true,
+    openAssets: true,
+  },
+  admin: {
     manageUsers: true,
     manageStructure: true,
     manageResources: true,
@@ -77,6 +87,8 @@ const state = {
   typeFilters: [],
   search: '',
   pendingDeleteResourceId: null,
+  pendingDeleteAuditId: null,
+  pendingDeleteKind: '',
   draftLinks: [],
   draftFiles: [],
   session: null,
@@ -151,6 +163,8 @@ const dom = {
   lessonEditTitleInput: document.querySelector('#lesson-edit-title-input'),
   structureList: document.querySelector('#structure-list'),
   deleteConfirm: document.querySelector('#delete-confirm'),
+  deleteConfirmTitle: document.querySelector('#delete-confirm-title'),
+  deleteConfirmCopy: document.querySelector('#delete-confirm-copy'),
   deleteConfirmResource: document.querySelector('#delete-confirm-resource'),
   confirmDelete: document.querySelector('#confirm-delete'),
   cancelDelete: document.querySelector('#cancel-delete'),
@@ -318,7 +332,7 @@ function canEdit() {
 
 function hasCapability(capability) {
   if (!remoteEditingActive()) return true;
-  if (capability === 'manageUsers') return state.isMainEditor;
+  if (capability === 'deleteAudit') return state.isMainEditor;
   return Boolean(roleCapabilities[state.userRole]?.[capability]);
 }
 
@@ -470,7 +484,7 @@ function canManageEditors() {
 
 function requireMainEditorPermission() {
   if (canManageEditors()) return true;
-  alert('Solo la cuenta principal puede autorizar o quitar editores.');
+  alert('Solo la cuenta principal o un administrador puede gestionar perfiles.');
   return false;
 }
 
@@ -1764,11 +1778,6 @@ function compactValue(value) {
   return String(value);
 }
 
-function listSummary(items, formatter) {
-  if (!Array.isArray(items) || !items.length) return 'ninguno';
-  return items.map(formatter).join('; ');
-}
-
 function valuesChanged(before, after) {
   return JSON.stringify(before ?? null) !== JSON.stringify(after ?? null);
 }
@@ -1785,50 +1794,247 @@ function auditFieldValue(key, value) {
   return compactValue(value);
 }
 
+const auditTrackedFields = [
+  ['title', 'Titulo'],
+  ['type', 'Tipo'],
+  ['status', 'Estado'],
+  ['section', 'Parte'],
+  ['priority', 'Prioridad'],
+  ['owner', 'Responsable'],
+  ['notes', 'Notas'],
+];
+
+function auditLinks(resource) {
+  return Array.isArray(resource?.links) ? resource.links : [];
+}
+
+function auditFiles(resource) {
+  return Array.isArray(resource?.files) ? resource.files : [];
+}
+
+function auditLinkLabel(link) {
+  return link?.label || 'Enlace';
+}
+
+function auditLinkUrl(link) {
+  return link?.url || 'Sin URL';
+}
+
+function auditFileLabel(file) {
+  const size = file?.size ? ` (${formatFileSize(file.size)})` : '';
+  return `${file?.name || 'Archivo'}${size}`;
+}
+
+function auditAssetText(items, formatter) {
+  if (!Array.isArray(items) || !items.length) return 'Ninguno';
+  return items.map(formatter).join(' | ');
+}
+
+function auditSnapshotResource(entry) {
+  if (entry.action === 'delete') return entry.previous_data || null;
+  return entry.new_data || entry.previous_data || null;
+}
+
+function auditSnapshotTitle(entry) {
+  if (entry.action === 'create') return 'Contenido creado';
+  if (entry.action === 'delete') return 'Contenido eliminado';
+  if (entry.action === 'move') return 'Contenido del recurso movido';
+  return 'Contenido despues de editar';
+}
+
+function auditSnapshotRows(resource) {
+  if (!resource) return [];
+  const rows = auditTrackedFields
+    .filter(([key]) => key !== 'section')
+    .map(([key, label]) => ({
+      label,
+      value: auditFieldValue(key, resource[key]),
+      kind: 'text',
+    }));
+  rows.push({
+    label: 'Enlaces',
+    value: auditLinks(resource),
+    kind: 'links',
+  });
+  rows.push({
+    label: 'Archivos',
+    value: auditFiles(resource),
+    kind: 'files',
+  });
+  return rows;
+}
+
 function auditChangeDetails(entry) {
   const previousData = entry.previous_data || null;
   const newData = entry.new_data || null;
-  if (entry.action === 'create') {
-    const details = ['Se creo el recurso.'];
-    if (newData?.status) details.push(`Estado inicial: ${labels[newData.status] ?? newData.status}.`);
-    if (newData?.type) details.push(`Tipo inicial: ${labels[newData.type] ?? newData.type}.`);
-    if (newData?.links?.length) details.push(`Enlaces iniciales: ${listSummary(newData.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
-    if (newData?.files?.length) details.push(`Archivos iniciales: ${listSummary(newData.files, (file) => `${file.name || 'archivo'}${file.size ? ` (${formatFileSize(file.size)})` : ''}`)}.`);
-    return details;
-  }
-  if (entry.action === 'delete') {
-    const details = ['Se elimino el recurso.'];
-    if (previousData?.status) details.push(`Ultimo estado: ${labels[previousData.status] ?? previousData.status}.`);
-    if (previousData?.links?.length) details.push(`Enlaces que tenia: ${listSummary(previousData.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
-    if (previousData?.files?.length) details.push(`Archivos que tenia: ${listSummary(previousData.files, (file) => `${file.name || 'archivo'}${file.size ? ` (${formatFileSize(file.size)})` : ''}`)}.`);
-    return details;
-  }
+  if (entry.action === 'create' || entry.action === 'delete') return [];
   if (entry.action === 'move') {
-    return [`Se movio de la posicion ${Number.isInteger(previousData?.orderIndex) ? previousData.orderIndex + 1 : 'sin registro'} a la posicion ${Number.isInteger(newData?.orderIndex) ? newData.orderIndex + 1 : 'sin registro'}.`];
+    return [{
+      label: 'Orden en la parte',
+      before: Number.isInteger(previousData?.orderIndex) ? `Posicion ${previousData.orderIndex + 1}` : 'Sin registro',
+      after: Number.isInteger(newData?.orderIndex) ? `Posicion ${newData.orderIndex + 1}` : 'Sin registro',
+      kind: 'text',
+    }];
   }
-  const fields = [
-    ['title', 'Titulo'],
-    ['type', 'Tipo'],
-    ['status', 'Estado'],
-    ['section', 'Parte'],
-    ['priority', 'Prioridad'],
-    ['owner', 'Responsable'],
-    ['notes', 'Notas'],
-  ];
+
   const details = [];
-  fields.forEach(([key, label]) => {
+  auditTrackedFields.forEach(([key, label]) => {
     if (!valuesChanged(previousData?.[key], newData?.[key])) return;
-    const before = auditFieldValue(key, previousData?.[key]);
-    const after = auditFieldValue(key, newData?.[key]);
-    details.push(`${label}: antes "${before}", ahora "${after}".`);
+    details.push({
+      label,
+      before: auditFieldValue(key, previousData?.[key]),
+      after: auditFieldValue(key, newData?.[key]),
+      kind: 'text',
+    });
   });
   if (valuesChanged(previousData?.links, newData?.links)) {
-    details.push(`Enlaces: antes ${listSummary(previousData?.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}; ahora ${listSummary(newData?.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
+    details.push({
+      label: 'Enlaces',
+      before: auditLinks(previousData),
+      after: auditLinks(newData),
+      kind: 'links',
+    });
   }
   if (valuesChanged(previousData?.files, newData?.files)) {
-    details.push(`Archivos: antes ${listSummary(previousData?.files, (file) => file.name || 'archivo')}; ahora ${listSummary(newData?.files, (file) => file.name || 'archivo')}.`);
+    details.push({
+      label: 'Archivos',
+      before: auditFiles(previousData),
+      after: auditFiles(newData),
+      kind: 'files',
+    });
   }
-  return details.length ? details : [entry.summary || 'Se guardo una edicion sin diferencias detalladas.'];
+  return details;
+}
+
+function auditValueText(value, kind = 'text') {
+  if (kind === 'links') {
+    return auditAssetText(value, (link) => `${auditLinkLabel(link)}: ${auditLinkUrl(link)}`);
+  }
+  if (kind === 'files') {
+    return auditAssetText(value, auditFileLabel);
+  }
+  return compactValue(value);
+}
+
+function auditEntrySearchText(entry) {
+  const snapshot = auditSnapshotResource(entry);
+  const snapshotText = auditSnapshotRows(snapshot)
+    .map((row) => `${row.label} ${auditValueText(row.value, row.kind)}`)
+    .join(' ');
+  const changeText = auditChangeDetails(entry)
+    .map((change) => `${change.label} antes ${auditValueText(change.before, change.kind)} ahora ${auditValueText(change.after, change.kind)}`)
+    .join(' ');
+  return `${snapshotText} ${changeText}`;
+}
+
+function appendAuditValue(parent, value, kind = 'text') {
+  if (kind === 'links') {
+    appendAuditAssetList(parent, value, 'links');
+    return;
+  }
+  if (kind === 'files') {
+    appendAuditAssetList(parent, value, 'files');
+    return;
+  }
+  const text = document.createElement('span');
+  text.className = 'audit-text-value';
+  text.textContent = compactValue(value);
+  parent.appendChild(text);
+}
+
+function appendAuditAssetList(parent, items, kind) {
+  const values = Array.isArray(items) ? items : [];
+  if (!values.length) {
+    const empty = document.createElement('span');
+    empty.className = 'audit-empty-value';
+    empty.textContent = 'Ninguno';
+    parent.appendChild(empty);
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'audit-asset-list';
+  values.forEach((item) => {
+    const row = document.createElement('li');
+    if (kind === 'links') {
+      const label = document.createElement('span');
+      label.className = 'audit-asset-name';
+      label.textContent = auditLinkLabel(item);
+      const url = document.createElement('span');
+      url.className = 'audit-asset-url';
+      url.textContent = auditLinkUrl(item);
+      url.title = auditLinkUrl(item);
+      row.append(label, url);
+    } else {
+      const label = document.createElement('span');
+      label.className = 'audit-asset-name';
+      label.textContent = auditFileLabel(item);
+      row.appendChild(label);
+    }
+    list.appendChild(row);
+  });
+  parent.appendChild(list);
+}
+
+function appendAuditSnapshot(row, entry) {
+  const resource = auditSnapshotResource(entry);
+  if (!resource) return;
+  const panel = document.createElement('section');
+  panel.className = 'audit-detail-panel audit-snapshot-panel';
+  const heading = document.createElement('h4');
+  heading.textContent = auditSnapshotTitle(entry);
+  const grid = document.createElement('div');
+  grid.className = 'audit-resource-grid';
+  auditSnapshotRows(resource).forEach((item) => {
+    const block = document.createElement('div');
+    block.className = `audit-resource-item audit-resource-${item.kind}`;
+    const label = document.createElement('span');
+    label.className = 'audit-detail-label';
+    label.textContent = item.label;
+    const value = document.createElement('div');
+    value.className = 'audit-detail-value';
+    appendAuditValue(value, item.value, item.kind);
+    block.append(label, value);
+    grid.appendChild(block);
+  });
+  panel.append(heading, grid);
+  row.appendChild(panel);
+}
+
+function appendAuditChanges(row, entry) {
+  const changes = auditChangeDetails(entry);
+  if (!changes.length) return;
+  const panel = document.createElement('section');
+  panel.className = 'audit-detail-panel audit-change-panel';
+  const heading = document.createElement('h4');
+  heading.textContent = 'Cambios detectados';
+  const list = document.createElement('div');
+  list.className = 'audit-change-list';
+  changes.forEach((change) => {
+    const block = document.createElement('article');
+    block.className = `audit-change-card audit-change-${change.kind}`;
+    const label = document.createElement('strong');
+    label.textContent = change.label;
+    const beforeAfter = document.createElement('div');
+    beforeAfter.className = 'audit-before-after';
+    [
+      ['Antes', change.before],
+      ['Ahora', change.after],
+    ].forEach(([caption, value]) => {
+      const side = document.createElement('div');
+      side.className = `audit-change-side audit-${caption.toLowerCase()}`;
+      const sideLabel = document.createElement('span');
+      sideLabel.textContent = caption;
+      const sideValue = document.createElement('div');
+      sideValue.className = 'audit-detail-value';
+      appendAuditValue(sideValue, value, change.kind);
+      side.append(sideLabel, sideValue);
+      beforeAfter.appendChild(side);
+    });
+    block.append(label, beforeAfter);
+    list.appendChild(block);
+  });
+  panel.append(heading, list);
+  row.appendChild(panel);
 }
 
 async function logResourceAudit(action, resource, context, previousResource = null, summary = '') {
@@ -1944,16 +2150,31 @@ function deleteResource(resourceId) {
   if (!lesson) return;
   const resource = (lesson.resources || []).find((item) => item.id === resourceId);
   if (!resource) return;
+  state.pendingDeleteKind = 'resource';
   state.pendingDeleteResourceId = resourceId;
+  state.pendingDeleteAuditId = null;
+  if (dom.deleteConfirmTitle) dom.deleteConfirmTitle.textContent = 'Eliminar recurso';
+  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta accion quitara el recurso del organizador.';
   dom.deleteConfirmResource.textContent = resource.title;
+  dom.confirmDelete.textContent = 'Eliminar recurso';
   dom.deleteConfirm.hidden = false;
   dom.confirmDelete.focus();
 }
 
 function closeDeleteConfirm() {
+  state.pendingDeleteKind = '';
   state.pendingDeleteResourceId = null;
+  state.pendingDeleteAuditId = null;
   dom.deleteConfirm.hidden = true;
   dom.deleteConfirmResource.textContent = '';
+}
+
+async function confirmDeletePending() {
+  if (state.pendingDeleteKind === 'audit') {
+    await confirmDeleteAuditEntry();
+    return;
+  }
+  await confirmDeleteResource();
 }
 
 async function confirmDeleteResource() {
@@ -2694,8 +2915,8 @@ function renderEditorList(editors = []) {
     dom.editorList.innerHTML = '<p class="asset-empty">Activa Supabase para administrar editores.</p>';
     return;
   }
-  if (!state.isMainEditor) {
-    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal puede ver y modificar editores.</p>';
+  if (!canManageEditors()) {
+    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver y modificar perfiles.</p>';
     return;
   }
   if (!editors.length) {
@@ -2763,8 +2984,8 @@ function renderRegisteredUsers(users = []) {
     dom.registeredUserList.innerHTML = '<p class="asset-empty">Activa Supabase para ver usuarios registrados.</p>';
     return;
   }
-  if (!state.isMainEditor) {
-    dom.registeredUserList.innerHTML = '<p class="asset-empty">Solo la cuenta principal puede ver usuarios registrados.</p>';
+  if (!canManageEditors()) {
+    dom.registeredUserList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver usuarios registrados.</p>';
     return;
   }
   if (!users.length) {
@@ -2819,6 +3040,38 @@ function renderRegisteredUsers(users = []) {
   });
 }
 
+function requestDeleteAuditEntry(entry) {
+  if (!requireCapability('deleteAudit', 'Solo la cuenta principal puede eliminar entradas del historial.')) return;
+  state.pendingDeleteKind = 'audit';
+  state.pendingDeleteAuditId = entry.id;
+  state.pendingDeleteResourceId = null;
+  if (dom.deleteConfirmTitle) dom.deleteConfirmTitle.textContent = 'Eliminar entrada del historial';
+  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta accion quitara solo este registro del historial. No cambia el recurso ni la estructura del curso.';
+  dom.deleteConfirmResource.textContent = `${entry.resource_title || 'Recurso sin titulo'} | ${auditActionLabel(entry.action)} | ${formatDateTime(entry.created_at) || 'Sin fecha'}`;
+  dom.confirmDelete.textContent = 'Eliminar del historial';
+  dom.deleteConfirm.hidden = false;
+  dom.confirmDelete.focus();
+}
+
+async function confirmDeleteAuditEntry() {
+  if (!state.pendingDeleteAuditId) {
+    closeDeleteConfirm();
+    return;
+  }
+  const auditId = state.pendingDeleteAuditId;
+  const { error } = await cloudClient
+    .from('resource_audit_log')
+    .delete()
+    .eq('id', auditId);
+  if (error) {
+    alert(`No se pudo eliminar la entrada del historial: ${error.message}. Ejecuta el SQL actualizado en Supabase y vuelve a intentar.`);
+    return;
+  }
+  state.resourceAuditLog = (state.resourceAuditLog || []).filter((entry) => entry.id !== auditId);
+  closeDeleteConfirm();
+  renderResourceAudit();
+}
+
 function renderResourceAudit() {
   if (!dom.auditList || !dom.auditStatus) return;
   if (!remoteEditingActive()) {
@@ -2827,8 +3080,8 @@ function renderResourceAudit() {
     if (dom.auditPagination) dom.auditPagination.innerHTML = '';
     return;
   }
-  if (!state.isMainEditor) {
-    dom.auditStatus.textContent = 'Solo la cuenta principal puede ver el historial.';
+  if (!canManageEditors()) {
+    dom.auditStatus.textContent = 'Solo la cuenta principal o un administrador puede ver el historial.';
     dom.auditList.innerHTML = '';
     if (dom.auditPagination) dom.auditPagination.innerHTML = '';
     return;
@@ -2836,7 +3089,6 @@ function renderResourceAudit() {
 
   const search = state.auditSearch.trim().toLowerCase();
   const entries = (state.resourceAuditLog || []).filter((entry) => {
-    const details = auditChangeDetails(entry).join(' ');
     if (!search) return true;
     const haystack = [
       entry.resource_title,
@@ -2846,7 +3098,7 @@ function renderResourceAudit() {
       entry.actor_email,
       auditContextLabel(entry),
       entry.summary,
-      details,
+      auditEntrySearchText(entry),
     ].join(' ').toLowerCase();
     return haystack.includes(search);
   });
@@ -2872,7 +3124,18 @@ function renderResourceAudit() {
     const action = document.createElement('span');
     action.className = `role-pill audit-action-${entry.action || 'update'}`;
     action.textContent = auditActionLabel(entry.action);
-    head.append(title, action);
+    const rowActions = document.createElement('div');
+    rowActions.className = 'audit-row-actions';
+    rowActions.appendChild(action);
+    if (state.isMainEditor) {
+      const remove = document.createElement('button');
+      remove.className = 'mini-btn delete audit-delete-button';
+      remove.type = 'button';
+      remove.textContent = 'Eliminar historial';
+      remove.addEventListener('click', () => requestDeleteAuditEntry(entry));
+      rowActions.appendChild(remove);
+    }
+    head.append(title, rowActions);
 
     const meta = document.createElement('p');
     meta.className = 'audit-meta';
@@ -2887,17 +3150,8 @@ function renderResourceAudit() {
     summary.textContent = auditActionSentence(entry.action);
 
     row.append(head, meta, place, summary);
-    const changes = auditChangeDetails(entry);
-    if (changes.length) {
-      const list = document.createElement('ul');
-      list.className = 'audit-changes';
-      changes.forEach((detail) => {
-        const item = document.createElement('li');
-        item.textContent = detail;
-        list.appendChild(item);
-      });
-      row.appendChild(list);
-    }
+    appendAuditSnapshot(row, entry);
+    appendAuditChanges(row, entry);
     dom.auditList.appendChild(row);
   });
 
@@ -2924,7 +3178,7 @@ function renderAuditPagination(totalPages) {
 }
 
 async function loadResourceAudit() {
-  if (!cloudClient || !state.isMainEditor) {
+  if (!cloudClient || !canManageEditors()) {
     state.resourceAuditLog = [];
     renderResourceAudit();
     return;
@@ -2972,7 +3226,7 @@ async function refreshEditorStatus() {
   state.accessChecked = true;
   state.userRole = state.isMainEditor ? 'owner' : data?.role || 'unassigned';
   state.hasCourseAccess = state.isMainEditor || Boolean(data?.role);
-  state.isEditor = ['owner', 'manager', 'contributor'].includes(state.userRole) && !error;
+  state.isEditor = ['owner', 'admin', 'manager', 'contributor'].includes(state.userRole) && !error;
   if (!state.hasCourseAccess && !state.recoveringPassword) {
     state.currentView = 'course';
     state.returnRoute = '#/mapa';
@@ -2992,7 +3246,7 @@ async function refreshEditorStatus() {
 }
 
 async function loadEditors() {
-  if (!cloudClient || !state.isMainEditor) {
+  if (!cloudClient || !canManageEditors()) {
     state.loadedEditors = [];
     state.loadedRegisteredUsers = [];
     state.resourceAuditLog = [];
@@ -3021,7 +3275,7 @@ async function loadEditors() {
 }
 
 async function loadRegisteredUsers() {
-  if (!cloudClient || !state.isMainEditor) {
+  if (!cloudClient || !canManageEditors()) {
     state.loadedRegisteredUsers = [];
     renderRegisteredUsers([]);
     return;
@@ -3247,7 +3501,7 @@ function wireEvents() {
     }
   });
   dom.resourceFiles.addEventListener('change', addFiles);
-  dom.confirmDelete.addEventListener('click', confirmDeleteResource);
+  dom.confirmDelete.addEventListener('click', confirmDeletePending);
   dom.cancelDelete.addEventListener('click', closeDeleteConfirm);
   dom.deleteConfirm.addEventListener('click', (event) => {
     if (event.target === dom.deleteConfirm) closeDeleteConfirm();

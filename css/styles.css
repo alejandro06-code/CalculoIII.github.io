@@ -1504,8 +1504,8 @@ body:not(.can-manage-users) .admin-users-card {
 
 .audit-row {
   display: grid;
-  gap: 5px;
-  padding: 10px;
+  gap: 9px;
+  padding: 12px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -1517,6 +1517,20 @@ body:not(.can-manage-users) .admin-users-card {
   gap: 8px;
   align-items: center;
   justify-content: space-between;
+}
+
+.audit-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.audit-delete-button {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
 }
 
 .audit-row-head strong {
@@ -1537,18 +1551,151 @@ body:not(.can-manage-users) .admin-users-card {
   color: var(--ink);
 }
 
-.audit-changes {
+.audit-detail-panel {
   display: grid;
-  gap: 4px;
-  margin: 2px 0 0;
-  padding-left: 18px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
-.audit-changes li::marker {
-  color: var(--accent);
+.audit-detail-panel h4 {
+  margin: 0;
+  color: var(--brand-2);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.audit-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.audit-resource-item {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.32fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  padding: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-resource-links,
+.audit-resource-files {
+  grid-column: 1 / -1;
+}
+
+.audit-detail-label,
+.audit-change-side > span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.audit-detail-value,
+.audit-text-value {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.audit-empty-value {
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 650;
+}
+
+.audit-asset-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.audit-asset-list li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+.audit-asset-name {
+  min-width: 0;
+  color: var(--brand);
+  font-size: 0.84rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.audit-asset-url {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: "Cascadia Mono", "Consolas", monospace;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-change-list {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-change-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-change-card > strong {
+  color: var(--brand);
+  font-size: 0.9rem;
+}
+
+.audit-before-after {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.audit-change-side {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.audit-antes {
+  background: #fff8f8;
+}
+
+.audit-ahora {
+  background: #f2fbf6;
 }
 
 .audit-pagination {
@@ -1778,6 +1925,12 @@ body:not(.can-manage-users) .admin-users-card {
   border-color: #a9dfc8;
 }
 
+.role-admin {
+  color: #0f5f5a;
+  background: #def7f3;
+  border-color: #aee1dc;
+}
+
 .role-contributor {
   color: #7b4a00;
   background: #fff1cf;
@@ -1936,6 +2089,11 @@ body:not(.can-manage-users) .admin-users-card {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .audit-resource-grid,
+  .audit-before-after {
+    grid-template-columns: 1fr;
+  }
+
   .admin-grid {
     grid-template-columns: 1fr;
   }
@@ -1945,6 +2103,7 @@ body:not(.can-manage-users) .admin-users-card {
   .app-header,
   .workspace-header,
   .admin-heading,
+  .audit-resource-item,
   .panel-heading,
   .map-heading,
   .resource-main {

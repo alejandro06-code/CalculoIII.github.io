@@ -18,7 +18,7 @@ drop constraint if exists course_editors_role_check;
 
 alter table public.course_editors
 add constraint course_editors_role_check
-check (role in ('owner', 'manager', 'contributor', 'viewer'));
+check (role in ('owner', 'admin', 'manager', 'contributor', 'viewer'));
 
 create table if not exists public.user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -116,7 +116,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'manager', 'contributor', 'viewer');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor', 'viewer');
 $$;
 
 create or replace function public.can_edit_course()
@@ -126,7 +126,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'manager', 'contributor');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor');
+$$;
+
+create or replace function public.can_manage_users()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin');
 $$;
 
 create or replace function public.email_for_login(login_identifier text)
@@ -238,7 +248,7 @@ as $$
   from auth.users au
   left join public.user_profiles up on up.id = au.id
   left join public.course_editors ce on lower(ce.email) = lower(au.email)
-  where public.is_main_editor()
+  where public.can_manage_users()
     and au.email is not null
   order by au.created_at desc;
 $$;
@@ -271,7 +281,7 @@ as $$
   from auth.users au
   left join public.user_profiles up on up.id = au.id
   left join public.course_editors ce on lower(ce.email) = lower(au.email)
-  where public.is_main_editor()
+  where public.can_manage_users()
     and lower(au.email) = lower(trim(account_email))
   limit 1;
 $$;
@@ -286,8 +296,8 @@ as $$
 declare
   synced_count integer;
 begin
-  if not public.is_main_editor() then
-    raise exception 'Solo la cuenta principal puede sincronizar usuarios.';
+  if not public.can_manage_users() then
+    raise exception 'Solo la cuenta principal o un administrador puede sincronizar usuarios.';
   end if;
 
   with raw_source as (
@@ -347,8 +357,8 @@ declare
   normalized_email text;
   target_id uuid;
 begin
-  if not public.is_main_editor() then
-    raise exception 'Solo la cuenta principal puede borrar cuentas.';
+  if not public.can_manage_users() then
+    raise exception 'Solo la cuenta principal o un administrador puede borrar cuentas.';
   end if;
 
   normalized_email := lower(trim(account_email));
@@ -386,6 +396,10 @@ grant execute on function public.list_registered_accounts() to authenticated;
 grant execute on function public.registered_account_status(text) to authenticated;
 grant execute on function public.sync_registered_user_profiles() to authenticated;
 grant execute on function public.delete_registered_account(text) to authenticated;
+grant execute on function public.current_course_role() to authenticated;
+grant execute on function public.can_access_course() to authenticated;
+grant execute on function public.can_edit_course() to authenticated;
+grant execute on function public.can_manage_users() to authenticated;
 
 with raw_source as (
   select
@@ -437,7 +451,7 @@ grant insert, update on public.course_state to authenticated;
 grant select on public.course_editors to authenticated;
 grant insert, update, delete on public.course_editors to authenticated;
 grant select, insert, update on public.user_profiles to authenticated;
-grant select, insert on public.resource_audit_log to authenticated;
+grant select, insert, delete on public.resource_audit_log to authenticated;
 
 drop policy if exists "user_profiles own read" on public.user_profiles;
 create policy "user_profiles own read"
@@ -467,7 +481,7 @@ on public.course_editors
 for select
 to authenticated
 using (
-  public.is_main_editor()
+  public.can_manage_users()
   or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
 );
 
@@ -476,29 +490,29 @@ create policy "course_editors editor insert"
 on public.course_editors
 for insert
 to authenticated
-with check (public.is_main_editor());
+with check (public.can_manage_users());
 
 drop policy if exists "course_editors editor update" on public.course_editors;
 create policy "course_editors editor update"
 on public.course_editors
 for update
 to authenticated
-using (public.is_main_editor())
-with check (public.is_main_editor());
+using (public.can_manage_users())
+with check (public.can_manage_users());
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
 create policy "course_editors editor delete"
 on public.course_editors
 for delete
 to authenticated
-using (public.is_main_editor());
+using (public.can_manage_users());
 
 drop policy if exists "resource_audit main read" on public.resource_audit_log;
 create policy "resource_audit main read"
 on public.resource_audit_log
 for select
 to authenticated
-using (public.is_main_editor());
+using (public.can_manage_users());
 
 drop policy if exists "resource_audit editor insert" on public.resource_audit_log;
 create policy "resource_audit editor insert"
@@ -509,6 +523,13 @@ with check (
   public.can_edit_course()
   and lower(actor_email) = lower(coalesce(auth.jwt() ->> 'email', ''))
 );
+
+drop policy if exists "resource_audit main delete" on public.resource_audit_log;
+create policy "resource_audit main delete"
+on public.resource_audit_log
+for delete
+to authenticated
+using (public.is_main_editor());
 
 drop policy if exists "course_state public read" on public.course_state;
 drop policy if exists "course_state authenticated read" on public.course_state;

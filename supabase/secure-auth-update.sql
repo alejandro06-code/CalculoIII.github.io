@@ -28,7 +28,27 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'manager', 'contributor', 'viewer');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor', 'viewer');
+$$;
+
+create or replace function public.can_edit_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor');
+$$;
+
+create or replace function public.can_manage_users()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin');
 $$;
 
 drop policy if exists "course_state public read" on public.course_state;
