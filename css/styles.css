@@ -1513,6 +1513,14 @@ body:not(.can-manage-users) .admin-users-card {
   border-top: 1px solid var(--line);
 }
 
+.registered-users-heading {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .registered-users h4 {
   font-size: 0.98rem;
 }
@@ -1607,6 +1615,18 @@ body:not(.can-manage-users) .admin-users-card {
   grid-template-columns: minmax(0, 1fr) minmax(140px, 190px);
 }
 
+.registered-user-row.missing-profile {
+  background: #fff8ea;
+  border-color: #efd191;
+}
+
+.registered-user-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .role-pill {
   width: fit-content;
   padding: 5px 8px;
@@ -1634,6 +1654,24 @@ body:not(.can-manage-users) .admin-users-card {
   color: #44546a;
   background: #edf1f5;
   border-color: #d6dde6;
+}
+
+.profile-profile_ready {
+  color: #075f45;
+  background: #e7f7ee;
+  border-color: #bce3cf;
+}
+
+.profile-missing_profile {
+  color: #7b4a00;
+  background: #fff1cf;
+  border-color: #f2d391;
+}
+
+.profile-no_auth_user {
+  color: #9b2034;
+  background: #ffe5ea;
+  border-color: #f2b3c0;
 }
 
 .structure-list {

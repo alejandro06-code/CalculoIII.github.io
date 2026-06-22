@@ -30,6 +30,12 @@ const labels = {
   viewer: 'Solo lectura',
 };
 
+const profileStatusLabels = {
+  profile_ready: 'Perfil activo',
+  missing_profile: 'Sin perfil',
+  no_auth_user: 'Sin cuenta Auth',
+};
+
 const roleCapabilities = {
   owner: {
     manageUsers: true,
@@ -83,6 +89,7 @@ const state = {
   structureDraft: null,
   structureDirty: false,
   loadedEditors: [],
+  loadedRegisteredUsers: [],
 };
 
 const dom = {
@@ -176,6 +183,7 @@ const dom = {
   editorRoleInput: document.querySelector('#editor-role-input'),
   editorList: document.querySelector('#editor-list'),
   registeredUserList: document.querySelector('#registered-user-list'),
+  syncRegisteredUsersButton: document.querySelector('#sync-registered-users'),
   structureStatus: document.querySelector('#structure-status'),
   saveStructure: document.querySelector('#save-structure'),
   discardStructure: document.querySelector('#discard-structure'),
@@ -2136,8 +2144,14 @@ async function lookupRegisteredEmail(identifier) {
   return data;
 }
 
+function isEmailIdentifier(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 async function resolveLoginEmail(identifier) {
-  return lookupRegisteredEmail(identifier);
+  const cleanIdentifier = identifier.trim();
+  if (isEmailIdentifier(cleanIdentifier)) return cleanIdentifier.toLowerCase();
+  return lookupRegisteredEmail(cleanIdentifier);
 }
 
 async function signupEditor() {
@@ -2181,7 +2195,12 @@ async function signupEditor() {
     },
   });
   if (error) {
-    alert(`No se pudo registrar la cuenta: ${error.message}`);
+    const probablyExists = /already|registered|exists|exist/i.test(error.message);
+    alert(
+      probablyExists
+        ? 'Ese correo ya existe en el sistema. Inicia sesion o recupera la contrasena; si no aparece en usuarios registrados, usa Sincronizar usuarios desde Administracion.'
+        : `No se pudo registrar la cuenta: ${error.message}`
+    );
     return;
   }
   if (data.user) {
@@ -2203,9 +2222,8 @@ async function resetPassword() {
     alert('Escribe el correo para recuperar la contrasena.');
     return;
   }
-  const registeredEmail = await lookupRegisteredEmail(email);
-  if (!registeredEmail) {
-    alert('No hay una cuenta registrada con ese correo.');
+  if (!isEmailIdentifier(email)) {
+    alert('Escribe un correo valido para recuperar la contrasena.');
     return;
   }
   const { error } = await cloudClient.auth.resetPasswordForEmail(email, {
@@ -2215,7 +2233,7 @@ async function resetPassword() {
     alert(`No se pudo enviar la recuperacion: ${error.message}`);
     return;
   }
-  setCloudStatus('Revisa el correo para recuperar la contrasena.', 'pending');
+  setCloudStatus('Si el correo esta registrado, recibira un enlace para cambiar la contrasena.', 'pending');
 }
 
 async function updatePasswordFromRecovery() {
@@ -2272,13 +2290,24 @@ function setViewFromReturnRoute() {
 async function upsertUserProfile(user, name = '') {
   if (!cloudClient || !user?.email) return;
   const fullName = name || user.user_metadata?.full_name || user.email;
-  const { error } = await cloudClient.from('user_profiles').upsert({
+  const payload = {
     id: user.id,
-    email: user.email,
+    email: user.email.toLowerCase(),
     full_name: fullName,
     updated_at: new Date().toISOString(),
-  });
+  };
+  const { error } = await cloudClient.from('user_profiles').upsert(payload);
   if (error) {
+    const canRetryWithEmail = fullName !== user.email && /duplicate|unique/i.test(error.message);
+    if (canRetryWithEmail) {
+      const { error: retryError } = await cloudClient.from('user_profiles').upsert({
+        ...payload,
+        full_name: user.email.toLowerCase(),
+      });
+      if (!retryError) return;
+      console.warn('No se pudo guardar el perfil de usuario.', retryError.message);
+      return;
+    }
     console.warn('No se pudo guardar el perfil de usuario.', error.message);
   }
 }
@@ -2359,18 +2388,32 @@ function renderRegisteredUsers(users = []) {
   users.forEach((user) => {
     const row = document.createElement('div');
     row.className = 'registered-user-row';
+    if (user.profile_status === 'missing_profile') row.classList.add('missing-profile');
     const account = document.createElement('div');
     account.className = 'editor-account';
     const name = document.createElement('strong');
-    name.textContent = user.full_name || user.email;
+    name.textContent = user.full_name || 'Sin nombre de usuario';
     const email = document.createElement('small');
     email.textContent = user.email;
     account.append(name, email);
+    if (user.email_confirmed === false) {
+      const unconfirmed = document.createElement('small');
+      unconfirmed.textContent = 'Correo sin confirmar';
+      account.append(unconfirmed);
+    }
+    const badges = document.createElement('div');
+    badges.className = 'registered-user-badges';
     const role = document.createElement('span');
     const roleValue = user.email?.toLowerCase() === MAIN_EDITOR_EMAIL ? 'owner' : editorRoles.get(user.email.toLowerCase()) || 'viewer';
     role.className = `role-pill role-${roleValue}`;
     role.textContent = labels[roleValue] ?? roleValue;
-    row.append(account, role);
+    badges.appendChild(role);
+    const profileStatus = user.profile_status || 'profile_ready';
+    const profile = document.createElement('span');
+    profile.className = `role-pill profile-${profileStatus}`;
+    profile.textContent = profileStatusLabels[profileStatus] ?? profileStatus;
+    badges.appendChild(profile);
+    row.append(account, badges);
     dom.registeredUserList.appendChild(row);
   });
 }
@@ -2405,6 +2448,8 @@ async function refreshEditorStatus() {
 
 async function loadEditors() {
   if (!cloudClient || !state.isMainEditor) {
+    state.loadedEditors = [];
+    state.loadedRegisteredUsers = [];
     renderEditorList([]);
     renderRegisteredUsers([]);
     return;
@@ -2414,6 +2459,8 @@ async function loadEditors() {
     .select('email, role, created_at')
     .order('email');
   if (error) {
+    state.loadedEditors = [];
+    state.loadedRegisteredUsers = [];
     renderEditorList([]);
     renderRegisteredUsers([]);
     return;
@@ -2425,7 +2472,14 @@ async function loadEditors() {
 
 async function loadRegisteredUsers() {
   if (!cloudClient || !state.isMainEditor) {
+    state.loadedRegisteredUsers = [];
     renderRegisteredUsers([]);
+    return;
+  }
+  const { data: accountData, error: accountError } = await cloudClient.rpc('list_registered_accounts');
+  if (!accountError) {
+    state.loadedRegisteredUsers = accountData || [];
+    renderRegisteredUsers(state.loadedRegisteredUsers);
     return;
   }
   const { data, error } = await cloudClient
@@ -2433,10 +2487,15 @@ async function loadRegisteredUsers() {
     .select('email, full_name, created_at, updated_at')
     .order('created_at', { ascending: false });
   if (error) {
-    dom.registeredUserList.innerHTML = `<p class="asset-empty">No se pudieron cargar usuarios registrados: ${error.message}</p>`;
+    state.loadedRegisteredUsers = [];
+    dom.registeredUserList.innerHTML = `<p class="asset-empty">No se pudieron cargar usuarios registrados: ${accountError.message || error.message}</p>`;
     return;
   }
-  renderRegisteredUsers(data || []);
+  state.loadedRegisteredUsers = (data || []).map((user) => ({
+    ...user,
+    profile_status: 'profile_ready',
+  }));
+  renderRegisteredUsers(state.loadedRegisteredUsers);
 }
 
 async function addEditor() {
@@ -2444,9 +2503,9 @@ async function addEditor() {
   const email = dom.editorEmailInput.value.trim().toLowerCase();
   const role = dom.editorRoleInput.value;
   if (!email) return;
-  const registeredEmail = await lookupRegisteredEmail(email);
-  if (!registeredEmail) {
-    alert('Ese correo todavia no esta registrado. Primero debe crear una cuenta en la pagina.');
+  const account = await lookupRegisteredAccount(email);
+  if (!account?.email) {
+    alert('Ese correo todavia no aparece como cuenta registrada. Si ya se registro, ejecuta el SQL de reparacion y luego usa Sincronizar usuarios.');
     return;
   }
   const { error } = await cloudClient.from('course_editors').upsert({ email, role });
@@ -2455,6 +2514,33 @@ async function addEditor() {
     return;
   }
   dom.editorEmailInput.value = '';
+  await loadEditors();
+}
+
+async function lookupRegisteredAccount(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !cloudClient) return null;
+  const loadedAccount = (state.loadedRegisteredUsers || []).find((user) => user.email?.toLowerCase() === normalizedEmail);
+  if (loadedAccount) return loadedAccount;
+  const { data, error } = await cloudClient.rpc('registered_account_status', {
+    account_email: normalizedEmail,
+  });
+  if (!error) {
+    const account = Array.isArray(data) ? data[0] : data;
+    if (account?.email) return account;
+  }
+  const registeredEmail = await lookupRegisteredEmail(normalizedEmail);
+  return registeredEmail ? { email: registeredEmail, profile_status: 'profile_ready' } : null;
+}
+
+async function syncRegisteredUsers() {
+  if (!requireMainEditorPermission()) return;
+  const { data, error } = await cloudClient.rpc('sync_registered_user_profiles');
+  if (error) {
+    alert(`No se pudieron sincronizar usuarios: ${error.message}. Ejecuta supabase/repair-user-profiles.sql en Supabase y vuelve a intentarlo.`);
+    return;
+  }
+  setCloudStatus(`Usuarios sincronizados. Filas revisadas: ${data ?? 0}.`, 'ok');
   await loadEditors();
 }
 
@@ -2547,6 +2633,7 @@ function wireEvents() {
   onOptional('#delete-module', 'click', deleteModule);
   onOptional('#update-section', 'click', updateSection);
   document.querySelector('#add-editor').addEventListener('click', addEditor);
+  dom.syncRegisteredUsersButton?.addEventListener('click', syncRegisteredUsers);
   dom.moduleEditSelect?.addEventListener('change', () => {
     const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
     dom.moduleTitleInput.value = module?.title ?? '';

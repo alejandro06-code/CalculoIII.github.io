@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260621-190000">
+  <link rel="stylesheet" href="css/styles.css?v=20260621-200500">
 </head>
 <body>
   <header class="app-header">
@@ -362,8 +362,13 @@
           </div>
           <div class="editor-list" id="editor-list"></div>
           <section class="registered-users">
-            <h4>Usuarios registrados</h4>
-            <p class="muted">Correos que ya crearon cuenta y pueden iniciar sesion para ver el organizador.</p>
+            <div class="registered-users-heading">
+              <div>
+                <h4>Usuarios registrados</h4>
+                <p class="muted">Cuentas creadas en Supabase Auth, incluso si todavia les falta perfil publico.</p>
+              </div>
+              <button class="mini-btn accent" id="sync-registered-users" type="button">Sincronizar usuarios</button>
+            </div>
             <div class="registered-user-list" id="registered-user-list"></div>
           </section>
         </section>
@@ -406,6 +411,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260621-190000"></script>
+  <script src="js/app.js?v=20260621-200500"></script>
 </body>
 </html>
