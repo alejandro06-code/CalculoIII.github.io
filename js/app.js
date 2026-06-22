@@ -2349,23 +2349,31 @@ function renderEditorList(editors = []) {
   editors.forEach((editor) => {
     const row = document.createElement('div');
     row.className = 'editor-row';
-    if (editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL) row.classList.add('main-account');
+    const isMainAccount = editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL;
+    if (isMainAccount) row.classList.add('main-account');
     const account = document.createElement('div');
     account.className = 'editor-account';
     const email = document.createElement('strong');
     email.textContent = editor.email;
     const meta = document.createElement('small');
-    meta.textContent = editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL ? 'Cuenta principal' : 'Cuenta autorizada';
+    meta.textContent = isMainAccount ? 'Cuenta principal' : 'Cuenta autorizada';
     account.append(email, meta);
     const role = document.createElement('span');
     role.className = `role-pill role-${editor.role || 'manager'}`;
     role.textContent = labels[editor.role || 'manager'] ?? editor.role;
-    const remove = document.createElement('button');
-    remove.className = 'mini-btn delete';
-    remove.type = 'button';
-    remove.textContent = 'Quitar';
-    remove.addEventListener('click', () => removeEditor(editor.email));
-    row.append(account, role, remove);
+    let action;
+    if (isMainAccount) {
+      action = document.createElement('span');
+      action.className = 'fixed-account-label';
+      action.textContent = 'Fijo';
+    } else {
+      action = document.createElement('button');
+      action.className = 'mini-btn delete';
+      action.type = 'button';
+      action.textContent = 'Quitar perfil';
+      action.addEventListener('click', () => removeEditor(editor.email));
+    }
+    row.append(account, role, action);
     dom.editorList.appendChild(row);
   });
 }
