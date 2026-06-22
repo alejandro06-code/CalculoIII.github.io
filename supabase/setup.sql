@@ -490,22 +490,40 @@ create policy "course_editors editor insert"
 on public.course_editors
 for insert
 to authenticated
-with check (public.can_manage_users());
+with check (
+  public.can_manage_users()
+  and (
+    (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
+    or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
+  )
+);
 
 drop policy if exists "course_editors editor update" on public.course_editors;
 create policy "course_editors editor update"
 on public.course_editors
 for update
 to authenticated
-using (public.can_manage_users())
-with check (public.can_manage_users());
+using (
+  public.can_manage_users()
+  and (public.is_main_editor() or lower(email) <> 'maira2004hernandez@gmail.com')
+)
+with check (
+  public.can_manage_users()
+  and (
+    (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
+    or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
+  )
+);
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
 create policy "course_editors editor delete"
 on public.course_editors
 for delete
 to authenticated
-using (public.can_manage_users());
+using (
+  public.can_manage_users()
+  and lower(email) <> 'maira2004hernandez@gmail.com'
+);
 
 drop policy if exists "resource_audit main read" on public.resource_audit_log;
 create policy "resource_audit main read"
