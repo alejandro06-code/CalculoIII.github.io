@@ -37,6 +37,8 @@ const profileStatusLabels = {
   no_auth_user: 'Sin cuenta Auth',
 };
 
+const assignableRoles = ['owner', 'manager', 'contributor', 'viewer'];
+
 const roleCapabilities = {
   owner: {
     manageUsers: true,
@@ -273,10 +275,10 @@ function updateAuthUi() {
   }
   if (signedIn) {
     dom.logoutButton.textContent = state.isMainEditor
-      ? `Salir (${state.session.user.email}, principal)`
+      ? `Cerrar sesion (${state.session.user.email}, principal)`
       : state.isEditor
-        ? `Salir (${state.session.user.email}, ${labels[state.userRole] ?? state.userRole})`
-        : `Salir (${state.session.user.email}, sin permiso)`;
+        ? `Cerrar sesion (${state.session.user.email}, ${labels[state.userRole] ?? state.userRole})`
+        : `Cerrar sesion (${state.session.user.email}, sin permiso)`;
   }
 }
 
@@ -2321,10 +2323,13 @@ async function logoutEditor() {
   state.isMainEditor = false;
   state.userRole = 'viewer';
   state.returnRoute = '#/mapa';
-  setAuthMode('login', { updateRoute: true, replace: true });
+  state.currentView = 'course';
+  history.replaceState(null, '', '#/login');
+  setAuthMode('login', { updateRoute: false });
   renderEditorList([]);
   renderRegisteredUsers([]);
-  setCloudStatus('Modo lectura. Inicia sesion para editar.', state.cloudReady ? 'pending' : 'local');
+  render();
+  setCloudStatus('Sesion cerrada. Inicia sesion para entrar al organizador.', state.cloudReady ? 'pending' : 'local');
 }
 
 function renderEditorList(editors = []) {
@@ -2358,22 +2363,40 @@ function renderEditorList(editors = []) {
     const meta = document.createElement('small');
     meta.textContent = isMainAccount ? 'Cuenta principal' : 'Cuenta autorizada';
     account.append(email, meta);
-    const role = document.createElement('span');
-    role.className = `role-pill role-${editor.role || 'manager'}`;
-    role.textContent = labels[editor.role || 'manager'] ?? editor.role;
+    let roleControl;
     let action;
     if (isMainAccount) {
+      roleControl = document.createElement('span');
+      roleControl.className = `role-pill role-${editor.role || 'owner'}`;
+      roleControl.textContent = labels[editor.role || 'owner'] ?? editor.role;
       action = document.createElement('span');
       action.className = 'fixed-account-label';
       action.textContent = 'Fijo';
     } else {
-      action = document.createElement('button');
-      action.className = 'mini-btn delete';
-      action.type = 'button';
-      action.textContent = 'Quitar perfil';
-      action.addEventListener('click', () => removeEditor(editor.email));
+      roleControl = document.createElement('select');
+      roleControl.className = 'inline-role-select';
+      assignableRoles.forEach((roleValue) => {
+        const option = document.createElement('option');
+        option.value = roleValue;
+        option.textContent = labels[roleValue] ?? roleValue;
+        if ((editor.role || 'manager') === roleValue) option.selected = true;
+        roleControl.appendChild(option);
+      });
+      action = document.createElement('div');
+      action.className = 'editor-row-actions';
+      const update = document.createElement('button');
+      update.className = 'mini-btn';
+      update.type = 'button';
+      update.textContent = 'Actualizar';
+      update.addEventListener('click', () => updateEditorRole(editor.email, roleControl.value));
+      const remove = document.createElement('button');
+      remove.className = 'mini-btn delete';
+      remove.type = 'button';
+      remove.textContent = 'Quitar perfil';
+      remove.addEventListener('click', () => removeEditor(editor.email));
+      action.append(update, remove);
     }
-    row.append(account, role, action);
+    row.append(account, roleControl, action);
     dom.editorList.appendChild(row);
   });
 }
@@ -2423,7 +2446,19 @@ function renderRegisteredUsers(users = []) {
     profile.className = `role-pill profile-${profileStatus}`;
     profile.textContent = profileStatusLabels[profileStatus] ?? profileStatus;
     badges.appendChild(profile);
-    row.append(account, badges);
+    let action;
+    if (normalizedEmail === MAIN_EDITOR_EMAIL) {
+      action = document.createElement('span');
+      action.className = 'fixed-account-label';
+      action.textContent = 'Fijo';
+    } else {
+      action = document.createElement('button');
+      action.className = 'mini-btn delete';
+      action.type = 'button';
+      action.textContent = 'Borrar cuenta';
+      action.addEventListener('click', () => deleteRegisteredAccount(user.email));
+    }
+    row.append(account, badges, action);
     dom.registeredUserList.appendChild(row);
   });
 }
@@ -2527,6 +2562,21 @@ async function addEditor() {
   await loadEditors();
 }
 
+async function updateEditorRole(email, role) {
+  if (!requireMainEditorPermission()) return;
+  if (email?.toLowerCase() === MAIN_EDITOR_EMAIL) {
+    alert('La cuenta principal siempre conserva acceso completo.');
+    return;
+  }
+  const { error } = await cloudClient.from('course_editors').upsert({ email: email.toLowerCase(), role });
+  if (error) {
+    alert(`No se pudo actualizar el perfil: ${error.message}`);
+    return;
+  }
+  setCloudStatus(`Perfil actualizado para ${email}.`, 'ok');
+  await loadEditors();
+}
+
 async function lookupRegisteredAccount(email) {
   const normalizedEmail = email.trim().toLowerCase();
   if (!normalizedEmail || !cloudClient) return null;
@@ -2556,6 +2606,10 @@ async function syncRegisteredUsers() {
 
 async function removeEditor(email) {
   if (!requireMainEditorPermission()) return;
+  if (email?.toLowerCase() === MAIN_EDITOR_EMAIL) {
+    alert('No se puede quitar el perfil de la cuenta principal.');
+    return;
+  }
   if (email === state.session?.user?.email && !confirm('Estas quitando tu propio permiso de editor. Continuar?')) return;
   const { error } = await cloudClient.from('course_editors').delete().eq('email', email);
   if (error) {
@@ -2563,6 +2617,27 @@ async function removeEditor(email) {
     return;
   }
   await refreshEditorStatus();
+}
+
+async function deleteRegisteredAccount(email) {
+  if (!requireMainEditorPermission()) return;
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (!normalizedEmail) return;
+  if (normalizedEmail === MAIN_EDITOR_EMAIL) {
+    alert('No se puede borrar la cuenta principal.');
+    return;
+  }
+  const confirmation = prompt(`Esto borrara la cuenta ${normalizedEmail}, su perfil, permisos y credenciales de inicio de sesion. Escribe BORRAR para confirmar.`);
+  if (confirmation !== 'BORRAR') return;
+  const { error } = await cloudClient.rpc('delete_registered_account', {
+    account_email: normalizedEmail,
+  });
+  if (error) {
+    alert(`No se pudo borrar la cuenta: ${error.message}. Ejecuta el SQL actualizado de supabase/repair-user-profiles.sql y vuelve a intentarlo.`);
+    return;
+  }
+  setCloudStatus(`Cuenta borrada: ${normalizedEmail}.`, 'ok');
+  await loadEditors();
 }
 
 function wireEvents() {

@@ -294,9 +294,56 @@ begin
 end;
 $$;
 
+create or replace function public.delete_registered_account(account_email text)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public, auth
+as $$
+declare
+  normalized_email text;
+  target_id uuid;
+begin
+  if not public.is_main_editor() then
+    raise exception 'Solo la cuenta principal puede borrar cuentas.';
+  end if;
+
+  normalized_email := lower(trim(account_email));
+  if normalized_email is null or normalized_email = '' then
+    raise exception 'Correo invalido.';
+  end if;
+
+  if normalized_email = 'maira2004hernandez@gmail.com' then
+    raise exception 'No se puede borrar la cuenta principal.';
+  end if;
+
+  select id
+  into target_id
+  from auth.users
+  where lower(email) = normalized_email
+  limit 1;
+
+  delete from public.course_editors
+  where lower(email) = normalized_email;
+
+  if target_id is not null then
+    delete from public.user_profiles
+    where id = target_id;
+
+    delete from auth.users
+    where id = target_id;
+  else
+    delete from public.user_profiles
+    where lower(email) = normalized_email;
+  end if;
+end;
+$$;
+
 grant execute on function public.list_registered_accounts() to authenticated;
 grant execute on function public.registered_account_status(text) to authenticated;
 grant execute on function public.sync_registered_user_profiles() to authenticated;
+grant execute on function public.delete_registered_account(text) to authenticated;
 
 with raw_source as (
   select

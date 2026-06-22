@@ -1611,13 +1611,28 @@ body:not(.can-manage-users) .admin-users-card {
   font-weight: 800;
 }
 
-.registered-user-row {
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 190px);
-}
-
 .registered-user-row.missing-profile {
   background: #fff8ea;
   border-color: #efd191;
+}
+
+.inline-role-select {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 800;
+}
+
+.editor-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .registered-user-badges {
