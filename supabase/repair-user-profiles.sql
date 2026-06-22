@@ -33,9 +33,112 @@ on public.resource_audit_log (resource_id, created_at desc);
 create index if not exists resource_audit_log_created_idx
 on public.resource_audit_log (created_at desc);
 
+alter table public.course_state enable row level security;
+alter table public.course_editors enable row level security;
 alter table public.resource_audit_log enable row level security;
 
 grant select, insert on public.resource_audit_log to authenticated;
+
+insert into public.course_editors (email, role)
+values ('maira2004hernandez@gmail.com', 'owner')
+on conflict (email) do update set role = 'owner';
+
+create or replace function public.is_main_editor()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'maira2004hernandez@gmail.com';
+$$;
+
+create or replace function public.current_course_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select role
+      from public.course_editors
+      where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      limit 1
+    ),
+    'unassigned'
+  );
+$$;
+
+create or replace function public.can_access_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'contributor', 'viewer');
+$$;
+
+create or replace function public.can_edit_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'contributor');
+$$;
+
+grant execute on function public.current_course_role() to authenticated;
+grant execute on function public.can_access_course() to authenticated;
+grant execute on function public.can_edit_course() to authenticated;
+
+revoke select on public.course_state from anon;
+grant select on public.course_state to authenticated;
+grant select on public.course_editors to authenticated;
+grant insert, update, delete on public.course_editors to authenticated;
+
+drop policy if exists "course_state public read" on public.course_state;
+drop policy if exists "course_state authenticated read" on public.course_state;
+create policy "course_state authenticated read"
+on public.course_state
+for select
+to authenticated
+using (id = 'main' and public.can_access_course());
+
+drop policy if exists "course_editors editor read" on public.course_editors;
+create policy "course_editors editor read"
+on public.course_editors
+for select
+to authenticated
+using (
+  public.is_main_editor()
+  or lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+);
+
+drop policy if exists "course_editors editor insert" on public.course_editors;
+create policy "course_editors editor insert"
+on public.course_editors
+for insert
+to authenticated
+with check (public.is_main_editor());
+
+drop policy if exists "course_editors editor update" on public.course_editors;
+create policy "course_editors editor update"
+on public.course_editors
+for update
+to authenticated
+using (public.is_main_editor())
+with check (public.is_main_editor());
+
+drop policy if exists "course_editors editor delete" on public.course_editors;
+create policy "course_editors editor delete"
+on public.course_editors
+for delete
+to authenticated
+using (public.is_main_editor());
 
 drop policy if exists "resource_audit main read" on public.resource_audit_log;
 create policy "resource_audit main read"
@@ -342,7 +445,23 @@ select
   lower(au.email) as email,
   au.email_confirmed_at is not null as correo_confirmado,
   up.email is not null as aparece_en_usuarios_registrados,
-  coalesce(up.full_name, au.raw_user_meta_data ->> 'full_name') as nombre_visible
+  coalesce(up.full_name, au.raw_user_meta_data ->> 'full_name') as nombre_visible,
+  ce.role as perfil_asignado,
+  case
+    when ce.role in ('owner', 'manager', 'contributor', 'viewer') then true
+    else false
+  end as puede_entrar,
+  case
+    when ce.role in ('owner', 'manager', 'contributor') then true
+    else false
+  end as puede_editar_recursos
 from auth.users au
 left join public.user_profiles up on up.id = au.id
+left join public.course_editors ce on lower(ce.email) = lower(au.email)
 where lower(au.email) = lower('alejandromendoza.at@gmail.com');
+
+select
+  email,
+  role as perfil_guardado_en_course_editors
+from public.course_editors
+where lower(email) = lower('alejandromendoza.at@gmail.com');

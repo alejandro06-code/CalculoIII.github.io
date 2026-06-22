@@ -22,6 +22,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background:
@@ -1531,6 +1535,46 @@ body:not(.can-manage-users) .admin-users-card {
 
 .audit-summary {
   color: var(--ink);
+}
+
+.audit-changes {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.audit-changes li::marker {
+  color: var(--accent);
+}
+
+.audit-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.audit-page-button {
+  min-width: 36px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--brand);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.audit-page-button.active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
 }
 
 .audit-action-create {

@@ -105,8 +105,18 @@ as $$
       where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
       limit 1
     ),
-    'viewer'
+    'unassigned'
   );
+$$;
+
+create or replace function public.can_access_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'contributor', 'viewer');
 $$;
 
 create or replace function public.can_edit_course()
@@ -506,7 +516,7 @@ create policy "course_state authenticated read"
 on public.course_state
 for select
 to authenticated
-using (id = 'main');
+using (id = 'main' and public.can_access_course());
 
 drop policy if exists "course_state authenticated insert" on public.course_state;
 create policy "course_state authenticated insert"

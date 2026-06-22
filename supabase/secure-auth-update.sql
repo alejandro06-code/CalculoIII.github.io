@@ -3,13 +3,41 @@
 revoke select on public.course_state from anon;
 grant select on public.course_state to authenticated;
 
+create or replace function public.current_course_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select role
+      from public.course_editors
+      where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      limit 1
+    ),
+    'unassigned'
+  );
+$$;
+
+create or replace function public.can_access_course()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'contributor', 'viewer');
+$$;
+
 drop policy if exists "course_state public read" on public.course_state;
 drop policy if exists "course_state authenticated read" on public.course_state;
 create policy "course_state authenticated read"
 on public.course_state
 for select
 to authenticated
-using (id = 'main');
+using (id = 'main' and public.can_access_course());
 
 drop policy if exists "user_profiles own read" on public.user_profiles;
 create policy "user_profiles own read"

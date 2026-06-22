@@ -82,7 +82,7 @@ const state = {
   session: null,
   isEditor: false,
   isMainEditor: false,
-  userRole: 'viewer',
+  userRole: 'unassigned',
   authMode: 'login',
   returnRoute: '#/mapa',
   recoveringPassword: false,
@@ -96,6 +96,10 @@ const state = {
   currentUserProfile: null,
   resourceAuditLog: [],
   auditSearch: '',
+  auditPage: 1,
+  auditPageSize: 20,
+  accessChecked: false,
+  hasCourseAccess: false,
 };
 
 const dom = {
@@ -193,6 +197,7 @@ const dom = {
   auditSearch: document.querySelector('#audit-search'),
   auditStatus: document.querySelector('#audit-status'),
   auditList: document.querySelector('#audit-list'),
+  auditPagination: document.querySelector('#audit-pagination'),
   refreshAuditLog: document.querySelector('#refresh-audit-log'),
   structureStatus: document.querySelector('#structure-status'),
   saveStructure: document.querySelector('#save-structure'),
@@ -220,6 +225,8 @@ function updateAuthUi() {
   const signupMode = state.authMode === 'signup';
   const resetMode = state.authMode === 'reset';
   const updateMode = state.authMode === 'update';
+  const checkingAccess = Boolean(cloudClient) && signedIn && !state.accessChecked && !updateMode;
+  const blockedByAccess = Boolean(cloudClient) && signedIn && state.accessChecked && !state.hasCourseAccess && !updateMode;
   document.body.classList.toggle('signed-out', !signedIn);
   document.body.classList.toggle('can-edit', canEdit());
   document.body.classList.toggle('can-create-resource', hasCapability('createResources'));
@@ -230,8 +237,8 @@ function updateAuthUi() {
   document.body.classList.toggle('auth-signup-mode', signupMode);
   document.body.classList.toggle('auth-reset-mode', resetMode);
   document.body.classList.toggle('auth-update-mode', updateMode);
-  dom.authGate.hidden = signedIn && !updateMode;
-  dom.appShell.hidden = !signedIn || updateMode;
+  dom.authGate.hidden = signedIn && !updateMode && !checkingAccess && !blockedByAccess;
+  dom.appShell.hidden = !signedIn || updateMode || checkingAccess || blockedByAccess;
   dom.loginName.hidden = signedIn || !signupMode;
   dom.loginEmail.hidden = signedIn || updateMode;
   dom.loginPassword.hidden = signedIn && !updateMode;
@@ -252,7 +259,11 @@ function updateAuthUi() {
   dom.authSignupMode?.classList.toggle('active', signupMode);
   if (dom.authTitle) {
     dom.authTitle.textContent =
-      state.authMode === 'signup'
+      checkingAccess
+        ? 'Verificando perfil de acceso'
+        : blockedByAccess
+          ? 'Cuenta sin perfil asignado'
+          : state.authMode === 'signup'
         ? 'Registrate para entrar al organizador'
         : state.authMode === 'reset'
           ? 'Recupera tu contrasena'
@@ -262,7 +273,11 @@ function updateAuthUi() {
   }
   if (dom.authDescription) {
     dom.authDescription.textContent =
-      state.authMode === 'signup'
+      checkingAccess
+        ? 'Estamos revisando si esta cuenta tiene un perfil autorizado para entrar al organizador.'
+        : blockedByAccess
+          ? 'La cuenta existe, pero la cuenta principal aun no le ha asignado un perfil de acceso.'
+          : state.authMode === 'signup'
         ? 'Crea un usuario con nombre, correo y contrasena. Luego podras iniciar sesion para ver el organizador.'
         : state.authMode === 'reset'
           ? 'Escribe el correo registrado. Te enviaremos un enlace para elegir una contrasena nueva.'
@@ -272,7 +287,11 @@ function updateAuthUi() {
   }
   if (dom.authModeNote) {
     dom.authModeNote.textContent =
-      state.authMode === 'signup'
+      checkingAccess
+        ? 'Esto puede tardar unos segundos.'
+        : blockedByAccess
+          ? 'Pide a la cuenta principal que asigne un perfil en Administracion.'
+          : state.authMode === 'signup'
         ? 'El nombre de usuario puede tener espacios. El correo debe ser unico.'
         : state.authMode === 'reset'
           ? 'Solo se enviara el enlace si el correo ya esta registrado.'
@@ -290,7 +309,7 @@ function updateAuthUi() {
 }
 
 function remoteEditingActive() {
-  return state.cloudReady && Boolean(cloudClient);
+  return Boolean(cloudClient);
 }
 
 function canEdit() {
@@ -1706,6 +1725,112 @@ function auditActionLabel(action) {
   }[action] || action;
 }
 
+function auditActionSentence(action) {
+  return {
+    create: 'Creo este recurso.',
+    update: 'Edito este recurso.',
+    move: 'Reordeno este recurso.',
+    delete: 'Elimino este recurso.',
+  }[action] || 'Registro un cambio en este recurso.';
+}
+
+function auditContextLabel(entry) {
+  const moduleIndex = state.data?.modules?.findIndex((module) => module.id === entry.module_id) ?? -1;
+  const module = moduleIndex >= 0 ? state.data.modules[moduleIndex] : null;
+  const lessonIndex = module?.lessons?.findIndex((lesson) => lesson.id === entry.lesson_id) ?? -1;
+  const lesson = lessonIndex >= 0 ? module.lessons[lessonIndex] : null;
+  const sectionIndex = state.data?.sections?.findIndex((section) => section.id === entry.section_id) ?? -1;
+  const section = sectionIndex >= 0 ? state.data.sections[sectionIndex] : null;
+  const moduleLabel = module
+    ? `Modulo ${moduleIndex + 1}: ${module.title}`
+    : entry.module_title
+      ? `Modulo sin ubicar: ${entry.module_title}`
+      : 'Modulo sin registro';
+  const lessonLabel = lesson
+    ? `Leccion ${lessonIndex + 1}: ${lesson.title}`
+    : entry.lesson_title
+      ? `Leccion sin ubicar: ${entry.lesson_title}`
+      : 'Leccion sin registro';
+  const sectionLabel = section
+    ? `Parte ${sectionIndex + 1}: ${section.title}`
+    : entry.section_title
+      ? `Parte sin ubicar: ${entry.section_title}`
+      : 'Parte sin registro';
+  return `${moduleLabel} / ${lessonLabel} / ${sectionLabel}`;
+}
+
+function compactValue(value) {
+  if (value === null || value === undefined || value === '') return 'vacio';
+  return String(value);
+}
+
+function listSummary(items, formatter) {
+  if (!Array.isArray(items) || !items.length) return 'ninguno';
+  return items.map(formatter).join('; ');
+}
+
+function valuesChanged(before, after) {
+  return JSON.stringify(before ?? null) !== JSON.stringify(after ?? null);
+}
+
+function auditFieldValue(key, value) {
+  if (key === 'status' || key === 'type' || key === 'priority') {
+    return labels[value] ?? compactValue(value);
+  }
+  if (key === 'section') {
+    const index = state.data?.sections?.findIndex((section) => section.id === value) ?? -1;
+    const section = index >= 0 ? state.data.sections[index] : null;
+    return section ? `Parte ${index + 1}: ${section.title}` : compactValue(value);
+  }
+  return compactValue(value);
+}
+
+function auditChangeDetails(entry) {
+  const previousData = entry.previous_data || null;
+  const newData = entry.new_data || null;
+  if (entry.action === 'create') {
+    const details = ['Se creo el recurso.'];
+    if (newData?.status) details.push(`Estado inicial: ${labels[newData.status] ?? newData.status}.`);
+    if (newData?.type) details.push(`Tipo inicial: ${labels[newData.type] ?? newData.type}.`);
+    if (newData?.links?.length) details.push(`Enlaces iniciales: ${listSummary(newData.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
+    if (newData?.files?.length) details.push(`Archivos iniciales: ${listSummary(newData.files, (file) => `${file.name || 'archivo'}${file.size ? ` (${formatFileSize(file.size)})` : ''}`)}.`);
+    return details;
+  }
+  if (entry.action === 'delete') {
+    const details = ['Se elimino el recurso.'];
+    if (previousData?.status) details.push(`Ultimo estado: ${labels[previousData.status] ?? previousData.status}.`);
+    if (previousData?.links?.length) details.push(`Enlaces que tenia: ${listSummary(previousData.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
+    if (previousData?.files?.length) details.push(`Archivos que tenia: ${listSummary(previousData.files, (file) => `${file.name || 'archivo'}${file.size ? ` (${formatFileSize(file.size)})` : ''}`)}.`);
+    return details;
+  }
+  if (entry.action === 'move') {
+    return [`Se movio de la posicion ${Number.isInteger(previousData?.orderIndex) ? previousData.orderIndex + 1 : 'sin registro'} a la posicion ${Number.isInteger(newData?.orderIndex) ? newData.orderIndex + 1 : 'sin registro'}.`];
+  }
+  const fields = [
+    ['title', 'Titulo'],
+    ['type', 'Tipo'],
+    ['status', 'Estado'],
+    ['section', 'Parte'],
+    ['priority', 'Prioridad'],
+    ['owner', 'Responsable'],
+    ['notes', 'Notas'],
+  ];
+  const details = [];
+  fields.forEach(([key, label]) => {
+    if (!valuesChanged(previousData?.[key], newData?.[key])) return;
+    const before = auditFieldValue(key, previousData?.[key]);
+    const after = auditFieldValue(key, newData?.[key]);
+    details.push(`${label}: antes "${before}", ahora "${after}".`);
+  });
+  if (valuesChanged(previousData?.links, newData?.links)) {
+    details.push(`Enlaces: antes ${listSummary(previousData?.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}; ahora ${listSummary(newData?.links, (link) => `${link.label || 'Enlace'} -> ${link.url || 'sin URL'}`)}.`);
+  }
+  if (valuesChanged(previousData?.files, newData?.files)) {
+    details.push(`Archivos: antes ${listSummary(previousData?.files, (file) => file.name || 'archivo')}; ahora ${listSummary(newData?.files, (file) => file.name || 'archivo')}.`);
+  }
+  return details.length ? details : [entry.summary || 'Se guardo una edicion sin diferencias detalladas.'];
+}
+
 async function logResourceAudit(action, resource, context, previousResource = null, summary = '') {
   if (!remoteEditingActive() || !cloudClient || !state.session?.user || !resource) return;
   const actor = currentActor();
@@ -2317,8 +2442,18 @@ async function loginEditor() {
   setCloudStatus('Sesion iniciada. Verificando permisos...', 'pending');
   const { data } = await cloudClient.auth.getUser();
   if (data.user) await upsertUserProfile(data.user);
-  await reloadCloudDataAfterSignIn();
   await refreshEditorStatus();
+  if (!state.hasCourseAccess) {
+    setAuthMode('login', { updateRoute: true, replace: true });
+    render();
+    return;
+  }
+  const loaded = await reloadCloudDataAfterSignIn();
+  if (!loaded) {
+    updateAuthUi();
+    render();
+    return;
+  }
   dom.loginEmail.value = '';
   setViewFromReturnRoute();
 }
@@ -2454,8 +2589,13 @@ async function updatePasswordFromRecovery() {
   if (dom.confirmPassword) dom.confirmPassword.value = '';
   state.recoveringPassword = false;
   setCloudStatus('Contrasena actualizada. Ya puedes usar tu cuenta.', 'ok');
-  await reloadCloudDataAfterSignIn();
   await refreshEditorStatus();
+  if (!state.hasCourseAccess) {
+    setAuthMode('login', { updateRoute: true, replace: true });
+    render();
+    return;
+  }
+  await reloadCloudDataAfterSignIn();
   setViewFromReturnRoute();
 }
 
@@ -2465,7 +2605,9 @@ async function reloadCloudDataAfterSignIn() {
     state.data = cloudData;
     selectFirstAvailable();
     clearForm();
+    return true;
   }
+  return false;
 }
 
 function setViewFromReturnRoute() {
@@ -2530,7 +2672,9 @@ async function logoutEditor() {
   state.session = null;
   state.isEditor = false;
   state.isMainEditor = false;
-  state.userRole = 'viewer';
+  state.userRole = 'unassigned';
+  state.accessChecked = false;
+  state.hasCourseAccess = false;
   state.returnRoute = '#/mapa';
   state.currentView = 'course';
   state.currentUserProfile = null;
@@ -2680,16 +2824,19 @@ function renderResourceAudit() {
   if (!remoteEditingActive()) {
     dom.auditStatus.textContent = 'Activa Supabase para guardar historial de recursos.';
     dom.auditList.innerHTML = '';
+    if (dom.auditPagination) dom.auditPagination.innerHTML = '';
     return;
   }
   if (!state.isMainEditor) {
     dom.auditStatus.textContent = 'Solo la cuenta principal puede ver el historial.';
     dom.auditList.innerHTML = '';
+    if (dom.auditPagination) dom.auditPagination.innerHTML = '';
     return;
   }
 
   const search = state.auditSearch.trim().toLowerCase();
   const entries = (state.resourceAuditLog || []).filter((entry) => {
+    const details = auditChangeDetails(entry).join(' ');
     if (!search) return true;
     const haystack = [
       entry.resource_title,
@@ -2697,20 +2844,25 @@ function renderResourceAudit() {
       auditActionLabel(entry.action),
       entry.actor_name,
       entry.actor_email,
-      entry.module_title,
-      entry.lesson_title,
-      entry.section_title,
+      auditContextLabel(entry),
       entry.summary,
+      details,
     ].join(' ').toLowerCase();
     return haystack.includes(search);
   });
 
-  dom.auditStatus.textContent = entries.length
-    ? `${entries.length} movimiento${entries.length === 1 ? '' : 's'} en el historial.`
-    : 'No hay movimientos que coincidan con la busqueda.';
   dom.auditList.innerHTML = '';
+  if (dom.auditPagination) dom.auditPagination.innerHTML = '';
+  const totalPages = Math.max(1, Math.ceil(entries.length / state.auditPageSize));
+  state.auditPage = Math.min(Math.max(state.auditPage, 1), totalPages);
+  const startIndex = (state.auditPage - 1) * state.auditPageSize;
+  const pageEntries = entries.slice(startIndex, startIndex + state.auditPageSize);
 
-  entries.forEach((entry) => {
+  dom.auditStatus.textContent = entries.length
+    ? `Mostrando ${startIndex + 1}-${Math.min(startIndex + pageEntries.length, entries.length)} de ${entries.length} movimientos.`
+    : 'No hay movimientos que coincidan con la busqueda.';
+
+  pageEntries.forEach((entry) => {
     const row = document.createElement('article');
     row.className = 'audit-row';
     const head = document.createElement('div');
@@ -2728,15 +2880,47 @@ function renderResourceAudit() {
 
     const place = document.createElement('p');
     place.className = 'audit-place';
-    place.textContent = [entry.module_title, entry.lesson_title, entry.section_title].filter(Boolean).join(' / ') || 'Ubicacion sin registro';
+    place.textContent = auditContextLabel(entry);
 
     const summary = document.createElement('p');
     summary.className = 'audit-summary';
-    summary.textContent = entry.summary || auditActionLabel(entry.action);
+    summary.textContent = auditActionSentence(entry.action);
 
     row.append(head, meta, place, summary);
+    const changes = auditChangeDetails(entry);
+    if (changes.length) {
+      const list = document.createElement('ul');
+      list.className = 'audit-changes';
+      changes.forEach((detail) => {
+        const item = document.createElement('li');
+        item.textContent = detail;
+        list.appendChild(item);
+      });
+      row.appendChild(list);
+    }
     dom.auditList.appendChild(row);
   });
+
+  renderAuditPagination(totalPages);
+}
+
+function renderAuditPagination(totalPages) {
+  if (!dom.auditPagination || totalPages <= 1) return;
+  for (let page = 1; page <= totalPages; page += 1) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'audit-page-button';
+    button.textContent = page;
+    if (page === state.auditPage) {
+      button.classList.add('active');
+      button.setAttribute('aria-current', 'page');
+    }
+    button.addEventListener('click', () => {
+      state.auditPage = page;
+      renderResourceAudit();
+    });
+    dom.auditPagination.appendChild(button);
+  }
 }
 
 async function loadResourceAudit() {
@@ -2749,7 +2933,7 @@ async function loadResourceAudit() {
     .from('resource_audit_log')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(250);
+    .limit(1000);
   if (error) {
     state.resourceAuditLog = [];
     if (dom.auditStatus) {
@@ -2763,32 +2947,45 @@ async function loadResourceAudit() {
 }
 
 async function refreshEditorStatus() {
-  if (!cloudClient || !state.session?.user || !state.cloudReady) {
+  if (!cloudClient || !state.session?.user) {
     state.isEditor = false;
     state.isMainEditor = false;
-    state.userRole = 'viewer';
+    state.userRole = 'unassigned';
     state.currentUserProfile = null;
     state.resourceAuditLog = [];
+    state.accessChecked = false;
+    state.hasCourseAccess = false;
     updateAuthUi();
     renderEditorList([]);
     renderRegisteredUsers([]);
     renderResourceAudit();
     return;
   }
-  const email = state.session.user.email;
+  const email = state.session.user.email?.toLowerCase() || '';
   await loadCurrentUserProfile();
-  state.isMainEditor = email.toLowerCase() === MAIN_EDITOR_EMAIL;
+  state.isMainEditor = email === MAIN_EDITOR_EMAIL;
   const { data, error } = await cloudClient
     .from('course_editors')
     .select('email, role')
     .eq('email', email)
     .maybeSingle();
-  state.userRole = state.isMainEditor ? 'owner' : data?.role || 'viewer';
-  state.isEditor = state.userRole !== 'viewer' && !error;
+  state.accessChecked = true;
+  state.userRole = state.isMainEditor ? 'owner' : data?.role || 'unassigned';
+  state.hasCourseAccess = state.isMainEditor || Boolean(data?.role);
+  state.isEditor = ['owner', 'manager', 'contributor'].includes(state.userRole) && !error;
+  if (!state.hasCourseAccess && !state.recoveringPassword) {
+    state.currentView = 'course';
+    state.returnRoute = '#/mapa';
+    if (!['#/login', '#/registro', '#/recuperar'].includes(window.location.hash)) {
+      history.replaceState(null, '', '#/login');
+    }
+  }
   updateAuthUi();
   setCloudStatus(
-    state.isEditor ? `Sesion activa: ${labels[state.userRole] ?? state.userRole}.` : 'Sesion iniciada, pero este correo no esta autorizado para editar.',
-    state.isEditor ? 'ok' : 'pending'
+    state.hasCourseAccess
+      ? `Sesion activa: ${labels[state.userRole] ?? state.userRole}.`
+      : 'Sesion iniciada, pero este correo no tiene perfil asignado.',
+    state.hasCourseAccess ? 'ok' : 'pending'
   );
   await loadEditors();
   if (state.data) render();
@@ -3030,6 +3227,7 @@ function wireEvents() {
   dom.refreshAuditLog?.addEventListener('click', loadResourceAudit);
   dom.auditSearch?.addEventListener('input', (event) => {
     state.auditSearch = event.target.value;
+    state.auditPage = 1;
     renderResourceAudit();
   });
   dom.moduleEditSelect?.addEventListener('change', () => {
@@ -3094,17 +3292,25 @@ async function loadCloudData() {
     setCloudStatus('Inicia sesion para cargar los datos compartidos.', 'pending');
     return null;
   }
+  if (!state.accessChecked) {
+    await refreshEditorStatus();
+  }
+  if (!state.hasCourseAccess) {
+    setCloudStatus('Sesion iniciada, pero este correo no tiene perfil asignado.', 'pending');
+    return null;
+  }
   const { data, error } = await cloudClient
     .from('course_state')
     .select('data, updated_at')
     .eq('id', cloudConfig.courseStateId)
     .single();
   if (error) {
+    state.cloudReady = false;
     setCloudStatus('No se pudieron cargar los datos compartidos. Revisa la configuracion de Supabase.', 'local');
     return null;
   }
   state.cloudReady = true;
-  setCloudStatus(`Datos compartidos activos. Ultima sincronizacion: ${new Date(data.updated_at).toLocaleString()}.`, 'ok');
+  setCloudStatus(`Datos compartidos activos. Ultima sincronizacion: ${formatDateTime(data.updated_at)}.`, 'ok');
   return data.data;
 }
 
@@ -3132,8 +3338,8 @@ async function initCloudSession() {
     }
     updateAuthUi();
     if (session) {
-      await reloadCloudDataAfterSignIn();
       await refreshEditorStatus();
+      if (state.hasCourseAccess) await reloadCloudDataAfterSignIn();
     } else {
       await refreshEditorStatus();
     }
@@ -3145,11 +3351,16 @@ async function initCloudSession() {
 
 async function init(forceDefault = false) {
   await initCloudSession();
-  const cloudData = forceDefault ? null : await loadCloudData();
-  const stored = forceDefault || cloudData ? null : loadStoredData();
+  let cloudData = null;
+  if (!forceDefault && cloudClient && state.session?.user) {
+    await refreshEditorStatus();
+    if (state.hasCourseAccess) cloudData = await loadCloudData();
+  } else if (!forceDefault && !cloudClient) {
+    cloudData = await loadCloudData();
+  }
+  const stored = forceDefault || cloudClient || cloudData ? null : loadStoredData();
   if (cloudData) {
     state.data = cloudData;
-    await refreshEditorStatus();
   } else if (stored) {
     state.data = stored;
     renderEditorList([]);
@@ -3157,14 +3368,16 @@ async function init(forceDefault = false) {
     localStorage.removeItem(STORAGE_KEY);
     const response = await fetch('js/data.json');
     state.data = await response.json();
-    await saveData();
+    if (!cloudClient || (forceDefault && state.session?.user && state.hasCourseAccess)) {
+      await saveData();
+    }
   }
   selectFirstAvailable();
   applyRouteFromLocation({ renderNow: false });
   clearForm();
-  if (!requiresSignIn() || state.session?.user) syncRouteFromState();
+  if (!requiresSignIn() || (state.session?.user && state.hasCourseAccess)) syncRouteFromState();
   render();
-  if (state.cloudReady) await loadEditors();
+  if (state.session?.user && state.hasCourseAccess) await loadEditors();
 }
 
 wireEvents();
