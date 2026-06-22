@@ -28,11 +28,12 @@ const labels = {
   manager: 'Editor avanzado',
   contributor: 'Creador de recursos',
   viewer: 'Solo lectura',
+  unassigned: 'Sin perfil asignado',
 };
 
 const profileStatusLabels = {
   profile_ready: 'Perfil activo',
-  missing_profile: 'Sin perfil',
+  missing_profile: 'Sin perfil publico',
   no_auth_user: 'Sin cuenta Auth',
 };
 
@@ -2404,7 +2405,8 @@ function renderRegisteredUsers(users = []) {
     const badges = document.createElement('div');
     badges.className = 'registered-user-badges';
     const role = document.createElement('span');
-    const roleValue = user.email?.toLowerCase() === MAIN_EDITOR_EMAIL ? 'owner' : editorRoles.get(user.email.toLowerCase()) || 'viewer';
+    const normalizedEmail = user.email?.toLowerCase() || '';
+    const roleValue = normalizedEmail === MAIN_EDITOR_EMAIL ? 'owner' : editorRoles.get(normalizedEmail) || 'unassigned';
     role.className = `role-pill role-${roleValue}`;
     role.textContent = labels[roleValue] ?? roleValue;
     badges.appendChild(role);

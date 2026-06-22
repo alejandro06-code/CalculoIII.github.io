@@ -88,7 +88,7 @@ as $$
     coalesce(up.full_name, nullif(au.raw_user_meta_data ->> 'full_name', ''), split_part(au.email, '@', 1)) as full_name,
     case when up.id is null then 'missing_profile' else 'profile_ready' end as profile_status,
     au.email_confirmed_at is not null as email_confirmed,
-    coalesce(ce.role, 'viewer') as role,
+    ce.role as role,
     au.created_at,
     coalesce(up.updated_at, au.updated_at) as updated_at
   from auth.users au
@@ -121,7 +121,7 @@ as $$
     coalesce(up.full_name, nullif(au.raw_user_meta_data ->> 'full_name', ''), split_part(au.email, '@', 1)) as full_name,
     case when up.id is null then 'missing_profile' else 'profile_ready' end as profile_status,
     au.email_confirmed_at is not null as email_confirmed,
-    coalesce(ce.role, 'viewer') as role,
+    ce.role as role,
     au.created_at,
     coalesce(up.updated_at, au.updated_at) as updated_at
   from auth.users au

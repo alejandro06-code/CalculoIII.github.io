@@ -1656,6 +1656,12 @@ body:not(.can-manage-users) .admin-users-card {
   border-color: #d6dde6;
 }
 
+.role-unassigned {
+  color: #7b4a00;
+  background: #fff1cf;
+  border-color: #f2d391;
+}
+
 .profile-profile_ready {
   color: #075f45;
   background: #e7f7ee;
