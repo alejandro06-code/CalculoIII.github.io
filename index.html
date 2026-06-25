@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260625-121500">
+  <meta name="description" content="Organizador compartido de recursos para el curso Calculo III.">
+  <meta property="og:title" content="Organizador de Recursos | Calculo III">
+  <meta property="og:description" content="Mapa compartido de modulos, lecciones y recursos del curso.">
+  <meta property="og:type" content="website">
+  <title>Organizador de Recursos | Calculo III</title>
+  <link rel="stylesheet" href="css/styles.css?v=20260625-132500">
 </head>
 <body>
   <header class="app-header">
@@ -19,6 +23,7 @@
         <p id="cloud-status">Preparando conexion...</p>
       </div>
       <div class="cloud-actions">
+        <a class="btn ghost profile-shortcut" id="profile-link" href="#/perfil" hidden>Mi perfil</a>
         <button class="btn ghost" id="logout-button" type="button" hidden>Cerrar sesion</button>
       </div>
     </section>
@@ -66,6 +71,7 @@
       <button class="page-tab" data-view="categories" type="button">Categorias</button>
       <button class="page-tab" data-view="structure" type="button">Estructura</button>
       <button class="page-tab" data-view="admin" type="button">Administracion</button>
+      <button class="page-tab" data-view="profile" type="button">Perfil</button>
     </nav>
 
     <section class="module-strip" data-view-panel="course module" aria-label="Modulos del curso">
@@ -344,13 +350,17 @@
           <div class="admin-card-heading">
             <div>
               <h3>Editores y permisos</h3>
-              <p class="muted">Solo la cuenta principal puede asignar, cambiar o quitar perfiles. Los administradores pueden apoyar en estructura y recursos.</p>
+              <p class="muted">Solo las cuentas principales pueden asignar, cambiar o quitar perfiles. Los administradores pueden apoyar en estructura y recursos.</p>
             </div>
           </div>
           <div class="permission-grid">
             <article>
+              <strong>Cuenta principal</strong>
+              <span>Acceso completo. Puede crear otras cuentas principales y cambiar cuentas.</span>
+            </article>
+            <article>
               <strong>Administrador</strong>
-              <span>Administra usuarios, estructura y recursos. No puede borrar la cuenta principal.</span>
+              <span>Administra estructura y recursos. Puede ver usuarios, pero no cambiar cuentas.</span>
             </article>
             <article>
               <strong>Editor avanzado</strong>
@@ -373,6 +383,7 @@
             <label>
               Perfil
               <select id="editor-role-input">
+                <option value="owner">Cuenta principal</option>
                 <option value="admin">Administrador</option>
                 <option value="manager">Editor avanzado</option>
                 <option value="contributor">Creador de recursos</option>
@@ -410,6 +421,69 @@
         <div class="audit-list" id="audit-list"></div>
         <div class="audit-pagination" id="audit-pagination" aria-label="Paginas del historial"></div>
       </section>
+    </section>
+
+    <section class="profile-row" data-view-panel="profile" aria-label="Perfil de usuario">
+      <div class="profile-heading">
+        <div>
+          <p class="eyebrow">Cuenta personal</p>
+          <h2>Mi perfil</h2>
+          <p class="muted">Revisa tus datos, cambia tu nombre de usuario o actualiza tu contrasena.</p>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <section class="profile-card profile-summary-card">
+          <div class="profile-avatar" id="profile-avatar">U</div>
+          <div class="profile-summary-main">
+            <p class="eyebrow">Sesion activa</p>
+            <h3 id="profile-display-name">Usuario</h3>
+            <p id="profile-display-email">correo@ejemplo.com</p>
+            <span class="role-pill" id="profile-display-role">Sin perfil asignado</span>
+          </div>
+        </section>
+
+        <section class="profile-card">
+          <h3>Enlace oficial</h3>
+          <p class="muted">Comparte este enlace para entrar al organizador publicado.</p>
+          <div class="copy-row">
+            <input id="official-link-input" readonly value="https://alejandro06-code.github.io/CalculoIII.github.io/">
+            <button class="btn ghost" id="copy-official-link" type="button">Copiar</button>
+          </div>
+        </section>
+
+        <section class="profile-card">
+          <h3>Datos de perfil</h3>
+          <label>
+            Nombre de usuario
+            <input id="profile-name-input" maxlength="80" placeholder="Nombre de usuario">
+          </label>
+          <button class="btn primary" id="save-profile-name" type="button">Guardar nombre</button>
+        </section>
+
+        <section class="profile-card">
+          <h3>Seguridad</h3>
+          <label>
+            Contrasena actual
+            <input id="profile-current-password" type="password" maxlength="72" autocomplete="current-password">
+          </label>
+          <div class="two-col">
+            <label>
+              Nueva contrasena
+              <input id="profile-new-password" type="password" maxlength="72" autocomplete="new-password">
+            </label>
+            <label>
+              Confirmar nueva contrasena
+              <input id="profile-confirm-password" type="password" maxlength="72" autocomplete="new-password">
+            </label>
+          </div>
+          <div class="profile-actions">
+            <button class="btn primary" id="change-profile-password" type="button">Cambiar contrasena</button>
+            <button class="btn ghost" id="send-profile-recovery" type="button">Enviar recuperacion</button>
+            <button class="btn danger" id="profile-logout" type="button">Cerrar sesion</button>
+          </div>
+        </section>
+      </div>
     </section>
   </main>
 
@@ -449,6 +523,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260625-121500"></script>
+  <script src="js/app.js?v=20260625-132500"></script>
 </body>
 </html>

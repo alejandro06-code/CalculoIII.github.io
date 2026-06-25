@@ -102,6 +102,10 @@ p {
   gap: 8px;
 }
 
+.profile-shortcut {
+  text-decoration: none;
+}
+
 .auth-gate {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(280px, 360px);
@@ -276,6 +280,7 @@ h4 {
 .categories-row,
 .structure-row,
 .admin-row,
+.profile-row,
 .editor-panel {
   min-width: 0;
 }
@@ -286,7 +291,9 @@ h4 {
 .categories-row,
 .structure-row,
 .admin-row,
+.profile-row,
 .admin-card,
+.profile-card,
 .editor-card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -1705,14 +1712,23 @@ body:not(.can-manage-users) .admin-users-card {
   padding: 18px;
 }
 
-.admin-heading {
+.profile-row {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+.admin-heading,
+.profile-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.admin-heading .muted {
+.admin-heading .muted,
+.profile-heading .muted {
   max-width: 520px;
   margin: 4px 0 0;
   text-align: right;
@@ -1734,6 +1750,82 @@ body:not(.can-manage-users) .admin-users-card {
 
 .admin-card h3 {
   font-size: 1rem;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.4fr);
+  gap: 14px;
+}
+
+.profile-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  box-shadow: none;
+}
+
+.profile-summary-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  background: linear-gradient(135deg, #f2fbf8, #eef6ff);
+}
+
+.profile-avatar {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  color: #fff;
+  background: var(--brand-2);
+  border-radius: 50%;
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.profile-summary-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.profile-summary-main h3 {
+  color: var(--text);
+  font-size: 1.35rem;
+  overflow-wrap: anywhere;
+}
+
+.profile-summary-main p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.profile-card label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.copy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.copy-row input {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .admin-audit-card {
@@ -2362,6 +2454,7 @@ body:not(.can-manage-users) .admin-users-card {
   .course-overview-stats,
   .category-grid,
   .admin-grid,
+  .profile-grid,
   .permission-grid,
   .editor-form-row,
   .editor-list-header,
@@ -2387,8 +2480,14 @@ body:not(.can-manage-users) .admin-users-card {
   .workspace,
   .workbench-main,
   .structure-row,
-  .admin-row {
+  .admin-row,
+  .profile-row {
     grid-column: 1;
+  }
+
+  .copy-row,
+  .profile-summary-card {
+    grid-template-columns: 1fr;
   }
 
   .sidebar,

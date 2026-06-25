@@ -11,8 +11,7 @@ Pasos obligatorios en Supabase:
 
 1. Abrir el SQL Editor.
 2. Copiar todo el contenido de `supabase/repair-user-profiles.sql`.
-3. Ejecutar el SQL con Run. La cuenta principal queda protegida como:
-   `maira2004hernandez@gmail.com`
+3. Ejecutar el SQL con Run. El correo `maira2004hernandez@gmail.com` queda sembrado como primera cuenta principal, y luego cualquier cuenta principal puede asignar ese mismo perfil a otras cuentas.
 4. En Authentication > URL Configuration, poner como Site URL:
    `https://alejandro06-code.github.io/CalculoIII.github.io/`
 5. Agregar tambien como Redirect URL:
@@ -24,11 +23,11 @@ Notas:
 - Sin cuenta no se puede entrar al organizador.
 - Los usuarios registrados sin perfil asignado no pueden entrar al contenido del organizador.
 - Solo los correos registrados en `course_editors` pueden entrar, editar, guardar, subir archivos, abrir enlaces o descargar archivos segun su perfil.
-- La cuenta principal y los perfiles `admin` pueden ver administracion e historial, pero solo la cuenta principal puede asignar perfiles, quitar permisos, sincronizar usuarios o borrar cuentas.
-- Solo la cuenta principal `maira2004hernandez@gmail.com` puede eliminar entradas del historial.
+- Las cuentas principales y los perfiles `admin` pueden ver administracion e historial, pero solo las cuentas principales pueden asignar perfiles, quitar permisos, sincronizar usuarios o borrar cuentas.
+- Solo una cuenta principal puede eliminar entradas del historial.
 - La tabla `course_editors` usa perfiles:
-  - `owner`: cuenta principal fija.
-  - `admin`: administra estructura, recursos y archivos; no cambia cuentas ni perfiles.
+  - `owner`: cuenta principal con acceso completo. Puede asignar tambien el perfil de cuenta principal a otra cuenta.
+  - `admin`: administra estructura, recursos y archivos; puede ver cuentas, pero no cambia cuentas ni perfiles.
   - `manager`: edita recursos, estructura, archivos y puede borrar, pero no administra usuarios.
   - `contributor`: puede crear recursos y subir archivos, pero no borrar ni modificar la estructura.
   - `viewer`: solo lectura.

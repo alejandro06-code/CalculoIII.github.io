@@ -1,6 +1,5 @@
 const STORAGE_KEY = 'calculo-iii-moodle-organizer-v2';
 const LEGACY_STORAGE_KEYS = ['calculo-iii-moodle-organizer-v1', 'calculo-iii-moodle-organizer-v0'];
-const MAIN_EDITOR_EMAIL = 'maira2004hernandez@gmail.com';
 const cloudConfig = window.SUPABASE_CONFIG ?? {};
 const cloudClient =
   window.supabase && cloudConfig.url && cloudConfig.publishableKey
@@ -31,6 +30,8 @@ const labels = {
   viewer: 'Solo lectura',
   unassigned: 'Sin perfil asignado',
 };
+
+const PUBLIC_SITE_URL = 'https://alejandro06-code.github.io/CalculoIII.github.io/';
 
 const categoryKeys = {
   status: 'resourceStatuses',
@@ -80,7 +81,15 @@ const profileStatusLabels = {
   no_auth_user: 'Sin cuenta Auth',
 };
 
-const assignableRoles = ['admin', 'manager', 'contributor', 'viewer'];
+const assignableRoles = ['owner', 'admin', 'manager', 'contributor', 'viewer'];
+const roleOrder = {
+  owner: 0,
+  admin: 1,
+  manager: 2,
+  contributor: 3,
+  viewer: 4,
+  unassigned: 5,
+};
 
 const roleCapabilities = {
   owner: {
@@ -236,6 +245,7 @@ const dom = {
   authDescription: document.querySelector('#auth-description'),
   resetPasswordButton: document.querySelector('#reset-password-button'),
   logoutButton: document.querySelector('#logout-button'),
+  profileLink: document.querySelector('#profile-link'),
   courseEyebrowDisplay: document.querySelector('#course-eyebrow-display'),
   courseDescriptionDisplay: document.querySelector('#course-description-display'),
   courseEyebrowInput: document.querySelector('#course-eyebrow-input'),
@@ -261,6 +271,20 @@ const dom = {
   auditList: document.querySelector('#audit-list'),
   auditPagination: document.querySelector('#audit-pagination'),
   refreshAuditLog: document.querySelector('#refresh-audit-log'),
+  profileAvatar: document.querySelector('#profile-avatar'),
+  profileDisplayName: document.querySelector('#profile-display-name'),
+  profileDisplayEmail: document.querySelector('#profile-display-email'),
+  profileDisplayRole: document.querySelector('#profile-display-role'),
+  profileNameInput: document.querySelector('#profile-name-input'),
+  profileCurrentPassword: document.querySelector('#profile-current-password'),
+  profileNewPassword: document.querySelector('#profile-new-password'),
+  profileConfirmPassword: document.querySelector('#profile-confirm-password'),
+  saveProfileName: document.querySelector('#save-profile-name'),
+  changeProfilePassword: document.querySelector('#change-profile-password'),
+  sendProfileRecovery: document.querySelector('#send-profile-recovery'),
+  profileLogout: document.querySelector('#profile-logout'),
+  officialLinkInput: document.querySelector('#official-link-input'),
+  copyOfficialLink: document.querySelector('#copy-official-link'),
   structureStatus: document.querySelector('#structure-status'),
   saveStructure: document.querySelector('#save-structure'),
   discardStructure: document.querySelector('#discard-structure'),
@@ -315,6 +339,7 @@ function updateAuthUi() {
   dom.resetPasswordButton.hidden = signedIn || !resetMode;
   if (dom.updatePasswordButton) dom.updatePasswordButton.hidden = !updateMode;
   dom.logoutButton.hidden = !signedIn;
+  if (dom.profileLink) dom.profileLink.hidden = !signedIn || updateMode || checkingAccess || blockedByAccess;
   if (dom.loginIdentifierLabel) {
     dom.loginIdentifierLabel.textContent = signupMode || resetMode ? 'Correo' : 'Correo o nombre de usuario';
   }
@@ -368,11 +393,10 @@ function updateAuthUi() {
             : 'Usa tu correo o nombre de usuario y tu contrasena.';
   }
   if (signedIn) {
-    dom.logoutButton.textContent = state.isMainEditor
-      ? `Cerrar sesion (${state.session.user.email}, principal)`
-      : state.isEditor
-        ? `Cerrar sesion (${state.session.user.email}, ${labels[state.userRole] ?? state.userRole})`
-        : `Cerrar sesion (${state.session.user.email}, sin permiso)`;
+    dom.logoutButton.textContent = `Cerrar sesion`;
+    if (dom.profileLink) {
+      dom.profileLink.textContent = `${state.currentUserProfile?.full_name || state.session.user.email} · ${labels[state.userRole] ?? 'sin perfil'}`;
+    }
   }
 }
 
@@ -386,7 +410,7 @@ function canEdit() {
 
 function hasCapability(capability) {
   if (!remoteEditingActive()) return true;
-  if (capability === 'deleteAudit') return state.isMainEditor;
+  if (capability === 'deleteAudit') return state.userRole === 'owner';
   return Boolean(roleCapabilities[state.userRole]?.[capability]);
 }
 
@@ -440,7 +464,7 @@ function normalizeView(view) {
   if (view === 'categories' && !hasCapability('manageStructure')) return 'course';
   if (view === 'structure' && !hasCapability('manageStructure')) return 'course';
   if (view === 'admin' && !hasCapability('manageUsers')) return 'course';
-  if (!['course', 'module', 'categories', 'structure', 'admin'].includes(view)) return 'course';
+  if (!['course', 'module', 'categories', 'structure', 'admin', 'profile'].includes(view)) return 'course';
   return view;
 }
 
@@ -448,6 +472,7 @@ function routeForCurrentState() {
   if (state.currentView === 'categories') return '#/categorias';
   if (state.currentView === 'structure') return '#/estructura';
   if (state.currentView === 'admin') return '#/admin';
+  if (state.currentView === 'profile') return '#/perfil';
   if (state.currentView === 'module' && state.selectedModuleId) return `#/modulo/${encodeURIComponent(state.selectedModuleId)}`;
   return '#/mapa';
 }
@@ -493,6 +518,8 @@ function applyRouteFromLocation({ renderNow = true } = {}) {
     state.currentView = normalizeView('structure');
   } else if (page === 'admin') {
     state.currentView = normalizeView('admin');
+  } else if (page === 'perfil' || page === 'mi-perfil') {
+    state.currentView = normalizeView('profile');
   } else if (page === 'modulo') {
     const moduleId = rawId ? decodeURIComponent(rawId) : null;
     const module = state.data.modules.find((item) => item.id === moduleId) ?? state.data.modules[0];
@@ -542,13 +569,36 @@ function canManageEditors() {
 }
 
 function canChangeAccounts() {
-  return !remoteEditingActive() || state.isMainEditor;
+  return !remoteEditingActive() || state.userRole === 'owner';
 }
 
 function requireMainEditorPermission() {
   if (canChangeAccounts()) return true;
-  alert('Solo la cuenta principal puede cambiar cuentas, perfiles y usuarios.');
+  alert('Solo una cuenta principal puede cambiar cuentas, perfiles y usuarios.');
   return false;
+}
+
+function roleRank(role = 'unassigned') {
+  return roleOrder[role] ?? roleOrder.unassigned;
+}
+
+function compareAccountsByRoleAndName(a, b, getRole = (item) => item.role, getName = (item) => item.email) {
+  const roleDiff = roleRank(getRole(a)) - roleRank(getRole(b));
+  if (roleDiff !== 0) return roleDiff;
+  return String(getName(a) || '').localeCompare(String(getName(b) || ''), 'es', { sensitivity: 'base' });
+}
+
+function ownerCount(editors = state.loadedEditors) {
+  return (editors || []).filter((editor) => editor.role === 'owner').length;
+}
+
+function editorRoleForEmail(email) {
+  const normalizedEmail = email?.toLowerCase() || '';
+  return (state.loadedEditors || []).find((editor) => editor.email?.toLowerCase() === normalizedEmail)?.role || 'unassigned';
+}
+
+function isLastOwnerEmail(email) {
+  return editorRoleForEmail(email) === 'owner' && ownerCount() <= 1;
 }
 
 function uid(prefix) {
@@ -1626,6 +1676,33 @@ function renderAdminControls() {
   if (dom.syncRegisteredUsersButton) dom.syncRegisteredUsersButton.disabled = lockAccounts;
 }
 
+function renderProfilePanel() {
+  if (!dom.profileDisplayName || !dom.profileDisplayEmail || !state.session?.user) return;
+  const user = state.session.user;
+  const profileName = state.currentUserProfile?.full_name || user.user_metadata?.full_name || user.email || 'Usuario';
+  const email = user.email || '';
+  const role = labels[state.userRole] ?? 'Sin perfil asignado';
+  dom.profileDisplayName.textContent = profileName;
+  dom.profileDisplayEmail.textContent = email;
+  if (dom.profileAvatar) {
+    const initials = profileName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join('');
+    dom.profileAvatar.textContent = initials || 'U';
+  }
+  if (dom.profileDisplayRole) {
+    dom.profileDisplayRole.className = `role-pill role-${state.userRole || 'unassigned'}`;
+    dom.profileDisplayRole.textContent = role;
+  }
+  if (dom.profileNameInput && document.activeElement !== dom.profileNameInput) {
+    dom.profileNameInput.value = profileName;
+  }
+  if (dom.officialLinkInput) dom.officialLinkInput.value = PUBLIC_SITE_URL;
+}
+
 function cloneCourseData(data) {
   return JSON.parse(JSON.stringify(data));
 }
@@ -2068,6 +2145,7 @@ function render() {
   renderTargets();
   renderLessonControls();
   renderAdminControls();
+  renderProfilePanel();
   renderStructureList();
   renderCategoryEditors();
   renderResources();
@@ -2610,7 +2688,7 @@ async function logResourceAudit(action, resource, context, previousResource = nu
     console.warn('No se pudo guardar el historial del recurso.', error.message);
     return;
   }
-  if (state.isMainEditor) await loadResourceAudit();
+  if (canManageEditors()) await loadResourceAudit();
 }
 
 async function saveResource(event) {
@@ -3437,6 +3515,97 @@ async function loadCurrentUserProfile() {
   return state.currentUserProfile;
 }
 
+async function saveCurrentProfileName() {
+  if (!cloudClient || !state.session?.user) return;
+  const name = dom.profileNameInput?.value.trim() || '';
+  if (!name) {
+    alert('Escribe un nombre de usuario.');
+    return;
+  }
+  if (name.length > 80) {
+    alert('El nombre de usuario no puede superar 80 caracteres.');
+    return;
+  }
+  const existingEmail = await lookupRegisteredEmail(name);
+  const currentEmail = state.session.user.email?.toLowerCase();
+  if (existingEmail && existingEmail.toLowerCase() !== currentEmail) {
+    alert('Ese nombre de usuario ya esta en uso.');
+    return;
+  }
+  const { error: authError } = await cloudClient.auth.updateUser({
+    data: { full_name: name },
+  });
+  if (authError) {
+    alert(`No se pudo actualizar el nombre en Auth: ${authError.message}`);
+    return;
+  }
+  await upsertUserProfile(state.session.user, name);
+  await loadCurrentUserProfile();
+  renderProfilePanel();
+  setCloudStatus('Nombre de usuario actualizado.', 'ok');
+}
+
+async function changeProfilePassword() {
+  if (!cloudClient || !state.session?.user?.email) return;
+  const currentPassword = dom.profileCurrentPassword?.value || '';
+  const newPassword = dom.profileNewPassword?.value || '';
+  const confirmation = dom.profileConfirmPassword?.value || '';
+  if (!currentPassword || !newPassword || !confirmation) {
+    alert('Escribe la contrasena actual, la nueva y la confirmacion.');
+    return;
+  }
+  if (newPassword.length > 72) {
+    alert('La nueva contrasena supera el maximo de 72 caracteres.');
+    return;
+  }
+  if (newPassword !== confirmation) {
+    alert('Las contrasenas nuevas no coinciden.');
+    return;
+  }
+  const { error: signInError } = await cloudClient.auth.signInWithPassword({
+    email: state.session.user.email,
+    password: currentPassword,
+  });
+  if (signInError) {
+    alert('La contrasena actual no coincide.');
+    return;
+  }
+  const { error } = await cloudClient.auth.updateUser({ password: newPassword });
+  if (error) {
+    alert(`No se pudo cambiar la contrasena: ${error.message}`);
+    return;
+  }
+  dom.profileCurrentPassword.value = '';
+  dom.profileNewPassword.value = '';
+  dom.profileConfirmPassword.value = '';
+  setCloudStatus('Contrasena actualizada correctamente.', 'ok');
+}
+
+async function sendProfileRecovery() {
+  if (!cloudClient || !state.session?.user?.email) return;
+  const { error } = await cloudClient.auth.resetPasswordForEmail(state.session.user.email, {
+    redirectTo: `${window.location.href.split('#')[0]}#/recuperar`,
+  });
+  if (error) {
+    alert(`No se pudo enviar la recuperacion: ${error.message}`);
+    return;
+  }
+  setCloudStatus('Enviamos un enlace de recuperacion al correo de esta cuenta.', 'pending');
+}
+
+async function copyOfficialLink() {
+  const link = PUBLIC_SITE_URL;
+  try {
+    await navigator.clipboard.writeText(link);
+    setCloudStatus('Enlace oficial copiado al portapapeles.', 'ok');
+  } catch {
+    if (dom.officialLinkInput) {
+      dom.officialLinkInput.focus();
+      dom.officialLinkInput.select();
+    }
+  }
+}
+
 async function logoutEditor() {
   if (!cloudClient) return;
   await cloudClient.auth.signOut();
@@ -3466,7 +3635,7 @@ function renderEditorList(editors = []) {
     return;
   }
   if (!canManageEditors()) {
-    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver perfiles. Solo la cuenta principal puede modificarlos.</p>';
+    dom.editorList.innerHTML = '<p class="asset-empty">Solo una cuenta principal o un administrador puede ver perfiles. Solo las cuentas principales pueden modificarlos.</p>';
     return;
   }
   if (!editors.length) {
@@ -3478,10 +3647,12 @@ function renderEditorList(editors = []) {
   header.className = 'editor-list-header';
   header.innerHTML = '<span>Cuenta</span><span>Perfil</span><span>Accion</span>';
   dom.editorList.appendChild(header);
-  editors.forEach((editor) => {
+  const sortedEditors = [...editors].sort((a, b) => compareAccountsByRoleAndName(a, b));
+  sortedEditors.forEach((editor) => {
     const row = document.createElement('div');
     row.className = 'editor-row';
-    const isMainAccount = editor.email?.toLowerCase() === MAIN_EDITOR_EMAIL;
+    const isMainAccount = editor.role === 'owner';
+    const lastOwner = isLastOwnerEmail(editor.email);
     if (isMainAccount) row.classList.add('main-account');
     const account = document.createElement('div');
     account.className = 'editor-account';
@@ -3492,16 +3663,18 @@ function renderEditorList(editors = []) {
     account.append(email, meta);
     let roleControl;
     let action;
-    if (isMainAccount || !canChangeAccounts()) {
+    if (!canChangeAccounts()) {
       roleControl = document.createElement('span');
       roleControl.className = `role-pill role-${editor.role || 'owner'}`;
       roleControl.textContent = labels[editor.role || 'owner'] ?? editor.role;
       action = document.createElement('span');
       action.className = 'fixed-account-label';
-      action.textContent = isMainAccount ? 'Fijo' : 'Solo principal';
+      action.textContent = 'Solo cuenta principal';
     } else {
       roleControl = document.createElement('select');
       roleControl.className = 'inline-role-select';
+      roleControl.disabled = lastOwner;
+      if (lastOwner) roleControl.title = 'Debe quedar al menos una cuenta principal.';
       assignableRoles.forEach((roleValue) => {
         const option = document.createElement('option');
         option.value = roleValue;
@@ -3515,11 +3688,15 @@ function renderEditorList(editors = []) {
       update.className = 'mini-btn';
       update.type = 'button';
       update.textContent = 'Actualizar';
+      update.disabled = lastOwner;
+      if (lastOwner) update.title = 'Debe quedar al menos una cuenta principal.';
       update.addEventListener('click', () => updateEditorRole(editor.email, roleControl.value));
       const remove = document.createElement('button');
       remove.className = 'mini-btn delete';
       remove.type = 'button';
       remove.textContent = 'Quitar perfil';
+      remove.disabled = lastOwner;
+      if (lastOwner) remove.title = 'Debe quedar al menos una cuenta principal.';
       remove.addEventListener('click', () => removeEditor(editor.email));
       action.append(update, remove);
     }
@@ -3535,7 +3712,7 @@ function renderRegisteredUsers(users = []) {
     return;
   }
   if (!canManageEditors()) {
-    dom.registeredUserList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver usuarios registrados.</p>';
+    dom.registeredUserList.innerHTML = '<p class="asset-empty">Solo una cuenta principal o un administrador puede ver usuarios registrados.</p>';
     return;
   }
   if (!users.length) {
@@ -3544,7 +3721,12 @@ function renderRegisteredUsers(users = []) {
   }
   const editorRoles = new Map((state.loadedEditors || []).map((editor) => [editor.email.toLowerCase(), editor.role || 'manager']));
   dom.registeredUserList.innerHTML = '';
-  users.forEach((user) => {
+  const sortedUsers = [...users].sort((a, b) => {
+    const roleA = editorRoles.get(a.email?.toLowerCase()) || 'unassigned';
+    const roleB = editorRoles.get(b.email?.toLowerCase()) || 'unassigned';
+    return compareAccountsByRoleAndName(a, b, () => roleA, (item) => item.full_name || item.email);
+  });
+  sortedUsers.forEach((user) => {
     const row = document.createElement('div');
     row.className = 'registered-user-row';
     if (user.profile_status === 'missing_profile') row.classList.add('missing-profile');
@@ -3564,7 +3746,7 @@ function renderRegisteredUsers(users = []) {
     badges.className = 'registered-user-badges';
     const role = document.createElement('span');
     const normalizedEmail = user.email?.toLowerCase() || '';
-    const roleValue = normalizedEmail === MAIN_EDITOR_EMAIL ? 'owner' : editorRoles.get(normalizedEmail) || 'unassigned';
+    const roleValue = editorRoles.get(normalizedEmail) || 'unassigned';
     role.className = `role-pill role-${roleValue}`;
     role.textContent = labels[roleValue] ?? roleValue;
     badges.appendChild(role);
@@ -3574,15 +3756,17 @@ function renderRegisteredUsers(users = []) {
     profile.textContent = profileStatusLabels[profileStatus] ?? profileStatus;
     badges.appendChild(profile);
     let action;
-    if (normalizedEmail === MAIN_EDITOR_EMAIL || !canChangeAccounts()) {
+    if (!canChangeAccounts()) {
       action = document.createElement('span');
       action.className = 'fixed-account-label';
-      action.textContent = normalizedEmail === MAIN_EDITOR_EMAIL ? 'Fijo' : 'Solo principal';
+      action.textContent = 'Solo cuenta principal';
     } else {
       action = document.createElement('button');
       action.className = 'mini-btn delete';
       action.type = 'button';
       action.textContent = 'Borrar cuenta';
+      action.disabled = roleValue === 'owner' && ownerCount() <= 1;
+      if (action.disabled) action.title = 'Debe quedar al menos una cuenta principal.';
       action.addEventListener('click', () => deleteRegisteredAccount(user.email));
     }
     row.append(account, badges, action);
@@ -3591,7 +3775,7 @@ function renderRegisteredUsers(users = []) {
 }
 
 function requestDeleteAuditEntry(entry) {
-  if (!requireCapability('deleteAudit', 'Solo la cuenta principal puede eliminar entradas del historial.')) return;
+  if (!requireCapability('deleteAudit', 'Solo una cuenta principal puede eliminar entradas del historial.')) return;
   state.pendingDeleteKind = 'audit';
   state.pendingDeleteAuditId = entry.id;
   state.pendingDeleteResourceId = null;
@@ -3631,7 +3815,7 @@ function renderResourceAudit() {
     return;
   }
   if (!canManageEditors()) {
-    dom.auditStatus.textContent = 'Solo la cuenta principal o un administrador puede ver el historial.';
+    dom.auditStatus.textContent = 'Solo una cuenta principal o un administrador puede ver el historial.';
     dom.auditList.innerHTML = '';
     if (dom.auditPagination) dom.auditPagination.innerHTML = '';
     return;
@@ -3767,15 +3951,15 @@ async function refreshEditorStatus() {
   }
   const email = state.session.user.email?.toLowerCase() || '';
   await loadCurrentUserProfile();
-  state.isMainEditor = email === MAIN_EDITOR_EMAIL;
   const { data, error } = await cloudClient
     .from('course_editors')
     .select('email, role')
     .eq('email', email)
     .maybeSingle();
   state.accessChecked = true;
-  state.userRole = state.isMainEditor ? 'owner' : data?.role || 'unassigned';
-  state.hasCourseAccess = state.isMainEditor || Boolean(data?.role);
+  state.userRole = data?.role || 'unassigned';
+  state.isMainEditor = state.userRole === 'owner';
+  state.hasCourseAccess = Boolean(data?.role);
   state.isEditor = ['owner', 'admin', 'manager', 'contributor'].includes(state.userRole) && !error;
   if (!state.hasCourseAccess && !state.recoveringPassword) {
     state.currentView = 'course';
@@ -3873,11 +4057,16 @@ async function addEditor() {
 
 async function updateEditorRole(email, role) {
   if (!requireMainEditorPermission()) return;
-  if (email?.toLowerCase() === MAIN_EDITOR_EMAIL) {
-    alert('La cuenta principal siempre conserva acceso completo.');
+  const normalizedEmail = email?.toLowerCase();
+  const previousRole = editorRoleForEmail(normalizedEmail);
+  if (previousRole === 'owner' && role !== 'owner' && ownerCount() <= 1) {
+    alert('Debe quedar al menos una cuenta principal.');
     return;
   }
-  const { error } = await cloudClient.from('course_editors').upsert({ email: email.toLowerCase(), role });
+  if (normalizedEmail === state.session?.user?.email?.toLowerCase() && previousRole === 'owner' && role !== 'owner') {
+    if (!confirm('Estas quitando tu propio perfil de cuenta principal. Continuar?')) return;
+  }
+  const { error } = await cloudClient.from('course_editors').upsert({ email: normalizedEmail, role });
   if (error) {
     alert(`No se pudo actualizar el perfil: ${error.message}`);
     return;
@@ -3915,8 +4104,8 @@ async function syncRegisteredUsers() {
 
 async function removeEditor(email) {
   if (!requireMainEditorPermission()) return;
-  if (email?.toLowerCase() === MAIN_EDITOR_EMAIL) {
-    alert('No se puede quitar el perfil de la cuenta principal.');
+  if (isLastOwnerEmail(email)) {
+    alert('No se puede quitar la ultima cuenta principal.');
     return;
   }
   if (email === state.session?.user?.email && !confirm('Estas quitando tu propio permiso de editor. Continuar?')) return;
@@ -3932,8 +4121,12 @@ async function deleteRegisteredAccount(email) {
   if (!requireMainEditorPermission()) return;
   const normalizedEmail = email?.trim().toLowerCase();
   if (!normalizedEmail) return;
-  if (normalizedEmail === MAIN_EDITOR_EMAIL) {
-    alert('No se puede borrar la cuenta principal.');
+  if (isLastOwnerEmail(normalizedEmail)) {
+    alert('No se puede borrar la ultima cuenta principal.');
+    return;
+  }
+  if (normalizedEmail === state.session?.user?.email?.toLowerCase()) {
+    alert('No puedes borrar tu propia cuenta desde esta pantalla. Cierra sesion y pide a otra cuenta principal que lo haga.');
     return;
   }
   const confirmation = prompt(`Esto borrara la cuenta ${normalizedEmail}, su perfil, permisos y credenciales de inicio de sesion. Escribe BORRAR para confirmar.`);
@@ -3995,6 +4188,11 @@ function wireEvents() {
   dom.loginButton.addEventListener('click', loginEditor);
   dom.signupButton.addEventListener('click', signupEditor);
   dom.updatePasswordButton?.addEventListener('click', updatePasswordFromRecovery);
+  dom.saveProfileName?.addEventListener('click', saveCurrentProfileName);
+  dom.changeProfilePassword?.addEventListener('click', changeProfilePassword);
+  dom.sendProfileRecovery?.addEventListener('click', sendProfileRecovery);
+  dom.profileLogout?.addEventListener('click', logoutEditor);
+  dom.copyOfficialLink?.addEventListener('click', copyOfficialLink);
   dom.authLoginMode?.addEventListener('click', () => setAuthMode('login', { updateRoute: true }));
   dom.authSignupMode?.addEventListener('click', () => setAuthMode('signup', { updateRoute: true }));
   dom.resetPasswordButton.addEventListener('click', resetPassword);

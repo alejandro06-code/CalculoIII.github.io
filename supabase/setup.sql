@@ -88,7 +88,12 @@ stable
 security definer
 set search_path = public
 as $$
-  select lower(coalesce(auth.jwt() ->> 'email', '')) = 'maira2004hernandez@gmail.com';
+  select exists (
+    select 1
+    from public.course_editors
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      and role = 'owner'
+  );
 $$;
 
 create or replace function public.current_course_role()
@@ -107,6 +112,18 @@ as $$
     ),
     'unassigned'
   );
+$$;
+
+create or replace function public.owner_editor_count()
+returns integer
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select count(*)::integer
+  from public.course_editors
+  where role = 'owner';
 $$;
 
 create or replace function public.can_access_course()
@@ -297,7 +314,7 @@ declare
   synced_count integer;
 begin
   if not public.is_main_editor() then
-    raise exception 'Solo la cuenta principal puede sincronizar usuarios.';
+    raise exception 'Solo una cuenta principal puede sincronizar usuarios.';
   end if;
 
   with raw_source as (
@@ -358,7 +375,7 @@ declare
   target_id uuid;
 begin
   if not public.is_main_editor() then
-    raise exception 'Solo la cuenta principal puede borrar cuentas.';
+    raise exception 'Solo una cuenta principal puede borrar cuentas.';
   end if;
 
   normalized_email := lower(trim(account_email));
@@ -366,8 +383,18 @@ begin
     raise exception 'Correo invalido.';
   end if;
 
-  if normalized_email = 'maira2004hernandez@gmail.com' then
-    raise exception 'No se puede borrar la cuenta principal.';
+  if normalized_email = lower(coalesce(auth.jwt() ->> 'email', '')) then
+    raise exception 'No puedes borrar tu propia cuenta desde esta funcion.';
+  end if;
+
+  if exists (
+    select 1
+    from public.course_editors
+    where lower(email) = normalized_email
+      and role = 'owner'
+  )
+  and public.owner_editor_count() <= 1 then
+    raise exception 'No se puede borrar la ultima cuenta principal.';
   end if;
 
   select id
@@ -400,6 +427,7 @@ grant execute on function public.current_course_role() to authenticated;
 grant execute on function public.can_access_course() to authenticated;
 grant execute on function public.can_edit_course() to authenticated;
 grant execute on function public.can_manage_users() to authenticated;
+grant execute on function public.owner_editor_count() to authenticated;
 
 with raw_source as (
   select
@@ -492,10 +520,7 @@ for insert
 to authenticated
 with check (
   public.is_main_editor()
-  and (
-    (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
-    or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
-  )
+  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
 );
 
 drop policy if exists "course_editors editor update" on public.course_editors;
@@ -505,13 +530,14 @@ for update
 to authenticated
 using (
   public.is_main_editor()
+  and (
+    role <> 'owner'
+    or public.owner_editor_count() > 1
+  )
 )
 with check (
   public.is_main_editor()
-  and (
-    (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
-    or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
-  )
+  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
 );
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
@@ -521,7 +547,11 @@ for delete
 to authenticated
 using (
   public.is_main_editor()
-  and lower(email) <> 'maira2004hernandez@gmail.com'
+  and lower(email) <> lower(coalesce(auth.jwt() ->> 'email', ''))
+  and (
+    role <> 'owner'
+    or public.owner_editor_count() > 1
+  )
 );
 
 drop policy if exists "resource_audit main read" on public.resource_audit_log;
