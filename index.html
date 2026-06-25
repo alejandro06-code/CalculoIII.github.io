@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Organizador Moodle | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260622-001500">
+  <link rel="stylesheet" href="css/styles.css?v=20260625-121500">
 </head>
 <body>
   <header class="app-header">
@@ -63,6 +63,7 @@
   <main class="app-shell">
     <nav class="page-tabs" aria-label="Vistas del organizador">
       <button class="page-tab active" data-view="course" type="button">Mapa del curso</button>
+      <button class="page-tab" data-view="categories" type="button">Categorias</button>
       <button class="page-tab" data-view="structure" type="button">Estructura</button>
       <button class="page-tab" data-view="admin" type="button">Administracion</button>
     </nav>
@@ -133,25 +134,12 @@
           <div class="filters" aria-label="Filtros de recursos">
             <fieldset class="filter-group" id="status-filter">
               <legend>Estado</legend>
-              <button class="filter-reset" data-filter-reset="status" type="button">Todos</button>
-              <label><input type="checkbox" value="exists"> Existe</label>
-              <label><input type="checkbox" value="planned"> Por anadir</label>
-              <label><input type="checkbox" value="missing"> Falta</label>
-              <label><input type="checkbox" value="review"> Por revisar</label>
-              <label><input type="checkbox" value="approved"> Aprobado</label>
-              <label><input type="checkbox" value="discarded"> Descartado</label>
             </fieldset>
             <fieldset class="filter-group" id="type-filter">
               <legend>Tipo</legend>
-              <button class="filter-reset" data-filter-reset="type" type="button">Todos</button>
-              <label><input type="checkbox" value="video"> Video</label>
-              <label><input type="checkbox" value="link"> Simulador</label>
-              <label><input type="checkbox" value="file"> LPS</label>
-              <label><input type="checkbox" value="text"> Competencias</label>
-              <label><input type="checkbox" value="page"> Pagina Moodle</label>
-              <label><input type="checkbox" value="h5p"> H5P</label>
-              <label><input type="checkbox" value="quiz"> Pregunta/reto</label>
-              <label><input type="checkbox" value="other"> Otro</label>
+            </fieldset>
+            <fieldset class="filter-group" id="group-filter">
+              <legend>Grupo visual</legend>
             </fieldset>
           </div>
 
@@ -174,30 +162,20 @@
             Titulo
             <input id="resource-title" required placeholder="Ej. Video sobre plano tangente">
           </label>
-          <div class="two-col">
+          <div class="three-col">
             <label>
               Tipo
               <select id="resource-type">
-                <option value="video">Video</option>
-                <option value="link">Simulador</option>
-                <option value="file">LPS</option>
-                <option value="text">Competencias</option>
-                <option value="page">Pagina Moodle</option>
-                <option value="h5p">H5P</option>
-                <option value="quiz">Pregunta/reto</option>
-                <option value="other">Otro</option>
               </select>
             </label>
             <label>
               Estado
               <select id="resource-status">
-                <option value="exists">Existe</option>
-                <option value="planned">Por anadir</option>
-                <option value="missing">Falta</option>
-                <option value="review">Por revisar</option>
-                <option value="approved">Aprobado</option>
-                <option value="discarded">Descartado</option>
               </select>
+            </label>
+            <label>
+              Grupo visual
+              <select id="resource-group"></select>
             </label>
           </div>
           <section class="asset-manager" aria-label="Enlaces del recurso">
@@ -258,6 +236,47 @@
           </form>
         </aside>
       </section>
+    </section>
+
+    <section class="categories-row" data-view-panel="categories" aria-label="Categorias de recursos">
+      <div class="categories-heading">
+        <div>
+          <p class="eyebrow">Organizacion visual</p>
+          <h2>Categorias de recursos</h2>
+          <p class="muted">Edita estados, tipos y grupos visuales. Los recursos se agrupan por grupo visual dentro de cada parte.</p>
+        </div>
+        <div class="category-savebar">
+          <span id="category-status">Sin cambios pendientes</span>
+          <button class="btn ghost" id="discard-categories" type="button">Descartar</button>
+          <button class="btn primary" id="save-categories" type="button">Guardar cambios</button>
+        </div>
+      </div>
+      <div class="category-grid">
+        <section class="category-card">
+          <div>
+            <p class="eyebrow">Filtros y etiquetas</p>
+            <h3>Estados</h3>
+            <p class="muted">Sirven para saber si el recurso existe, falta, esta por revisar o ya fue aprobado.</p>
+          </div>
+          <div id="status-category-list" class="category-list"></div>
+        </section>
+        <section class="category-card">
+          <div>
+            <p class="eyebrow">Formato</p>
+            <h3>Tipos</h3>
+            <p class="muted">Describen la naturaleza del recurso: video, enlace, archivo, pagina Moodle y otros formatos.</p>
+          </div>
+          <div id="type-category-list" class="category-list"></div>
+        </section>
+        <section class="category-card category-card-wide">
+          <div>
+            <p class="eyebrow">Separadores de visualizacion</p>
+            <h3>Grupos visuales</h3>
+            <p class="muted">Crean separadores como Simuladores, Videos o Lecturas para que cada parte no quede como una lista mezclada.</p>
+          </div>
+          <div id="group-category-list" class="category-list"></div>
+        </section>
+      </div>
     </section>
 
     <section class="structure-row" data-view-panel="structure" aria-label="Estructura">
@@ -325,7 +344,7 @@
           <div class="admin-card-heading">
             <div>
               <h3>Editores y permisos</h3>
-              <p class="muted">La cuenta principal y los administradores pueden asignar perfiles. Los permisos controlan que puede hacer cada cuenta.</p>
+              <p class="muted">Solo la cuenta principal puede asignar, cambiar o quitar perfiles. Los administradores pueden apoyar en estructura y recursos.</p>
             </div>
           </div>
           <div class="permission-grid">
@@ -430,6 +449,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260622-161000"></script>
+  <script src="js/app.js?v=20260625-121500"></script>
 </body>
 </html>

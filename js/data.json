@@ -29,6 +29,138 @@
       "description": "Autoevaluacion, sintesis y decisiones finales de la leccion."
     }
   ],
+  "resourceStatuses": [
+    {
+      "id": "exists",
+      "title": "Existe",
+      "color": "#247548",
+      "active": true
+    },
+    {
+      "id": "planned",
+      "title": "Por anadir",
+      "color": "#b7791f",
+      "active": true
+    },
+    {
+      "id": "missing",
+      "title": "Falta",
+      "color": "#b4233b",
+      "active": true
+    },
+    {
+      "id": "review",
+      "title": "Por revisar",
+      "color": "#d89521",
+      "active": true
+    },
+    {
+      "id": "approved",
+      "title": "Aprobado",
+      "color": "#16815f",
+      "active": true
+    },
+    {
+      "id": "discarded",
+      "title": "Descartado",
+      "color": "#667085",
+      "active": true
+    }
+  ],
+  "resourceTypes": [
+    {
+      "id": "video",
+      "title": "Video",
+      "color": "#1e4f87",
+      "active": true
+    },
+    {
+      "id": "link",
+      "title": "Link",
+      "color": "#2b746b",
+      "active": true
+    },
+    {
+      "id": "file",
+      "title": "Archivo",
+      "color": "#7047a8",
+      "active": true
+    },
+    {
+      "id": "page",
+      "title": "Pagina Moodle",
+      "color": "#8a5a1f",
+      "active": true
+    },
+    {
+      "id": "h5p",
+      "title": "H5P",
+      "color": "#0f766e",
+      "active": true
+    },
+    {
+      "id": "quiz",
+      "title": "Pregunta/reto",
+      "color": "#9f2d3d",
+      "active": true
+    },
+    {
+      "id": "other",
+      "title": "Otro",
+      "color": "#607086",
+      "active": true
+    }
+  ],
+  "resourceGroups": [
+    {
+      "id": "general",
+      "title": "General",
+      "color": "#607086",
+      "active": true
+    },
+    {
+      "id": "simuladores",
+      "title": "Simuladores",
+      "color": "#19a974",
+      "active": true
+    },
+    {
+      "id": "videos",
+      "title": "Videos",
+      "color": "#1e4f87",
+      "active": true
+    },
+    {
+      "id": "lecturas",
+      "title": "Lecturas",
+      "color": "#7047a8",
+      "active": true
+    },
+    {
+      "id": "resumenes",
+      "title": "Resumenes",
+      "color": "#d89521",
+      "active": true
+    },
+    {
+      "id": "competencias",
+      "title": "Competencias",
+      "color": "#b4233b",
+      "active": true
+    },
+    {
+      "id": "material-apoyo",
+      "title": "Material de apoyo",
+      "color": "#2b746b",
+      "active": true
+    },
+    {
+      "id": "moodle",
+      "title": "Moodle",
+      "color": "#8a5a1f",
+      "active": true
+    }
+  ],
   "modules": [
     {
       "id": "m1",
@@ -44,6 +176,7 @@
               "title": "Video de bienvenida del curso",
               "type": "video",
               "status": "planned",
+              "group": "videos",
               "url": "",
               "links": [],
               "files": [],
@@ -57,6 +190,7 @@
               "title": "Encuesta diagnostica",
               "type": "quiz",
               "status": "missing",
+              "group": "competencias",
               "url": "",
               "links": [],
               "files": [],
@@ -86,6 +220,7 @@
               "title": "Applet o enlace de visualizacion 3D",
               "type": "link",
               "status": "review",
+              "group": "simuladores",
               "url": "",
               "links": [],
               "files": [],

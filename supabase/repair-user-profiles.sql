@@ -145,7 +145,7 @@ on public.course_editors
 for insert
 to authenticated
 with check (
-  public.can_manage_users()
+  public.is_main_editor()
   and (
     (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
     or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
@@ -158,11 +158,10 @@ on public.course_editors
 for update
 to authenticated
 using (
-  public.can_manage_users()
-  and (public.is_main_editor() or lower(email) <> 'maira2004hernandez@gmail.com')
+  public.is_main_editor()
 )
 with check (
-  public.can_manage_users()
+  public.is_main_editor()
   and (
     (lower(email) <> 'maira2004hernandez@gmail.com' and role in ('admin', 'manager', 'contributor', 'viewer'))
     or (public.is_main_editor() and lower(email) = 'maira2004hernandez@gmail.com' and role = 'owner')
@@ -175,7 +174,7 @@ on public.course_editors
 for delete
 to authenticated
 using (
-  public.can_manage_users()
+  public.is_main_editor()
   and lower(email) <> 'maira2004hernandez@gmail.com'
 );
 
@@ -344,8 +343,8 @@ as $$
 declare
   synced_count integer;
 begin
-  if not public.can_manage_users() then
-    raise exception 'Solo la cuenta principal o un administrador puede sincronizar usuarios.';
+  if not public.is_main_editor() then
+    raise exception 'Solo la cuenta principal puede sincronizar usuarios.';
   end if;
 
   with raw_source as (
@@ -405,8 +404,8 @@ declare
   normalized_email text;
   target_id uuid;
 begin
-  if not public.can_manage_users() then
-    raise exception 'Solo la cuenta principal o un administrador puede borrar cuentas.';
+  if not public.is_main_editor() then
+    raise exception 'Solo la cuenta principal puede borrar cuentas.';
   end if;
 
   normalized_email := lower(trim(account_email));

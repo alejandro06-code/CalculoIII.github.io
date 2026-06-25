@@ -32,6 +32,48 @@ const labels = {
   unassigned: 'Sin perfil asignado',
 };
 
+const categoryKeys = {
+  status: 'resourceStatuses',
+  type: 'resourceTypes',
+  group: 'resourceGroups',
+};
+
+const categoryFallbacks = {
+  status: 'planned',
+  type: 'other',
+  group: 'general',
+};
+
+const defaultCategories = {
+  status: [
+    { id: 'exists', title: 'Existe', color: '#247548', active: true },
+    { id: 'planned', title: 'Por anadir', color: '#b7791f', active: true },
+    { id: 'missing', title: 'Falta', color: '#b4233b', active: true },
+    { id: 'review', title: 'Por revisar', color: '#d89521', active: true },
+    { id: 'approved', title: 'Aprobado', color: '#16815f', active: true },
+    { id: 'discarded', title: 'Descartado', color: '#667085', active: true },
+  ],
+  type: [
+    { id: 'video', title: 'Video', color: '#1e4f87', active: true },
+    { id: 'link', title: 'Link', color: '#2b746b', active: true },
+    { id: 'file', title: 'Archivo', color: '#7047a8', active: true },
+    { id: 'page', title: 'Pagina Moodle', color: '#8a5a1f', active: true },
+    { id: 'h5p', title: 'H5P', color: '#0f766e', active: true },
+    { id: 'quiz', title: 'Pregunta/reto', color: '#9f2d3d', active: true },
+    { id: 'other', title: 'Otro', color: '#607086', active: true },
+  ],
+  group: [
+    { id: 'general', title: 'General', color: '#607086', active: true },
+    { id: 'simuladores', title: 'Simuladores', color: '#19a974', active: true },
+    { id: 'videos', title: 'Videos', color: '#1e4f87', active: true },
+    { id: 'lecturas', title: 'Lecturas', color: '#7047a8', active: true },
+    { id: 'resumenes', title: 'Resumenes', color: '#d89521', active: true },
+    { id: 'competencias', title: 'Competencias', color: '#b4233b', active: true },
+    { id: 'material-apoyo', title: 'Material de apoyo', color: '#2b746b', active: true },
+    { id: 'moodle', title: 'Moodle', color: '#8a5a1f', active: true },
+  ],
+};
+
 const profileStatusLabels = {
   profile_ready: 'Perfil activo',
   missing_profile: 'Sin perfil publico',
@@ -85,6 +127,7 @@ const state = {
   selectedSectionId: 'preparacion',
   statusFilters: [],
   typeFilters: [],
+  groupFilters: [],
   search: '',
   pendingDeleteResourceId: null,
   pendingDeleteAuditId: null,
@@ -103,6 +146,8 @@ const state = {
   cloudStatus: 'local',
   structureDraft: null,
   structureDirty: false,
+  categoryDraft: null,
+  categoryDirty: false,
   loadedEditors: [],
   loadedRegisteredUsers: [],
   currentUserProfile: null,
@@ -137,6 +182,7 @@ const dom = {
   sectionDescription: document.querySelector('#section-description'),
   statusFilter: document.querySelector('#status-filter'),
   typeFilter: document.querySelector('#type-filter'),
+  groupFilter: document.querySelector('#group-filter'),
   search: document.querySelector('#search'),
   form: document.querySelector('#resource-form'),
   formTitle: document.querySelector('#form-title'),
@@ -144,6 +190,7 @@ const dom = {
   resourceTitle: document.querySelector('#resource-title'),
   resourceType: document.querySelector('#resource-type'),
   resourceStatus: document.querySelector('#resource-status'),
+  resourceGroup: document.querySelector('#resource-group'),
   linkLabel: document.querySelector('#link-label'),
   linkUrl: document.querySelector('#link-url'),
   addLink: document.querySelector('#add-link'),
@@ -205,6 +252,7 @@ const dom = {
   sectionDescriptionInput: document.querySelector('#section-description-input'),
   editorEmailInput: document.querySelector('#editor-email-input'),
   editorRoleInput: document.querySelector('#editor-role-input'),
+  addEditorButton: document.querySelector('#add-editor'),
   editorList: document.querySelector('#editor-list'),
   registeredUserList: document.querySelector('#registered-user-list'),
   syncRegisteredUsersButton: document.querySelector('#sync-registered-users'),
@@ -218,6 +266,12 @@ const dom = {
   discardStructure: document.querySelector('#discard-structure'),
   structureNewModuleTitle: document.querySelector('#structure-new-module-title'),
   structureAddModule: document.querySelector('#structure-add-module'),
+  categoryStatus: document.querySelector('#category-status'),
+  saveCategories: document.querySelector('#save-categories'),
+  discardCategories: document.querySelector('#discard-categories'),
+  statusCategoryList: document.querySelector('#status-category-list'),
+  typeCategoryList: document.querySelector('#type-category-list'),
+  groupCategoryList: document.querySelector('#group-category-list'),
   template: document.querySelector('#resource-template'),
 };
 
@@ -383,13 +437,15 @@ function setAuthMode(mode, { updateRoute = false, replace = false } = {}) {
 }
 
 function normalizeView(view) {
+  if (view === 'categories' && !hasCapability('manageStructure')) return 'course';
   if (view === 'structure' && !hasCapability('manageStructure')) return 'course';
   if (view === 'admin' && !hasCapability('manageUsers')) return 'course';
-  if (!['course', 'module', 'structure', 'admin'].includes(view)) return 'course';
+  if (!['course', 'module', 'categories', 'structure', 'admin'].includes(view)) return 'course';
   return view;
 }
 
 function routeForCurrentState() {
+  if (state.currentView === 'categories') return '#/categorias';
   if (state.currentView === 'structure') return '#/estructura';
   if (state.currentView === 'admin') return '#/admin';
   if (state.currentView === 'module' && state.selectedModuleId) return `#/modulo/${encodeURIComponent(state.selectedModuleId)}`;
@@ -431,7 +487,9 @@ function applyRouteFromLocation({ renderNow = true } = {}) {
     return;
   }
 
-  if (page === 'estructura') {
+  if (page === 'categorias' || page === 'categorias-recursos') {
+    state.currentView = normalizeView('categories');
+  } else if (page === 'estructura') {
     state.currentView = normalizeView('structure');
   } else if (page === 'admin') {
     state.currentView = normalizeView('admin');
@@ -469,6 +527,7 @@ function renderView() {
     const active = button.dataset.view === state.currentView || (button.dataset.view === 'course' && state.currentView === 'module');
     button.classList.toggle('active', active);
     button.hidden =
+      (button.dataset.view === 'categories' && !hasCapability('manageStructure')) ||
       (button.dataset.view === 'structure' && !hasCapability('manageStructure')) ||
       (button.dataset.view === 'admin' && !hasCapability('manageUsers'));
   });
@@ -482,9 +541,13 @@ function canManageEditors() {
   return hasCapability('manageUsers');
 }
 
+function canChangeAccounts() {
+  return !remoteEditingActive() || state.isMainEditor;
+}
+
 function requireMainEditorPermission() {
-  if (canManageEditors()) return true;
-  alert('Solo la cuenta principal o un administrador puede gestionar perfiles.');
+  if (canChangeAccounts()) return true;
+  alert('Solo la cuenta principal puede cambiar cuentas, perfiles y usuarios.');
   return false;
 }
 
@@ -493,6 +556,7 @@ function uid(prefix) {
 }
 
 async function saveData() {
+  ensureCategoryData(state.data);
   if (remoteEditingActive()) {
     if (!requireEditPermission()) return false;
     const { error } = await cloudClient
@@ -527,6 +591,7 @@ function loadStoredData() {
     try {
       const parsed = JSON.parse(stored);
       if (isUsableCourseData(parsed)) {
+        ensureCategoryData(parsed);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
         return parsed;
       }
@@ -547,6 +612,86 @@ function isUsableCourseData(data) {
       Array.isArray(data.sections) &&
       data.sections.length > 0
   );
+}
+
+function normalizeHexColor(value, fallback = '#607086') {
+  return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
+}
+
+function normalizeCategoryList(list, defaults) {
+  const byId = new Map();
+  const source = Array.isArray(list) && list.length ? list : defaults;
+  source.forEach((item) => {
+    const id = slugify(item?.id || item?.title || '');
+    if (!id) return;
+    const fallback = defaults.find((defaultItem) => defaultItem.id === id);
+    byId.set(id, {
+      id,
+      title: String(item?.title || labels[id] || id).trim() || id,
+      color: normalizeHexColor(item?.color, fallback?.color || '#607086'),
+      active: item?.active !== false,
+    });
+  });
+  return Array.from(byId.values());
+}
+
+function normalizeResourceCategory(value, kind) {
+  const list = state.data?.[categoryKeys[kind]] || defaultCategories[kind];
+  const fallback = categoryFallbacks[kind];
+  const id = String(value || '').trim();
+  return list.some((item) => item.id === id) ? id : fallback;
+}
+
+function ensureCategoryData(data) {
+  if (!data) return data;
+  Object.keys(categoryKeys).forEach((kind) => {
+    data[categoryKeys[kind]] = normalizeCategoryList(data[categoryKeys[kind]], defaultCategories[kind]);
+  });
+  (data.modules || []).forEach((module) => {
+    (module.lessons || []).forEach((lesson) => {
+      lesson.resources = Array.isArray(lesson.resources) ? lesson.resources : [];
+      lesson.resources.forEach((resource) => {
+        Object.keys(categoryKeys).forEach((kind) => {
+          const key = kind === 'group' ? 'group' : kind;
+          const value = String(resource[key] || '').trim();
+          const exists = data[categoryKeys[kind]].some((item) => item.id === value);
+          const fallback = data[categoryKeys[kind]].find((item) => item.id === categoryFallbacks[kind])?.id || data[categoryKeys[kind]][0]?.id || categoryFallbacks[kind];
+          resource[key] = exists ? value : fallback;
+        });
+      });
+    });
+  });
+  return data;
+}
+
+function categoryList(kind, { activeOnly = false } = {}) {
+  const list = state.data?.[categoryKeys[kind]] || defaultCategories[kind];
+  return activeOnly ? list.filter((item) => item.active !== false) : list;
+}
+
+function findCategory(kind, id) {
+  return categoryList(kind).find((item) => item.id === id) || defaultCategories[kind].find((item) => item.id === id);
+}
+
+function categoryLabel(kind, id) {
+  return findCategory(kind, id)?.title || labels[id] || id || '';
+}
+
+function categoryColor(kind, id) {
+  return normalizeHexColor(findCategory(kind, id)?.color, '#607086');
+}
+
+function categoryStyle(kind, id) {
+  return `--category-color: ${categoryColor(kind, id)};`;
+}
+
+function setCategoryStyle(element, kind, id) {
+  element.style.setProperty('--category-color', categoryColor(kind, id));
+}
+
+function fallbackCategoryId(kind) {
+  const list = categoryList(kind);
+  return list.find((item) => item.id === categoryFallbacks[kind])?.id || list[0]?.id || categoryFallbacks[kind];
 }
 
 function allResources() {
@@ -620,6 +765,7 @@ function resourceAuditSnapshot(resource) {
     title: resource.title,
     type: resource.type,
     status: resource.status,
+    group: resource.group,
     section: resource.section,
     priority: resource.priority,
     owner: resource.owner,
@@ -768,12 +914,44 @@ function currentSection() {
   return state.data.sections.find((section) => section.id === state.selectedSectionId) ?? state.data.sections[0];
 }
 
+function preferredSectionIdForLesson(lesson) {
+  const resourceSectionId = state.data.sections.find((section) =>
+    (lesson?.resources || []).some((resource) => resource.section === section.id)
+  )?.id;
+  return resourceSectionId || state.data.sections[0]?.id || 'preparacion';
+}
+
+function scrollToResourceWorkspace() {
+  window.setTimeout(() => {
+    document.querySelector('.resource-workspace')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 60);
+}
+
+function selectModulePage(module, { scrollToResources = false } = {}) {
+  state.selectedModuleId = module?.id ?? null;
+  const lesson = module?.lessons[0] ?? null;
+  state.selectedLessonId = lesson?.id ?? null;
+  state.selectedSectionId = preferredSectionIdForLesson(lesson);
+  clearForm();
+  setView('module', { renderNow: true });
+  if (scrollToResources) scrollToResourceWorkspace();
+}
+
+function selectLessonPage(module, lesson, { scrollToResources = false, sectionId = '' } = {}) {
+  state.selectedModuleId = module?.id ?? null;
+  state.selectedLessonId = lesson?.id ?? null;
+  state.selectedSectionId = sectionId || preferredSectionIdForLesson(lesson);
+  clearForm();
+  setView('module', { renderNow: true });
+  if (scrollToResources) scrollToResourceWorkspace();
+}
+
 function selectFirstAvailable() {
   const firstModule = state.data.modules[0];
   const firstLesson = firstModule?.lessons[0];
   state.selectedModuleId = firstModule?.id ?? null;
   state.selectedLessonId = firstLesson?.id ?? null;
-  state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
+  state.selectedSectionId = preferredSectionIdForLesson(firstLesson);
 }
 
 function renderSummary() {
@@ -799,46 +977,42 @@ function renderNavigation() {
     return;
   }
 
+  const indexSection = document.createElement('section');
+  indexSection.className = 'module-group module-index-group';
+  indexSection.innerHTML = '<p class="nav-kicker">Indice de modulos</p>';
   state.data.modules.forEach((module, moduleIndex) => {
-    const moduleNode = document.createElement('section');
-    moduleNode.className = 'module-group';
-    if (module.id === state.selectedModuleId) moduleNode.classList.add('active');
-    moduleNode.innerHTML = `
-      <p class="nav-kicker">Modulo ${moduleIndex + 1}</p>
-      <button class="module-nav-button" type="button">${module.title}</button>
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'module-index-button';
+    if (module.id === state.selectedModuleId) button.classList.add('active');
+    button.innerHTML = `
+      <small>Modulo ${moduleIndex + 1}</small>
+      <span>${module.title}</span>
     `;
-    moduleNode.querySelector('.module-nav-button').addEventListener('click', () => {
-      state.selectedModuleId = module.id;
-      state.selectedLessonId = module.lessons[0]?.id ?? null;
-      state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
-      clearForm();
-      setView('module');
-      render();
-    });
-
-    module.lessons.forEach((lesson, lessonIndex) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'lesson-button';
-      if (module.id === state.selectedModuleId && lesson.id === state.selectedLessonId) {
-        button.classList.add('active');
-      }
-      button.innerHTML = `
-        <small>Leccion ${lessonIndex + 1}</small>
-        <span>${lesson.title}</span>
-      `;
-      button.addEventListener('click', () => {
-        state.selectedModuleId = module.id;
-        state.selectedLessonId = lesson.id;
-        clearForm();
-        setView('module');
-        render();
-      });
-      moduleNode.appendChild(button);
-    });
-
-    dom.nav.appendChild(moduleNode);
+    button.addEventListener('click', () => selectModulePage(module));
+    indexSection.appendChild(button);
   });
+  dom.nav.appendChild(indexSection);
+
+  const module = currentModule();
+  if (!module) return;
+
+  const lessons = document.createElement('section');
+  lessons.className = 'module-group current-module-lessons';
+  lessons.innerHTML = '<p class="nav-kicker">Lecciones del modulo</p>';
+  module.lessons.forEach((lesson, lessonIndex) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'lesson-button';
+    if (lesson.id === state.selectedLessonId) button.classList.add('active');
+    button.innerHTML = `
+      <small>Leccion ${lessonIndex + 1}</small>
+      <span>${lesson.title}</span>
+    `;
+    button.addEventListener('click', () => selectLessonPage(module, lesson, { scrollToResources: true }));
+    lessons.appendChild(button);
+  });
+  dom.nav.appendChild(lessons);
 }
 
 function renderModuleStrip() {
@@ -859,13 +1033,7 @@ function renderModuleStrip() {
       <span>Modulo ${moduleIndex + 1}</span>
       <strong>${module.title}</strong>
     `;
-    button.addEventListener('click', () => {
-      state.selectedModuleId = module.id;
-      state.selectedLessonId = module.lessons[0]?.id ?? null;
-      state.selectedSectionId = state.data.sections[0]?.id ?? 'preparacion';
-      clearForm();
-      setView('module', { renderNow: true });
-    });
+    button.addEventListener('click', () => selectModulePage(module));
     dom.moduleStrip.appendChild(button);
   });
 }
@@ -1036,10 +1204,7 @@ function renderCourseMap() {
         </button>
       `;
       lessonBlock.querySelector('.map-lesson-title').addEventListener('click', () => {
-        state.selectedModuleId = module.id;
-        state.selectedLessonId = lesson.id;
-        clearForm();
-        render();
+        selectLessonPage(module, lesson, { scrollToResources: true });
       });
 
       const sectionList = document.createElement('div');
@@ -1066,11 +1231,7 @@ function renderCourseMap() {
           </small>
         `;
         sectionButton.addEventListener('click', () => {
-          state.selectedModuleId = module.id;
-          state.selectedLessonId = lesson.id;
-          state.selectedSectionId = section.id;
-          clearForm();
-          render();
+          selectLessonPage(module, lesson, { scrollToResources: true, sectionId: section.id });
         });
         sectionList.appendChild(sectionButton);
       });
@@ -1100,16 +1261,76 @@ function renderTabs() {
   });
 }
 
+function renderFilterGroup(kind) {
+  const container = kind === 'status' ? dom.statusFilter : kind === 'type' ? dom.typeFilter : dom.groupFilter;
+  if (!container) return;
+  const legend = container.querySelector('legend')?.textContent || '';
+  const selectedValues = kind === 'status' ? state.statusFilters : kind === 'type' ? state.typeFilters : state.groupFilters;
+  container.innerHTML = '';
+  const legendNode = document.createElement('legend');
+  legendNode.textContent = legend || (kind === 'group' ? 'Grupo visual' : kind);
+  container.appendChild(legendNode);
+  const reset = document.createElement('button');
+  reset.className = 'filter-reset';
+  reset.dataset.filterReset = kind;
+  reset.type = 'button';
+  reset.textContent = 'Todos';
+  reset.addEventListener('click', () => resetMultiFilter(kind));
+  container.appendChild(reset);
+  categoryList(kind, { activeOnly: true }).forEach((category) => {
+    const label = document.createElement('label');
+    label.style.setProperty('--category-color', category.color);
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = category.id;
+    input.checked = selectedValues.includes(category.id);
+    const swatch = document.createElement('span');
+    swatch.className = 'category-swatch';
+    label.append(input, swatch, document.createTextNode(category.title));
+    container.appendChild(label);
+  });
+}
+
+function renderFilters() {
+  renderFilterGroup('status');
+  renderFilterGroup('type');
+  renderFilterGroup('group');
+}
+
+function populateCategorySelect(select, kind, currentValue = '') {
+  if (!select) return;
+  const previous = currentValue || select.value || fallbackCategoryId(kind);
+  select.innerHTML = '';
+  const categories = categoryList(kind);
+  categories
+    .filter((category) => category.active !== false || category.id === previous)
+    .forEach((category) => {
+      const option = document.createElement('option');
+      option.value = category.id;
+      option.textContent = category.active === false ? `${category.title} (inactiva)` : category.title;
+      select.appendChild(option);
+    });
+  select.value = categories.some((category) => category.id === previous) ? previous : fallbackCategoryId(kind);
+}
+
+function renderResourceSelects() {
+  populateCategorySelect(dom.resourceType, 'type');
+  populateCategorySelect(dom.resourceStatus, 'status');
+  populateCategorySelect(dom.resourceGroup, 'group');
+}
+
 function resourceMatches(resource) {
   const sectionMatch = resource.section === state.selectedSectionId;
   const statusMatch = !state.statusFilters.length || state.statusFilters.includes(resource.status);
   const typeMatch = !state.typeFilters.length || state.typeFilters.includes(resource.type);
+  const groupMatch = !state.groupFilters.length || state.groupFilters.includes(resource.group);
   const linkText = normalizeLinks(resource).map((link) => `${link.label} ${link.url}`).join(' ');
   const fileText = normalizeFiles(resource).map((file) => file.name).join(' ');
   const auditText = `${resource.createdByName} ${resource.createdByEmail} ${resource.updatedByName} ${resource.updatedByEmail}`;
-  const haystack = `${resource.title} ${resource.url} ${linkText} ${fileText} ${resource.owner} ${resource.notes} ${auditText}`.toLowerCase();
+  const categoryText = `${categoryLabel('status', resource.status)} ${categoryLabel('type', resource.type)} ${categoryLabel('group', resource.group)}`;
+  const haystack = `${resource.title} ${resource.url} ${linkText} ${fileText} ${resource.owner} ${resource.notes} ${categoryText} ${auditText}`.toLowerCase();
   const searchMatch = !state.search || haystack.includes(state.search.toLowerCase());
-  return sectionMatch && statusMatch && typeMatch && searchMatch;
+  return sectionMatch && statusMatch && typeMatch && groupMatch && searchMatch;
 }
 
 function resourcePeopleText(resource) {
@@ -1130,6 +1351,53 @@ function resourcePeopleText(resource) {
   }
 
   return parts.join(' | ');
+}
+
+function resourceCardNode(resource) {
+  const node = dom.template.content.firstElementChild.cloneNode(true);
+  node.dataset.resourceId = resource.id;
+  node.querySelector('h4').textContent = resource.title;
+  node.querySelector('.resource-people').textContent = resourcePeopleText(resource);
+  node.querySelector('.resource-meta').textContent = `${categoryLabel('type', resource.type)} | Prioridad ${labels[resource.priority] ?? resource.priority}`;
+  node.querySelector('.resource-notes').textContent = resource.notes || 'Sin notas.';
+
+  renderResourceAssets(node.querySelector('.resource-assets'), resource);
+
+  const badges = node.querySelector('.badges');
+  badges.innerHTML = `
+    <span class="badge category-badge" style="${categoryStyle('status', resource.status)}">${categoryLabel('status', resource.status)}</span>
+    <span class="badge category-badge" style="${categoryStyle('group', resource.group)}">${categoryLabel('group', resource.group)}</span>
+    ${resource.owner ? `<span class="badge neutral">${resource.owner}</span>` : ''}
+  `;
+
+  const actions = node.querySelector('.resource-actions');
+  const canManageResource = hasCapability('manageResources');
+  actions.hidden = !canManageResource && !hasCapability('deleteResources') && !hasCapability('moveResources');
+  node.querySelector('.edit').hidden = !canManageResource;
+  node.querySelector('.delete').hidden = !hasCapability('deleteResources');
+  node.querySelector('.move-up').hidden = !hasCapability('moveResources');
+  node.querySelector('.move-down').hidden = !hasCapability('moveResources');
+  node.querySelector('.edit').addEventListener('click', () => editResource(resource.id));
+  node.querySelector('.delete').addEventListener('click', () => deleteResource(resource.id));
+  node.querySelector('.move-up').addEventListener('click', () => moveResource(resource.id, -1));
+  node.querySelector('.move-down').addEventListener('click', () => moveResource(resource.id, 1));
+  return node;
+}
+
+function groupedResources(resources) {
+  const groups = categoryList('group');
+  const orderedIds = groups.map((category) => category.id);
+  const buckets = new Map();
+  resources.forEach((resource) => {
+    const groupId = groups.some((category) => category.id === resource.group) ? resource.group : fallbackCategoryId('group');
+    if (!buckets.has(groupId)) buckets.set(groupId, []);
+    buckets.get(groupId).push(resource);
+  });
+  return Array.from(buckets.entries()).sort(([groupA], [groupB]) => {
+    const indexA = orderedIds.indexOf(groupA);
+    const indexB = orderedIds.indexOf(groupB);
+    return (indexA < 0 ? Number.MAX_SAFE_INTEGER : indexA) - (indexB < 0 ? Number.MAX_SAFE_INTEGER : indexB);
+  });
 }
 
 function renderResources() {
@@ -1153,39 +1421,29 @@ function renderResources() {
 
   const resources = (lesson.resources || []).filter(resourceMatches);
   if (!resources.length) {
-    dom.list.innerHTML = '<p class="empty-state">No hay recursos con estos filtros. Puedes crear uno con el panel de la derecha.</p>';
+    dom.list.innerHTML = '<p class="empty-state">No hay recursos con estos filtros. Puedes crear uno con el editor de recursos.</p>';
     return;
   }
 
-  resources.forEach((resource) => {
-    const node = dom.template.content.firstElementChild.cloneNode(true);
-    node.dataset.resourceId = resource.id;
-    node.querySelector('h4').textContent = resource.title;
-    node.querySelector('.resource-people').textContent = resourcePeopleText(resource);
-    node.querySelector('.resource-meta').textContent = `${labels[resource.type] ?? resource.type} · Prioridad ${labels[resource.priority] ?? resource.priority}`;
-    node.querySelector('.resource-notes').textContent = resource.notes || 'Sin notas.';
-
-    renderResourceAssets(node.querySelector('.resource-assets'), resource);
-
-    const badges = node.querySelector('.badges');
-    badges.innerHTML = `
-      <span class="badge status-${resource.status}">${labels[resource.status] ?? resource.status}</span>
-      ${resource.owner ? `<span class="badge neutral">${resource.owner}</span>` : ''}
+  groupedResources(resources).forEach(([groupId, items]) => {
+    const group = document.createElement('section');
+    group.className = 'resource-group-section';
+    setCategoryStyle(group, 'group', groupId);
+    const heading = document.createElement('div');
+    heading.className = 'resource-group-heading';
+    heading.innerHTML = `
+      <h4 class="resource-group-title"><span class="resource-group-swatch"></span>${categoryLabel('group', groupId)}</h4>
+      <span class="resource-group-count">${plural(items.length, 'recurso', 'recursos')}</span>
     `;
-
-    const actions = node.querySelector('.resource-actions');
-    const canManageResource = hasCapability('manageResources');
-    actions.hidden = !canManageResource && !hasCapability('deleteResources') && !hasCapability('moveResources');
-    node.querySelector('.edit').hidden = !canManageResource;
-    node.querySelector('.delete').hidden = !hasCapability('deleteResources');
-    node.querySelector('.move-up').hidden = !hasCapability('moveResources');
-    node.querySelector('.move-down').hidden = !hasCapability('moveResources');
-    node.querySelector('.edit').addEventListener('click', () => editResource(resource.id));
-    node.querySelector('.delete').addEventListener('click', () => deleteResource(resource.id));
-    node.querySelector('.move-up').addEventListener('click', () => moveResource(resource.id, -1));
-    node.querySelector('.move-down').addEventListener('click', () => moveResource(resource.id, 1));
-    dom.list.appendChild(node);
+    const list = document.createElement('div');
+    list.className = 'resource-group-items';
+    items.forEach((resource) => {
+      list.appendChild(resourceCardNode(resource));
+    });
+    group.append(heading, list);
+    dom.list.appendChild(group);
   });
+  return;
 }
 
 function renderResourceAssets(container, resource) {
@@ -1357,6 +1615,15 @@ function renderAdminControls() {
     dom.sectionTitleInput.value = selectedSection?.title ?? '';
     dom.sectionDescriptionInput.value = selectedSection?.description ?? '';
   }
+
+  const lockAccounts = remoteEditingActive() && !canChangeAccounts();
+  if (dom.editorEmailInput) dom.editorEmailInput.disabled = lockAccounts;
+  if (dom.editorRoleInput) dom.editorRoleInput.disabled = lockAccounts;
+  if (dom.addEditorButton) {
+    dom.addEditorButton.disabled = lockAccounts;
+    dom.addEditorButton.textContent = lockAccounts ? 'Solo cuenta principal' : 'Guardar perfil';
+  }
+  if (dom.syncRegisteredUsersButton) dom.syncRegisteredUsersButton.disabled = lockAccounts;
 }
 
 function cloneCourseData(data) {
@@ -1551,9 +1818,249 @@ function renderStructureList() {
   });
 }
 
+function cloneCategoryData(data = state.data) {
+  return {
+    resourceStatuses: cloneCourseData(data.resourceStatuses || defaultCategories.status),
+    resourceTypes: cloneCourseData(data.resourceTypes || defaultCategories.type),
+    resourceGroups: cloneCourseData(data.resourceGroups || defaultCategories.group),
+  };
+}
+
+function ensureCategoryDraft({ reset = false } = {}) {
+  if (!state.data) return null;
+  if (reset || !state.categoryDraft) {
+    state.categoryDraft = cloneCategoryData();
+    state.categoryDirty = false;
+  }
+  return state.categoryDraft;
+}
+
+function setCategoryDirty(isDirty = true) {
+  state.categoryDirty = isDirty;
+  if (!dom.categoryStatus) return;
+  dom.categoryStatus.textContent = isDirty ? 'Cambios pendientes sin guardar' : 'Sin cambios pendientes';
+  dom.categoryStatus.dataset.dirty = isDirty ? 'true' : 'false';
+}
+
+function categoryDraftList(kind) {
+  ensureCategoryDraft();
+  return state.categoryDraft?.[categoryKeys[kind]] || [];
+}
+
+function countResourcesUsingCategory(kind, categoryId) {
+  const resourceKey = kind === 'group' ? 'group' : kind;
+  return allResources().filter(({ resource }) => resource[resourceKey] === categoryId).length;
+}
+
+function uniqueCategoryId(kind, title) {
+  const list = categoryDraftList(kind);
+  const base = slugify(title || 'categoria');
+  let id = base;
+  let counter = 2;
+  while (list.some((category) => category.id === id)) {
+    id = `${base}-${counter}`;
+    counter += 1;
+  }
+  return id;
+}
+
+function moveCategoryDraft(kind, categoryId, direction) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  const list = categoryDraftList(kind);
+  const index = list.findIndex((category) => category.id === categoryId);
+  if (!moveDraftItem(list, index, direction)) return;
+  setCategoryDirty(true);
+  renderCategoryEditors();
+}
+
+function deleteCategoryDraft(kind, categoryId) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  const list = categoryDraftList(kind);
+  if (list.length <= 1) {
+    alert('Debe quedar al menos una categoria en esta lista.');
+    return;
+  }
+  const category = list.find((item) => item.id === categoryId);
+  if (!category) return;
+  const used = countResourcesUsingCategory(kind, categoryId);
+  const replacement = list.find((item) => item.id !== categoryId);
+  const warning = used
+    ? ` Hay ${used} recursos usando esta categoria; al guardar se moveran a "${replacement.title}".`
+    : '';
+  if (!confirm(`Quitar la categoria "${category.title}"?${warning}`)) return;
+  state.categoryDraft[categoryKeys[kind]] = list.filter((item) => item.id !== categoryId);
+  setCategoryDirty(true);
+  renderCategoryEditors();
+}
+
+function addCategoryDraft(kind, title, color) {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return;
+  categoryDraftList(kind).push({
+    id: uniqueCategoryId(kind, cleanTitle),
+    title: cleanTitle,
+    color: normalizeHexColor(color, '#607086'),
+    active: true,
+  });
+  setCategoryDirty(true);
+  renderCategoryEditors();
+}
+
+function categoryEditorRow(kind, category, index) {
+  const row = document.createElement('div');
+  row.className = 'category-row';
+  if (category.active === false) row.classList.add('inactive');
+
+  const color = document.createElement('input');
+  color.type = 'color';
+  color.value = normalizeHexColor(category.color);
+  color.addEventListener('input', () => {
+    category.color = color.value;
+    setCategoryDirty(true);
+  });
+
+  const nameWrap = document.createElement('div');
+  nameWrap.className = 'category-name-field';
+  const name = document.createElement('input');
+  name.value = category.title || '';
+  name.placeholder = 'Nombre de la categoria';
+  name.addEventListener('input', () => {
+    category.title = name.value;
+    setCategoryDirty(true);
+  });
+  const id = document.createElement('small');
+  id.className = 'category-id';
+  id.textContent = `ID interno: ${category.id}`;
+  nameWrap.append(name, id);
+
+  const active = document.createElement('label');
+  active.className = 'category-active';
+  const activeInput = document.createElement('input');
+  activeInput.type = 'checkbox';
+  activeInput.checked = category.active !== false;
+  activeInput.addEventListener('change', () => {
+    category.active = activeInput.checked;
+    setCategoryDirty(true);
+    renderCategoryEditors();
+  });
+  active.append(activeInput, document.createTextNode('Visible'));
+
+  const actions = document.createElement('div');
+  actions.className = 'category-actions';
+  actions.append(
+    createStructureButton('Subir', 'mini-btn', () => moveCategoryDraft(kind, category.id, -1)),
+    createStructureButton('Bajar', 'mini-btn', () => moveCategoryDraft(kind, category.id, 1)),
+    createStructureButton('Quitar', 'mini-btn delete', () => deleteCategoryDraft(kind, category.id))
+  );
+  if (index === 0) actions.firstElementChild.disabled = true;
+  if (index === categoryDraftList(kind).length - 1) actions.children[1].disabled = true;
+
+  row.append(color, nameWrap, active, actions);
+  return row;
+}
+
+function categoryCreateRow(kind) {
+  const row = document.createElement('div');
+  row.className = 'category-create-row';
+  const color = document.createElement('input');
+  color.type = 'color';
+  color.value = kind === 'status' ? '#1e4f87' : kind === 'type' ? '#2b746b' : '#19a974';
+  const input = document.createElement('input');
+  input.placeholder = kind === 'group' ? 'Nuevo grupo visual' : 'Nueva categoria';
+  const add = createStructureButton('Crear', 'mini-btn accent', () => {
+    addCategoryDraft(kind, input.value, color.value);
+  });
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addCategoryDraft(kind, input.value, color.value);
+    }
+  });
+  row.append(color, input, add);
+  return row;
+}
+
+function renderCategoryEditor(kind, container) {
+  if (!container) return;
+  ensureCategoryDraft({ reset: !state.categoryDirty });
+  container.innerHTML = '';
+  categoryDraftList(kind).forEach((category, index) => {
+    container.appendChild(categoryEditorRow(kind, category, index));
+  });
+  container.appendChild(categoryCreateRow(kind));
+}
+
+function renderCategoryEditors() {
+  if (!dom.statusCategoryList || !state.data) return;
+  ensureCategoryDraft({ reset: !state.categoryDirty });
+  setCategoryDirty(state.categoryDirty);
+  renderCategoryEditor('status', dom.statusCategoryList);
+  renderCategoryEditor('type', dom.typeCategoryList);
+  renderCategoryEditor('group', dom.groupCategoryList);
+}
+
+function validateCategoryDraft() {
+  const draft = ensureCategoryDraft();
+  for (const kind of Object.keys(categoryKeys)) {
+    const list = draft[categoryKeys[kind]];
+    if (!list.length) return 'Cada lista debe tener al menos una categoria.';
+    if (list.some((category) => !category.title.trim())) return 'Todas las categorias deben tener nombre.';
+    const ids = new Set();
+    for (const category of list) {
+      if (ids.has(category.id)) return 'Hay IDs de categorias repetidos.';
+      ids.add(category.id);
+      category.color = normalizeHexColor(category.color);
+      category.title = category.title.trim();
+    }
+  }
+  return '';
+}
+
+function reconcileResourcesWithCategories() {
+  const replacements = {
+    status: fallbackCategoryId('status'),
+    type: fallbackCategoryId('type'),
+    group: fallbackCategoryId('group'),
+  };
+  allResources().forEach(({ resource }) => {
+    Object.keys(categoryKeys).forEach((kind) => {
+      const key = kind === 'group' ? 'group' : kind;
+      const exists = categoryList(kind).some((category) => category.id === resource[key]);
+      if (!exists) resource[key] = replacements[kind];
+    });
+  });
+}
+
+async function saveCategoryDraft() {
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  ensureCategoryDraft();
+  const error = validateCategoryDraft();
+  if (error) {
+    alert(error);
+    return;
+  }
+  state.data.resourceStatuses = cloneCourseData(state.categoryDraft.resourceStatuses);
+  state.data.resourceTypes = cloneCourseData(state.categoryDraft.resourceTypes);
+  state.data.resourceGroups = cloneCourseData(state.categoryDraft.resourceGroups);
+  reconcileResourcesWithCategories();
+  if (!(await saveData())) return;
+  ensureCategoryDraft({ reset: true });
+  render();
+}
+
+function discardCategoryDraft() {
+  if (!state.categoryDirty || confirm('Descartar los cambios de categorias sin guardar?')) {
+    ensureCategoryDraft({ reset: true });
+    renderCategoryEditors();
+  }
+}
+
 function render() {
   renderView();
   renderSummary();
+  renderFilters();
+  renderResourceSelects();
   renderModuleStrip();
   renderNavigation();
   renderCourseMap();
@@ -1562,6 +2069,7 @@ function render() {
   renderLessonControls();
   renderAdminControls();
   renderStructureList();
+  renderCategoryEditors();
   renderResources();
 }
 
@@ -1661,11 +2169,14 @@ function renderDraftFiles() {
 }
 
 function clearForm() {
+  renderResourceSelects();
   dom.form.reset();
   dom.resourceId.value = '';
   dom.formTitle.textContent = 'Nuevo recurso';
   dom.resourcePriority.value = 'medium';
-  dom.resourceStatus.value = 'planned';
+  dom.resourceType.value = fallbackCategoryId('type');
+  dom.resourceStatus.value = categoryList('status').some((category) => category.id === 'planned') ? 'planned' : fallbackCategoryId('status');
+  dom.resourceGroup.value = fallbackCategoryId('group');
   state.draftLinks = [];
   state.draftFiles = [];
   renderDraftAssets();
@@ -1679,8 +2190,12 @@ function editResource(resourceId) {
   dom.formTitle.textContent = 'Editar recurso';
   dom.resourceId.value = resource.id;
   dom.resourceTitle.value = resource.title ?? '';
-  dom.resourceType.value = resource.type ?? 'link';
-  dom.resourceStatus.value = resource.status ?? 'planned';
+  populateCategorySelect(dom.resourceType, 'type', resource.type);
+  populateCategorySelect(dom.resourceStatus, 'status', resource.status);
+  populateCategorySelect(dom.resourceGroup, 'group', resource.group);
+  dom.resourceType.value = categoryList('type').some((category) => category.id === resource.type) ? resource.type : fallbackCategoryId('type');
+  dom.resourceStatus.value = categoryList('status').some((category) => category.id === resource.status) ? resource.status : fallbackCategoryId('status');
+  dom.resourceGroup.value = categoryList('group').some((category) => category.id === resource.group) ? resource.group : fallbackCategoryId('group');
   dom.resourceOwner.value = resource.owner ?? '';
   dom.resourcePriority.value = resource.priority ?? 'medium';
   dom.resourceNotes.value = resource.notes ?? '';
@@ -1713,6 +2228,7 @@ function formResource() {
     title: dom.resourceTitle.value.trim(),
     type: dom.resourceType.value,
     status: dom.resourceStatus.value,
+    group: dom.resourceGroup.value,
     url: locationSummary,
     links,
     files,
@@ -1812,7 +2328,10 @@ function valuesChanged(before, after) {
 }
 
 function auditFieldValue(key, value) {
-  if (key === 'status' || key === 'type' || key === 'priority') {
+  if (key === 'status' || key === 'type' || key === 'group') {
+    return categoryLabel(key, value) || compactValue(value);
+  }
+  if (key === 'priority') {
     return labels[value] ?? compactValue(value);
   }
   if (key === 'section') {
@@ -1827,6 +2346,7 @@ const auditTrackedFields = [
   ['title', 'Titulo'],
   ['type', 'Tipo'],
   ['status', 'Estado'],
+  ['group', 'Grupo visual'],
   ['section', 'Parte'],
   ['priority', 'Prioridad'],
   ['owner', 'Responsable'],
@@ -2603,14 +3123,15 @@ function exportJson() {
 
 function exportCsv() {
   const rows = [
-    ['Modulo', 'Leccion', 'Seccion', 'Titulo', 'Tipo', 'Estado', 'Prioridad', 'Responsable', 'Enlaces', 'Archivos', 'Notas'],
+    ['Modulo', 'Leccion', 'Seccion', 'Titulo', 'Tipo', 'Estado', 'Grupo visual', 'Prioridad', 'Responsable', 'Enlaces', 'Archivos', 'Notas'],
     ...allResources().map(({ module, lesson, resource }) => [
       module.title,
       lesson.title,
       labels[resource.section] ?? state.data.sections.find((section) => section.id === resource.section)?.title ?? resource.section,
       resource.title,
-      labels[resource.type] ?? resource.type,
-      labels[resource.status] ?? resource.status,
+      categoryLabel('type', resource.type),
+      categoryLabel('status', resource.status),
+      categoryLabel('group', resource.group),
       labels[resource.priority] ?? resource.priority,
       resource.owner ?? '',
       normalizeLinks(resource).map((link) => `${link.label}: ${link.url}`).join(' | '),
@@ -2644,7 +3165,7 @@ function importJson(event) {
     try {
       const imported = JSON.parse(reader.result);
       if (!imported.modules || !imported.sections) throw new Error('Invalid structure');
-      state.data = imported;
+      state.data = ensureCategoryData(imported);
       selectFirstAvailable();
       if (!(await saveData())) return;
       clearForm();
@@ -2945,7 +3466,7 @@ function renderEditorList(editors = []) {
     return;
   }
   if (!canManageEditors()) {
-    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver y modificar perfiles.</p>';
+    dom.editorList.innerHTML = '<p class="asset-empty">Solo la cuenta principal o un administrador puede ver perfiles. Solo la cuenta principal puede modificarlos.</p>';
     return;
   }
   if (!editors.length) {
@@ -2971,13 +3492,13 @@ function renderEditorList(editors = []) {
     account.append(email, meta);
     let roleControl;
     let action;
-    if (isMainAccount) {
+    if (isMainAccount || !canChangeAccounts()) {
       roleControl = document.createElement('span');
       roleControl.className = `role-pill role-${editor.role || 'owner'}`;
       roleControl.textContent = labels[editor.role || 'owner'] ?? editor.role;
       action = document.createElement('span');
       action.className = 'fixed-account-label';
-      action.textContent = 'Fijo';
+      action.textContent = isMainAccount ? 'Fijo' : 'Solo principal';
     } else {
       roleControl = document.createElement('select');
       roleControl.className = 'inline-role-select';
@@ -3053,10 +3574,10 @@ function renderRegisteredUsers(users = []) {
     profile.textContent = profileStatusLabels[profileStatus] ?? profileStatus;
     badges.appendChild(profile);
     let action;
-    if (normalizedEmail === MAIN_EDITOR_EMAIL) {
+    if (normalizedEmail === MAIN_EDITOR_EMAIL || !canChangeAccounts()) {
       action = document.createElement('span');
       action.className = 'fixed-account-label';
-      action.textContent = 'Fijo';
+      action.textContent = normalizedEmail === MAIN_EDITOR_EMAIL ? 'Fijo' : 'Solo principal';
     } else {
       action = document.createElement('button');
       action.className = 'mini-btn delete';
@@ -3441,6 +3962,7 @@ function wireEvents() {
   });
   dom.statusFilter.addEventListener('change', () => updateMultiFilter('status'));
   dom.typeFilter.addEventListener('change', () => updateMultiFilter('type'));
+  dom.groupFilter?.addEventListener('change', () => updateMultiFilter('group'));
   document.querySelectorAll('[data-filter-reset]').forEach((button) => {
     button.addEventListener('click', () => resetMultiFilter(button.dataset.filterReset));
   });
@@ -3454,6 +3976,8 @@ function wireEvents() {
   onOptional('#section-down', 'click', () => moveSectionOrder(1));
   dom.saveStructure?.addEventListener('click', saveStructureDraft);
   dom.discardStructure?.addEventListener('click', discardStructureDraft);
+  dom.saveCategories?.addEventListener('click', saveCategoryDraft);
+  dom.discardCategories?.addEventListener('click', discardCategoryDraft);
   dom.structureAddModule?.addEventListener('click', addStructureModule);
   dom.structureNewModuleTitle?.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -3546,25 +4070,29 @@ function wireEvents() {
 }
 
 function updateMultiFilter(kind) {
-  const container = kind === 'status' ? dom.statusFilter : dom.typeFilter;
+  const container = kind === 'status' ? dom.statusFilter : kind === 'type' ? dom.typeFilter : dom.groupFilter;
   const values = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
   if (kind === 'status') {
     state.statusFilters = values;
-  } else {
+  } else if (kind === 'type') {
     state.typeFilters = values;
+  } else {
+    state.groupFilters = values;
   }
   renderResources();
 }
 
 function resetMultiFilter(kind) {
-  const container = kind === 'status' ? dom.statusFilter : dom.typeFilter;
+  const container = kind === 'status' ? dom.statusFilter : kind === 'type' ? dom.typeFilter : dom.groupFilter;
   container.querySelectorAll('input[type="checkbox"]').forEach((input) => {
     input.checked = false;
   });
   if (kind === 'status') {
     state.statusFilters = [];
-  } else {
+  } else if (kind === 'type') {
     state.typeFilters = [];
+  } else {
+    state.groupFilters = [];
   }
   renderResources();
 }
@@ -3594,7 +4122,7 @@ async function loadCloudData() {
   }
   state.cloudReady = true;
   setCloudStatus(`Datos compartidos activos. Ultima sincronizacion: ${formatDateTime(data.updated_at)}.`, 'ok');
-  return data.data;
+  return ensureCategoryData(data.data);
 }
 
 async function initCloudSession() {
@@ -3643,14 +4171,14 @@ async function init(forceDefault = false) {
   }
   const stored = forceDefault || cloudClient || cloudData ? null : loadStoredData();
   if (cloudData) {
-    state.data = cloudData;
+    state.data = ensureCategoryData(cloudData);
   } else if (stored) {
-    state.data = stored;
+    state.data = ensureCategoryData(stored);
     renderEditorList([]);
   } else {
     localStorage.removeItem(STORAGE_KEY);
     const response = await fetch('js/data.json');
-    state.data = await response.json();
+    state.data = ensureCategoryData(await response.json());
     if (!cloudClient || (forceDefault && state.session?.user && state.hasCourseAccess)) {
       await saveData();
     }
