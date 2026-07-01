@@ -6,19 +6,19 @@ create table if not exists public.course_state (
 
 create table if not exists public.course_editors (
   email text primary key,
-  role text not null default 'manager',
+  role text not null default 'viewer',
   created_at timestamptz not null default now()
 );
 
 alter table public.course_editors
-add column if not exists role text not null default 'manager';
+add column if not exists role text not null default 'viewer';
 
 alter table public.course_editors
 drop constraint if exists course_editors_role_check;
 
 alter table public.course_editors
 add constraint course_editors_role_check
-check (role in ('owner', 'admin', 'manager', 'contributor', 'viewer'));
+check (role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer'));
 
 create table if not exists public.user_profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -133,7 +133,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor', 'viewer');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer');
 $$;
 
 create or replace function public.can_edit_course()
@@ -143,7 +143,27 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor');
+$$;
+
+create or replace function public.can_open_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer');
+$$;
+
+create or replace function public.can_delete_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'editor');
 $$;
 
 create or replace function public.can_manage_users()
@@ -426,6 +446,8 @@ grant execute on function public.delete_registered_account(text) to authenticate
 grant execute on function public.current_course_role() to authenticated;
 grant execute on function public.can_access_course() to authenticated;
 grant execute on function public.can_edit_course() to authenticated;
+grant execute on function public.can_open_resource_assets() to authenticated;
+grant execute on function public.can_delete_resource_assets() to authenticated;
 grant execute on function public.can_manage_users() to authenticated;
 grant execute on function public.owner_editor_count() to authenticated;
 
@@ -520,7 +542,7 @@ for insert
 to authenticated
 with check (
   public.is_main_editor()
-  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
+  and role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer')
 );
 
 drop policy if exists "course_editors editor update" on public.course_editors;
@@ -537,7 +559,7 @@ using (
 )
 with check (
   public.is_main_editor()
-  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
+  and role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer')
 );
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
@@ -776,7 +798,7 @@ create policy "resource_files authenticated read"
 on storage.objects
 for select
 to authenticated
-using (bucket_id = 'resource-files' and public.can_edit_course());
+using (bucket_id = 'resource-files' and public.can_open_resource_assets());
 
 drop policy if exists "resource_files authenticated upload" on storage.objects;
 create policy "resource_files authenticated upload"
@@ -798,4 +820,4 @@ create policy "resource_files authenticated delete"
 on storage.objects
 for delete
 to authenticated
-using (bucket_id = 'resource-files' and public.can_edit_course());
+using (bucket_id = 'resource-files' and public.can_delete_resource_assets());

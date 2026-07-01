@@ -34,14 +34,14 @@ create index if not exists resource_audit_log_created_idx
 on public.resource_audit_log (created_at desc);
 
 alter table public.course_editors
-add column if not exists role text not null default 'manager';
+add column if not exists role text not null default 'viewer';
 
 alter table public.course_editors
 drop constraint if exists course_editors_role_check;
 
 alter table public.course_editors
 add constraint course_editors_role_check
-check (role in ('owner', 'admin', 'manager', 'contributor', 'viewer'));
+check (role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer'));
 
 alter table public.course_state enable row level security;
 alter table public.course_editors enable row level security;
@@ -105,7 +105,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor', 'viewer');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer');
 $$;
 
 create or replace function public.can_edit_course()
@@ -115,7 +115,27 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor');
+$$;
+
+create or replace function public.can_open_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer');
+$$;
+
+create or replace function public.can_delete_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'editor');
 $$;
 
 create or replace function public.can_manage_users()
@@ -131,6 +151,8 @@ $$;
 grant execute on function public.current_course_role() to authenticated;
 grant execute on function public.can_access_course() to authenticated;
 grant execute on function public.can_edit_course() to authenticated;
+grant execute on function public.can_open_resource_assets() to authenticated;
+grant execute on function public.can_delete_resource_assets() to authenticated;
 grant execute on function public.can_manage_users() to authenticated;
 grant execute on function public.owner_editor_count() to authenticated;
 
@@ -164,7 +186,7 @@ for insert
 to authenticated
 with check (
   public.is_main_editor()
-  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
+  and role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer')
 );
 
 drop policy if exists "course_editors editor update" on public.course_editors;
@@ -181,7 +203,7 @@ using (
 )
 with check (
   public.is_main_editor()
-  and role in ('owner', 'admin', 'manager', 'contributor', 'viewer')
+  and role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer')
 );
 
 drop policy if exists "course_editors editor delete" on public.course_editors;
@@ -523,11 +545,11 @@ select
   coalesce(up.full_name, au.raw_user_meta_data ->> 'full_name') as nombre_visible,
   ce.role as perfil_asignado,
   case
-    when ce.role in ('owner', 'admin', 'manager', 'contributor', 'viewer') then true
+    when ce.role in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer') then true
     else false
   end as puede_entrar,
   case
-    when ce.role in ('owner', 'admin', 'manager', 'contributor') then true
+    when ce.role in ('owner', 'admin', 'manager', 'editor', 'contributor') then true
     else false
   end as puede_editar_recursos
 from auth.users au

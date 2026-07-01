@@ -8,7 +8,7 @@
   <meta property="og:description" content="Mapa compartido de modulos, lecciones y recursos del curso.">
   <meta property="og:type" content="website">
   <title>Organizador de Recursos | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260701-113100">
+  <link rel="stylesheet" href="css/styles.css?v=20260701-120500">
 </head>
 <body>
   <header class="app-header">
@@ -350,29 +350,41 @@
           <div class="admin-card-heading">
             <div>
               <h3>Editores y permisos</h3>
-              <p class="muted">Solo las cuentas principales pueden asignar, cambiar o quitar perfiles. Los administradores pueden apoyar en estructura y recursos.</p>
+              <p class="muted">Solo las cuentas principales pueden asignar, cambiar o quitar perfiles. Los administradores pueden ver este panel, revisar historial y apoyar estructura sin eliminar cuentas ni permisos.</p>
             </div>
           </div>
           <div class="permission-grid">
             <article>
-              <strong>Cuenta principal</strong>
-              <span>Acceso completo. Puede crear otras cuentas principales y cambiar cuentas.</span>
+              <strong>Sin perfil asignado</strong>
+              <span>Estado inicial de una cuenta nueva. No puede entrar al organizador hasta recibir un perfil.</span>
             </article>
             <article>
-              <strong>Administrador</strong>
-              <span>Administra estructura y recursos. Puede ver usuarios, pero no cambiar cuentas.</span>
+              <strong>Lector</strong>
+              <span>Puede entrar y revisar el curso. No edita, no descarga archivos y no abre enlaces.</span>
             </article>
             <article>
-              <strong>Editor avanzado</strong>
-              <span>Edita estructura y recursos, sin autorizar usuarios.</span>
+              <strong>Lector avanzado</strong>
+              <span>Puede revisar el curso y abrir enlaces o descargar archivos, sin modificar contenido.</span>
             </article>
             <article>
               <strong>Creador de recursos</strong>
-              <span>Crea recursos, enlaces y archivos sin eliminar.</span>
+              <span>Puede crear recursos con enlaces y archivos. No edita recursos ya creados.</span>
             </article>
             <article>
-              <strong>Solo lectura</strong>
-              <span>Revisa la estructura sin modificar ni descargar.</span>
+              <strong>Editor</strong>
+              <span>Puede crear y editar recursos existentes. No elimina recursos completos ni historial.</span>
+            </article>
+            <article>
+              <strong>Editor avanzado</strong>
+              <span>Puede crear, editar, mover y eliminar recursos. No modifica estructura ni perfiles.</span>
+            </article>
+            <article>
+              <strong>Administrador</strong>
+              <span>Edita categorias, estructura y recursos. Revisa usuarios e historial. No elimina recursos, categorias, estructura, cuentas, permisos ni historial.</span>
+            </article>
+            <article>
+              <strong>Cuenta principal</strong>
+              <span>Acceso total. Puede eliminar, cambiar perfiles, borrar cuentas y asignar otras cuentas principales.</span>
             </article>
           </div>
           <div class="editor-form-row">
@@ -386,8 +398,10 @@
                 <option value="owner">Cuenta principal</option>
                 <option value="admin">Administrador</option>
                 <option value="manager">Editor avanzado</option>
+                <option value="editor">Editor</option>
                 <option value="contributor">Creador de recursos</option>
-                <option value="viewer">Solo lectura</option>
+                <option value="advanced_viewer">Lector avanzado</option>
+                <option value="viewer">Lector</option>
               </select>
             </label>
             <button class="btn ghost" id="add-editor" type="button">Guardar perfil</button>
@@ -553,6 +567,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260701-113100"></script>
+  <script src="js/app.js?v=20260701-120500"></script>
 </body>
 </html>

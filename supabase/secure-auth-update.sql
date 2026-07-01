@@ -28,7 +28,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor', 'viewer');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer');
 $$;
 
 create or replace function public.can_edit_course()
@@ -38,7 +38,27 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'admin', 'manager', 'contributor');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor');
+$$;
+
+create or replace function public.can_open_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer');
+$$;
+
+create or replace function public.can_delete_resource_assets()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.current_course_role() in ('owner', 'manager', 'editor');
 $$;
 
 create or replace function public.can_manage_users()
@@ -50,6 +70,12 @@ set search_path = public
 as $$
   select public.current_course_role() in ('owner', 'admin');
 $$;
+
+grant execute on function public.can_access_course() to authenticated;
+grant execute on function public.can_edit_course() to authenticated;
+grant execute on function public.can_open_resource_assets() to authenticated;
+grant execute on function public.can_delete_resource_assets() to authenticated;
+grant execute on function public.can_manage_users() to authenticated;
 
 drop policy if exists "course_state public read" on public.course_state;
 drop policy if exists "course_state authenticated read" on public.course_state;
@@ -84,4 +110,4 @@ create policy "resource_files authenticated read"
 on storage.objects
 for select
 to authenticated
-using (bucket_id = 'resource-files' and public.can_edit_course());
+using (bucket_id = 'resource-files' and public.can_open_resource_assets());

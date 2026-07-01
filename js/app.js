@@ -26,8 +26,10 @@ const labels = {
   owner: 'Cuenta principal',
   admin: 'Administrador',
   manager: 'Editor avanzado',
+  editor: 'Editor',
   contributor: 'Creador de recursos',
-  viewer: 'Solo lectura',
+  advanced_viewer: 'Lector avanzado',
+  viewer: 'Lector',
   unassigned: 'Sin perfil asignado',
 };
 
@@ -81,23 +83,29 @@ const profileStatusLabels = {
   no_auth_user: 'Sin cuenta Auth',
 };
 
-const assignableRoles = ['owner', 'admin', 'manager', 'contributor', 'viewer'];
+const assignableRoles = ['owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer'];
 const roleOrder = {
   owner: 0,
   admin: 1,
   manager: 2,
-  contributor: 3,
-  viewer: 4,
-  unassigned: 5,
+  editor: 3,
+  contributor: 4,
+  advanced_viewer: 5,
+  viewer: 6,
+  unassigned: 7,
 };
-const accountRoleGroups = ['owner', 'admin', 'manager', 'contributor', 'viewer', 'unassigned'];
+const accountRoleGroups = ['owner', 'admin', 'manager', 'editor', 'contributor', 'advanced_viewer', 'viewer', 'unassigned'];
 
 const roleCapabilities = {
   owner: {
     manageUsers: true,
+    manageCourseSettings: true,
     manageStructure: true,
+    deleteStructure: true,
     manageResources: true,
+    editResources: true,
     createResources: true,
+    deleteResourceAssets: true,
     deleteResources: true,
     moveResources: true,
     openAssets: true,
@@ -106,21 +114,32 @@ const roleCapabilities = {
     manageUsers: true,
     manageStructure: true,
     manageResources: true,
+    editResources: true,
     createResources: true,
-    deleteResources: true,
     moveResources: true,
     openAssets: true,
   },
   manager: {
-    manageStructure: true,
     manageResources: true,
+    editResources: true,
     createResources: true,
+    deleteResourceAssets: true,
     deleteResources: true,
     moveResources: true,
     openAssets: true,
   },
+  editor: {
+    manageResources: true,
+    editResources: true,
+    createResources: true,
+    deleteResourceAssets: true,
+    openAssets: true,
+  },
   contributor: {
     createResources: true,
+    openAssets: true,
+  },
+  advanced_viewer: {
     openAssets: true,
   },
   viewer: {},
@@ -260,6 +279,7 @@ const dom = {
   coursePeriodInput: document.querySelector('#course-period-input'),
   courseOwnerInput: document.querySelector('#course-owner-input'),
   courseMoodleUrlInput: document.querySelector('#course-moodle-url-input'),
+  saveCourseSettingsButton: document.querySelector('#save-course-settings'),
   moduleEditSelect: document.querySelector('#module-edit-select'),
   moduleTitleInput: document.querySelector('#module-title-input'),
   newModuleTitleInput: document.querySelector('#new-module-title-input'),
@@ -337,7 +357,9 @@ function updateAuthUi() {
   document.body.classList.toggle('can-edit', canEdit());
   document.body.classList.toggle('can-create-resource', hasCapability('createResources'));
   document.body.classList.toggle('can-manage-structure', hasCapability('manageStructure'));
+  document.body.classList.toggle('can-delete-structure', hasCapability('deleteStructure'));
   document.body.classList.toggle('can-manage-users', hasCapability('manageUsers'));
+  document.body.classList.toggle('can-change-accounts', canChangeAccounts());
   document.body.classList.toggle('main-editor', state.isMainEditor || !remoteEditingActive());
   document.body.classList.toggle('auth-login-mode', state.authMode === 'login');
   document.body.classList.toggle('auth-signup-mode', signupMode);
@@ -419,7 +441,7 @@ function remoteEditingActive() {
 }
 
 function canEdit() {
-  return !remoteEditingActive() || hasCapability('createResources') || hasCapability('manageStructure') || hasCapability('manageUsers');
+  return !remoteEditingActive() || hasCapability('createResources') || hasCapability('editResources') || hasCapability('manageStructure') || hasCapability('manageUsers');
 }
 
 function hasCapability(capability) {
@@ -435,7 +457,7 @@ function requireCapability(capability, message) {
 }
 
 function requireEditPermission() {
-  return requireCapability('createResources', 'Para editar o crear recursos debes tener un perfil autorizado.');
+  return requireCapability('createResources', 'Para crear recursos debes tener un perfil autorizado.');
 }
 
 function authModeForRoute(page) {
@@ -1463,9 +1485,9 @@ function resourceCardNode(resource) {
   `;
 
   const actions = node.querySelector('.resource-actions');
-  const canManageResource = hasCapability('manageResources');
-  actions.hidden = !canManageResource && !hasCapability('deleteResources') && !hasCapability('moveResources');
-  node.querySelector('.edit').hidden = !canManageResource;
+  const canEditResource = hasCapability('editResources');
+  actions.hidden = !canEditResource && !hasCapability('deleteResources') && !hasCapability('moveResources');
+  node.querySelector('.edit').hidden = !canEditResource;
   node.querySelector('.delete').hidden = !hasCapability('deleteResources');
   node.querySelector('.move-up').hidden = !hasCapability('moveResources');
   node.querySelector('.move-down').hidden = !hasCapability('moveResources');
@@ -1680,6 +1702,18 @@ function renderAdminControls() {
   if (dom.coursePeriodInput) dom.coursePeriodInput.value = course.period ?? '';
   if (dom.courseOwnerInput) dom.courseOwnerInput.value = course.owner ?? '';
   if (dom.courseMoodleUrlInput) dom.courseMoodleUrlInput.value = course.moodleUrl ?? '';
+  const canEditCourseSettings = hasCapability('manageCourseSettings');
+  [
+    dom.courseEyebrowInput,
+    dom.courseTitleInput,
+    dom.courseDescriptionInput,
+    dom.coursePeriodInput,
+    dom.courseOwnerInput,
+    dom.courseMoodleUrlInput,
+  ].forEach((input) => {
+    if (input) input.disabled = !canEditCourseSettings;
+  });
+  if (dom.saveCourseSettingsButton) dom.saveCourseSettingsButton.hidden = !canEditCourseSettings;
 
   if (dom.moduleEditSelect) {
     dom.moduleEditSelect.innerHTML = '';
@@ -1842,9 +1876,11 @@ function renderStructureParts(lessonBlock) {
     actions.className = 'structure-actions';
     actions.append(
       createStructureButton('Subir', 'mini-btn', () => moveStructureSection(section.id, -1)),
-      createStructureButton('Bajar', 'mini-btn', () => moveStructureSection(section.id, 1)),
-      createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureSection(section.id))
+      createStructureButton('Bajar', 'mini-btn', () => moveStructureSection(section.id, 1))
     );
+    if (hasCapability('deleteStructure')) {
+      actions.appendChild(createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureSection(section.id)));
+    }
     row.append(label, fields, actions);
     parts.appendChild(row);
   });
@@ -1889,9 +1925,11 @@ function renderStructureList() {
     moduleActions.className = 'structure-actions';
     moduleActions.append(
       createStructureButton('Subir', 'mini-btn', () => moveStructureModule(module.id, -1)),
-      createStructureButton('Bajar', 'mini-btn', () => moveStructureModule(module.id, 1)),
-      createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureModule(module.id))
+      createStructureButton('Bajar', 'mini-btn', () => moveStructureModule(module.id, 1))
     );
+    if (hasCapability('deleteStructure')) {
+      moduleActions.appendChild(createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureModule(module.id)));
+    }
     head.append(moduleFields, moduleActions);
     card.appendChild(head);
 
@@ -1912,9 +1950,11 @@ function renderStructureList() {
       actions.className = 'structure-actions';
       actions.append(
         createStructureButton('Subir', 'mini-btn', () => moveStructureLesson(module.id, lesson.id, -1)),
-        createStructureButton('Bajar', 'mini-btn', () => moveStructureLesson(module.id, lesson.id, 1)),
-        createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureLesson(module.id, lesson.id))
+        createStructureButton('Bajar', 'mini-btn', () => moveStructureLesson(module.id, lesson.id, 1))
       );
+      if (hasCapability('deleteStructure')) {
+        actions.appendChild(createStructureButton('Eliminar', 'mini-btn delete', () => deleteStructureLesson(module.id, lesson.id)));
+      }
       row.append(label, input, actions);
       lessonBlock.appendChild(row);
       renderStructureParts(lessonBlock);
@@ -1993,7 +2033,7 @@ function moveCategoryDraft(kind, categoryId, direction) {
 }
 
 function deleteCategoryDraft(kind, categoryId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar categorias.')) return;
   const list = categoryDraftList(kind);
   if (list.length <= 1) {
     alert('Debe quedar al menos una categoria en esta lista.');
@@ -2069,9 +2109,11 @@ function categoryEditorRow(kind, category, index) {
   actions.className = 'category-actions';
   actions.append(
     createStructureButton('Subir', 'mini-btn', () => moveCategoryDraft(kind, category.id, -1)),
-    createStructureButton('Bajar', 'mini-btn', () => moveCategoryDraft(kind, category.id, 1)),
-    createStructureButton('Quitar', 'mini-btn delete', () => deleteCategoryDraft(kind, category.id))
+    createStructureButton('Bajar', 'mini-btn', () => moveCategoryDraft(kind, category.id, 1))
   );
+  if (hasCapability('deleteStructure')) {
+    actions.appendChild(createStructureButton('Quitar', 'mini-btn delete', () => deleteCategoryDraft(kind, category.id)));
+  }
   if (index === 0) actions.firstElementChild.disabled = true;
   if (index === categoryDraftList(kind).length - 1) actions.children[1].disabled = true;
 
@@ -2238,7 +2280,8 @@ function renderDraftLinks() {
       state.draftLinks = state.draftLinks.filter((item) => item.id !== link.id);
       renderDraftLinks();
     });
-    actions.append(open, remove);
+    actions.appendChild(open);
+    if (canRemoveCurrentResourceDraftItem()) actions.appendChild(remove);
     row.append(fields, actions);
     dom.linksList.appendChild(row);
   });
@@ -2282,7 +2325,8 @@ function renderDraftFiles() {
       state.draftFiles = state.draftFiles.filter((item) => item.id !== file.id);
       renderDraftFiles();
     });
-    actions.append(anchor, remove);
+    actions.appendChild(anchor);
+    if (canRemoveCurrentResourceDraftItem()) actions.appendChild(remove);
     row.append(fields, actions);
     dom.filesList.appendChild(row);
   });
@@ -2304,6 +2348,7 @@ function clearForm() {
 }
 
 function editResource(resourceId) {
+  if (!requireCapability('editResources', 'Tu perfil no puede editar recursos existentes.')) return;
   const lesson = currentLesson();
   const resource = lesson?.resources.find((item) => item.id === resourceId);
   if (!resource) return;
@@ -2325,6 +2370,14 @@ function editResource(resourceId) {
   renderDraftAssets();
   setView('module');
   dom.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function canModifyCurrentResourceDraft() {
+  return dom.resourceId.value ? hasCapability('editResources') : hasCapability('createResources');
+}
+
+function canRemoveCurrentResourceDraftItem() {
+  return dom.resourceId.value ? hasCapability('deleteResourceAssets') : hasCapability('createResources');
 }
 
 function findLesson(moduleId, lessonId) {
@@ -2747,7 +2800,7 @@ async function saveResource(event) {
   const existingIndex = sourceLesson?.resources.findIndex((item) => item.id === resource.id) ?? -1;
   const existingResource = existingIndex >= 0 ? { ...sourceLesson.resources[existingIndex] } : null;
   if (existingIndex >= 0) {
-    if (!requireCapability('manageResources', 'Tu perfil puede crear recursos, pero no editar recursos existentes.')) return;
+    if (!requireCapability('editResources', 'Tu perfil puede crear recursos, pero no editar recursos existentes.')) return;
   } else if (!requireCapability('createResources', 'Tu perfil no puede crear recursos.')) {
     return;
   }
@@ -2773,7 +2826,10 @@ async function saveResource(event) {
 }
 
 function addLink() {
-  if (!requireCapability('createResources', 'Tu perfil no puede agregar enlaces a recursos.')) return;
+  if (!canModifyCurrentResourceDraft()) {
+    requireCapability(dom.resourceId.value ? 'editResources' : 'createResources', 'Tu perfil no puede agregar enlaces en este recurso.');
+    return;
+  }
   const url = normalizeUrl(dom.linkUrl.value);
   if (!url) return;
   state.draftLinks.push({
@@ -2787,7 +2843,8 @@ function addLink() {
 }
 
 async function addFiles(event) {
-  if (!requireCapability('createResources', 'Tu perfil no puede agregar archivos a recursos.')) {
+  if (!canModifyCurrentResourceDraft()) {
+    requireCapability(dom.resourceId.value ? 'editResources' : 'createResources', 'Tu perfil no puede agregar archivos en este recurso.');
     dom.resourceFiles.value = '';
     return;
   }
@@ -2922,7 +2979,7 @@ async function updateLesson() {
 }
 
 async function updateCourseSettings() {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la configuracion del curso.')) return;
+  if (!requireCapability('manageCourseSettings', 'Tu perfil no puede modificar la configuracion general del curso.')) return;
   state.data.course = state.data.course || {};
   state.data.course.eyebrow = dom.courseEyebrowInput?.value.trim() || 'Propuesta de organizador Moodle';
   state.data.course.title = dom.courseTitleInput.value.trim() || 'Calculo III';
@@ -2965,7 +3022,7 @@ async function updateModule() {
 }
 
 async function deleteModule() {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar modulos.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar modulos.')) return;
   const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
   if (!module) return;
   const lessonCount = module.lessons?.length ?? 0;
@@ -3060,7 +3117,7 @@ async function moveLessonById(moduleId, lessonId, direction) {
 }
 
 async function deleteModuleById(moduleId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar modulos.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar modulos.')) return;
   const module = state.data.modules.find((item) => item.id === moduleId);
   if (!module) return;
   const lessonCount = module.lessons?.length ?? 0;
@@ -3073,7 +3130,7 @@ async function deleteModuleById(moduleId) {
 }
 
 async function deleteLessonById(moduleId, lessonId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede eliminar lecciones.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar lecciones.')) return;
   const module = state.data.modules.find((item) => item.id === moduleId);
   const lesson = module?.lessons.find((item) => item.id === lessonId);
   if (!module || !lesson) return;
@@ -3151,7 +3208,7 @@ function moveStructureSection(sectionId, direction) {
 }
 
 function deleteStructureModule(moduleId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar estructura del curso.')) return;
   const module = structureDraftModule(moduleId);
   if (!module) return;
   const resourceCount = module.lessons.reduce((total, lesson) => total + (lesson.resources?.length ?? 0), 0);
@@ -3162,7 +3219,7 @@ function deleteStructureModule(moduleId) {
 }
 
 function deleteStructureLesson(moduleId, lessonId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar estructura del curso.')) return;
   const module = structureDraftModule(moduleId);
   const lesson = structureDraftLesson(moduleId, lessonId);
   if (!module || !lesson) return;
@@ -3174,7 +3231,7 @@ function deleteStructureLesson(moduleId, lessonId) {
 }
 
 function deleteStructureSection(sectionId) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar la estructura del curso.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar partes de las lecciones.')) return;
   ensureStructureDraft();
   if (state.structureDraft.sections.length <= 1) {
     alert('Debe quedar al menos una parte en las lecciones.');
@@ -3695,10 +3752,10 @@ function renderEditorList(editors = []) {
   const sortedEditors = [...editors].sort((a, b) => compareAccountsByRoleAndName(
     a,
     b,
-    (item) => item.role || 'manager',
+    (item) => item.role || 'viewer',
     (item) => `${displayNameForEmail(item.email)} ${item.email || ''}`,
   ));
-  groupByRole(sortedEditors, (editor) => editor.role || 'manager').forEach((group) => {
+  groupByRole(sortedEditors, (editor) => editor.role || 'viewer').forEach((group) => {
     const groupSection = createAccountRoleGroup(group.role, group.items.length);
     group.items.forEach((editor) => {
     const row = document.createElement('div');
@@ -3733,7 +3790,7 @@ function renderEditorList(editors = []) {
         const option = document.createElement('option');
         option.value = roleValue;
         option.textContent = labels[roleValue] ?? roleValue;
-        if ((editor.role || 'manager') === roleValue) option.selected = true;
+        if ((editor.role || 'viewer') === roleValue) option.selected = true;
         roleControl.appendChild(option);
       });
       action = document.createElement('div');
@@ -3789,7 +3846,7 @@ function renderRegisteredUsers(users = []) {
     dom.registeredUserList.innerHTML = '<p class="asset-empty">No hay usuarios registrados cargados.</p>';
     return;
   }
-  const editorRoles = new Map((state.loadedEditors || []).map((editor) => [editor.email.toLowerCase(), editor.role || 'manager']));
+  const editorRoles = new Map((state.loadedEditors || []).map((editor) => [editor.email.toLowerCase(), editor.role || 'viewer']));
   dom.registeredUserList.innerHTML = '';
   const scroll = document.createElement('div');
   scroll.className = 'account-list-scroll registered-list-scroll';
@@ -4081,7 +4138,7 @@ async function refreshEditorStatus() {
   state.userRole = data?.role || 'unassigned';
   state.isMainEditor = state.userRole === 'owner';
   state.hasCourseAccess = Boolean(data?.role);
-  state.isEditor = ['owner', 'admin', 'manager', 'contributor'].includes(state.userRole) && !error;
+  state.isEditor = ['owner', 'admin', 'manager', 'editor', 'contributor'].includes(state.userRole) && !error;
   if (!state.hasCourseAccess && !state.recoveringPassword) {
     state.currentView = 'course';
     state.returnRoute = '#/mapa';

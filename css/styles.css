@@ -1225,7 +1225,11 @@ body:not(.can-manage-users) .admin-users-card {
   display: none;
 }
 
-body:not(.can-manage-users) .admin-users-card {
+body:not(.can-change-accounts) .editor-form-row {
+  display: none;
+}
+
+body:not(.can-change-accounts) #sync-registered-users {
   display: none;
 }
 
@@ -2344,10 +2348,22 @@ body:not(.can-manage-users) .admin-users-card {
   border-color: #cce0f1;
 }
 
+.role-editor {
+  color: #4f3f8f;
+  background: #ebe8ff;
+  border-color: #c9c0ff;
+}
+
 .role-contributor {
   color: #7b4a00;
   background: #fff1cf;
   border-color: #f2d391;
+}
+
+.role-advanced_viewer {
+  color: #1b5d6c;
+  background: #e2f6fb;
+  border-color: #b6dfe8;
 }
 
 .role-viewer {
