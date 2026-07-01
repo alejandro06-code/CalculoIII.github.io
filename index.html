@@ -8,7 +8,7 @@
   <meta property="og:description" content="Mapa compartido de modulos, lecciones y recursos del curso.">
   <meta property="og:type" content="website">
   <title>Organizador de Recursos | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260625-132500">
+  <link rel="stylesheet" href="css/styles.css?v=20260701-111500">
 </head>
 <body>
   <header class="app-header">
@@ -413,10 +413,39 @@
           </div>
           <button class="mini-btn" id="refresh-audit-log" type="button">Actualizar historial</button>
         </div>
-        <label>
-          Buscar recurso, persona, correo o accion
-          <input id="audit-search" placeholder="Titulo, correo, nombre, crear, editar...">
-        </label>
+        <div class="audit-filter-grid" aria-label="Filtros del historial">
+          <label>
+            Buscar recurso o accion
+            <input id="audit-search" placeholder="Titulo, crear, editar, mover...">
+          </label>
+          <label>
+            Persona o correo
+            <input id="audit-person-search" placeholder="Nombre o correo">
+          </label>
+          <label>
+            Accion
+            <select id="audit-action-filter">
+              <option value="">Todas</option>
+              <option value="create">Creacion</option>
+              <option value="update">Edicion</option>
+              <option value="move">Movimiento</option>
+              <option value="delete">Eliminacion</option>
+            </select>
+          </label>
+          <label>
+            Desde
+            <input id="audit-date-from" type="date">
+          </label>
+          <label>
+            Hasta
+            <input id="audit-date-to" type="date">
+          </label>
+          <label>
+            Ubicacion, categoria o etiqueta
+            <input id="audit-detail-search" placeholder="Modulo, leccion, estado, tipo, grupo...">
+          </label>
+          <button class="btn ghost" id="clear-audit-filters" type="button">Limpiar filtros</button>
+        </div>
         <p class="asset-empty" id="audit-status"></p>
         <div class="audit-list" id="audit-list"></div>
         <div class="audit-pagination" id="audit-pagination" aria-label="Paginas del historial"></div>
@@ -523,6 +552,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260625-132500"></script>
+  <script src="js/app.js?v=20260701-111500"></script>
 </body>
 </html>

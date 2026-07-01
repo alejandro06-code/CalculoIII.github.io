@@ -90,6 +90,7 @@ const roleOrder = {
   viewer: 4,
   unassigned: 5,
 };
+const accountRoleGroups = ['owner', 'admin', 'manager', 'contributor', 'viewer', 'unassigned'];
 
 const roleCapabilities = {
   owner: {
@@ -162,8 +163,13 @@ const state = {
   currentUserProfile: null,
   resourceAuditLog: [],
   auditSearch: '',
+  auditPersonSearch: '',
+  auditDetailSearch: '',
+  auditActionFilter: '',
+  auditDateFrom: '',
+  auditDateTo: '',
   auditPage: 1,
-  auditPageSize: 20,
+  auditPageSize: 10,
   accessChecked: false,
   hasCourseAccess: false,
 };
@@ -267,6 +273,12 @@ const dom = {
   registeredUserList: document.querySelector('#registered-user-list'),
   syncRegisteredUsersButton: document.querySelector('#sync-registered-users'),
   auditSearch: document.querySelector('#audit-search'),
+  auditPersonSearch: document.querySelector('#audit-person-search'),
+  auditDetailSearch: document.querySelector('#audit-detail-search'),
+  auditActionFilter: document.querySelector('#audit-action-filter'),
+  auditDateFrom: document.querySelector('#audit-date-from'),
+  auditDateTo: document.querySelector('#audit-date-to'),
+  clearAuditFilters: document.querySelector('#clear-audit-filters'),
   auditStatus: document.querySelector('#audit-status'),
   auditList: document.querySelector('#audit-list'),
   auditPagination: document.querySelector('#audit-pagination'),
@@ -586,6 +598,34 @@ function compareAccountsByRoleAndName(a, b, getRole = (item) => item.role, getNa
   const roleDiff = roleRank(getRole(a)) - roleRank(getRole(b));
   if (roleDiff !== 0) return roleDiff;
   return String(getName(a) || '').localeCompare(String(getName(b) || ''), 'es', { sensitivity: 'base' });
+}
+
+function registeredUserForEmail(email) {
+  const normalizedEmail = email?.toLowerCase() || '';
+  return (state.loadedRegisteredUsers || []).find((user) => user.email?.toLowerCase() === normalizedEmail) || null;
+}
+
+function displayNameForEmail(email) {
+  return registeredUserForEmail(email)?.full_name || email || 'Sin nombre de usuario';
+}
+
+function groupByRole(items, getRole) {
+  return accountRoleGroups
+    .map((role) => ({
+      role,
+      items: items.filter((item) => (getRole(item) || 'unassigned') === role),
+    }))
+    .filter((group) => group.items.length);
+}
+
+function createAccountRoleGroup(role, count) {
+  const section = document.createElement('section');
+  section.className = `account-role-group role-group-${role}`;
+  const heading = document.createElement('div');
+  heading.className = 'account-role-heading';
+  heading.innerHTML = `<span>${labels[role] ?? role}</span><strong>${count}</strong>`;
+  section.appendChild(heading);
+  return section;
 }
 
 function ownerCount(editors = state.loadedEditors) {
@@ -3647,8 +3687,18 @@ function renderEditorList(editors = []) {
   header.className = 'editor-list-header';
   header.innerHTML = '<span>Cuenta</span><span>Perfil</span><span>Accion</span>';
   dom.editorList.appendChild(header);
-  const sortedEditors = [...editors].sort((a, b) => compareAccountsByRoleAndName(a, b));
-  sortedEditors.forEach((editor) => {
+  const scroll = document.createElement('div');
+  scroll.className = 'account-list-scroll editor-list-scroll';
+  dom.editorList.appendChild(scroll);
+  const sortedEditors = [...editors].sort((a, b) => compareAccountsByRoleAndName(
+    a,
+    b,
+    (item) => item.role || 'manager',
+    (item) => `${displayNameForEmail(item.email)} ${item.email || ''}`,
+  ));
+  groupByRole(sortedEditors, (editor) => editor.role || 'manager').forEach((group) => {
+    const groupSection = createAccountRoleGroup(group.role, group.items.length);
+    group.items.forEach((editor) => {
     const row = document.createElement('div');
     row.className = 'editor-row';
     const isMainAccount = editor.role === 'owner';
@@ -3656,11 +3706,13 @@ function renderEditorList(editors = []) {
     if (isMainAccount) row.classList.add('main-account');
     const account = document.createElement('div');
     account.className = 'editor-account';
-    const email = document.createElement('strong');
+    const name = document.createElement('strong');
+    name.textContent = displayNameForEmail(editor.email);
+    const email = document.createElement('small');
     email.textContent = editor.email;
     const meta = document.createElement('small');
     meta.textContent = isMainAccount ? 'Cuenta principal' : 'Cuenta autorizada';
-    account.append(email, meta);
+    account.append(name, email, meta);
     let roleControl;
     let action;
     if (!canChangeAccounts()) {
@@ -3701,8 +3753,24 @@ function renderEditorList(editors = []) {
       action.append(update, remove);
     }
     row.append(account, roleControl, action);
-    dom.editorList.appendChild(row);
+      groupSection.appendChild(row);
+    });
+    scroll.appendChild(groupSection);
   });
+}
+
+function bogotaDateKey(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Bogota',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
 }
 
 function renderRegisteredUsers(users = []) {
@@ -3721,12 +3789,18 @@ function renderRegisteredUsers(users = []) {
   }
   const editorRoles = new Map((state.loadedEditors || []).map((editor) => [editor.email.toLowerCase(), editor.role || 'manager']));
   dom.registeredUserList.innerHTML = '';
-  const sortedUsers = [...users].sort((a, b) => {
-    const roleA = editorRoles.get(a.email?.toLowerCase()) || 'unassigned';
-    const roleB = editorRoles.get(b.email?.toLowerCase()) || 'unassigned';
-    return compareAccountsByRoleAndName(a, b, () => roleA, (item) => item.full_name || item.email);
-  });
-  sortedUsers.forEach((user) => {
+  const scroll = document.createElement('div');
+  scroll.className = 'account-list-scroll registered-list-scroll';
+  dom.registeredUserList.appendChild(scroll);
+  const sortedUsers = [...users].sort((a, b) => compareAccountsByRoleAndName(
+    a,
+    b,
+    (item) => editorRoles.get(item.email?.toLowerCase()) || 'unassigned',
+    (item) => `${item.full_name || ''} ${item.email || ''}`,
+  ));
+  groupByRole(sortedUsers, (user) => editorRoles.get(user.email?.toLowerCase()) || 'unassigned').forEach((group) => {
+    const groupSection = createAccountRoleGroup(group.role, group.items.length);
+    group.items.forEach((user) => {
     const row = document.createElement('div');
     row.className = 'registered-user-row';
     if (user.profile_status === 'missing_profile') row.classList.add('missing-profile');
@@ -3770,7 +3844,9 @@ function renderRegisteredUsers(users = []) {
       action.addEventListener('click', () => deleteRegisteredAccount(user.email));
     }
     row.append(account, badges, action);
-    dom.registeredUserList.appendChild(row);
+      groupSection.appendChild(row);
+    });
+    scroll.appendChild(groupSection);
   });
 }
 
@@ -3822,19 +3898,36 @@ function renderResourceAudit() {
   }
 
   const search = state.auditSearch.trim().toLowerCase();
+  const personSearch = state.auditPersonSearch.trim().toLowerCase();
+  const detailSearch = state.auditDetailSearch.trim().toLowerCase();
+  const actionFilter = state.auditActionFilter;
+  const fromDate = state.auditDateFrom;
+  const toDate = state.auditDateTo;
   const entries = (state.resourceAuditLog || []).filter((entry) => {
-    if (!search) return true;
-    const haystack = [
+    const generalHaystack = [
       entry.resource_title,
       entry.action,
       auditActionLabel(entry.action),
+      entry.summary,
+    ].join(' ').toLowerCase();
+    const personHaystack = [
       entry.actor_name,
       entry.actor_email,
-      auditContextLabel(entry),
-      entry.summary,
-      auditEntrySearchText(entry),
     ].join(' ').toLowerCase();
-    return haystack.includes(search);
+    const detailHaystack = [
+      auditContextLabel(entry),
+      auditEntrySearchText(entry),
+      entry.summary,
+    ].join(' ').toLowerCase();
+    const dateKey = bogotaDateKey(entry.created_at);
+    if (search && !generalHaystack.includes(search)) return false;
+    if (personSearch && !personHaystack.includes(personSearch)) return false;
+    if (detailSearch && !detailHaystack.includes(detailSearch)) return false;
+    if (actionFilter && entry.action !== actionFilter) return false;
+    if (fromDate && dateKey && dateKey < fromDate) return false;
+    if (toDate && dateKey && dateKey > toDate) return false;
+    if ((fromDate || toDate) && !dateKey) return false;
+    return true;
   });
 
   dom.auditList.innerHTML = '';
@@ -3844,9 +3937,10 @@ function renderResourceAudit() {
   const startIndex = (state.auditPage - 1) * state.auditPageSize;
   const pageEntries = entries.slice(startIndex, startIndex + state.auditPageSize);
 
+  const activeFilterCount = [search, personSearch, detailSearch, actionFilter, fromDate, toDate].filter(Boolean).length;
   dom.auditStatus.textContent = entries.length
-    ? `Mostrando ${startIndex + 1}-${Math.min(startIndex + pageEntries.length, entries.length)} de ${entries.length} movimientos.`
-    : 'No hay movimientos que coincidan con la busqueda.';
+    ? `Mostrando ${startIndex + 1}-${Math.min(startIndex + pageEntries.length, entries.length)} de ${entries.length} movimientos${activeFilterCount ? ` con ${activeFilterCount} filtro${activeFilterCount === 1 ? '' : 's'}` : ''}.`
+    : 'No hay movimientos que coincidan con los filtros.';
 
   pageEntries.forEach((entry) => {
     const row = document.createElement('article');
@@ -3890,6 +3984,23 @@ function renderResourceAudit() {
   });
 
   renderAuditPagination(totalPages);
+}
+
+function clearAuditFilters() {
+  state.auditSearch = '';
+  state.auditPersonSearch = '';
+  state.auditDetailSearch = '';
+  state.auditActionFilter = '';
+  state.auditDateFrom = '';
+  state.auditDateTo = '';
+  state.auditPage = 1;
+  if (dom.auditSearch) dom.auditSearch.value = '';
+  if (dom.auditPersonSearch) dom.auditPersonSearch.value = '';
+  if (dom.auditDetailSearch) dom.auditDetailSearch.value = '';
+  if (dom.auditActionFilter) dom.auditActionFilter.value = '';
+  if (dom.auditDateFrom) dom.auditDateFrom.value = '';
+  if (dom.auditDateTo) dom.auditDateTo.value = '';
+  renderResourceAudit();
 }
 
 function renderAuditPagination(totalPages) {
@@ -4003,8 +4114,8 @@ async function loadEditors() {
     return;
   }
   state.loadedEditors = data || [];
-  renderEditorList(data);
   await loadRegisteredUsers();
+  renderEditorList(state.loadedEditors);
   await loadResourceAudit();
 }
 
@@ -4235,6 +4346,32 @@ function wireEvents() {
     state.auditPage = 1;
     renderResourceAudit();
   });
+  dom.auditPersonSearch?.addEventListener('input', (event) => {
+    state.auditPersonSearch = event.target.value;
+    state.auditPage = 1;
+    renderResourceAudit();
+  });
+  dom.auditDetailSearch?.addEventListener('input', (event) => {
+    state.auditDetailSearch = event.target.value;
+    state.auditPage = 1;
+    renderResourceAudit();
+  });
+  dom.auditActionFilter?.addEventListener('change', (event) => {
+    state.auditActionFilter = event.target.value;
+    state.auditPage = 1;
+    renderResourceAudit();
+  });
+  dom.auditDateFrom?.addEventListener('change', (event) => {
+    state.auditDateFrom = event.target.value;
+    state.auditPage = 1;
+    renderResourceAudit();
+  });
+  dom.auditDateTo?.addEventListener('change', (event) => {
+    state.auditDateTo = event.target.value;
+    state.auditPage = 1;
+    renderResourceAudit();
+  });
+  dom.clearAuditFilters?.addEventListener('click', clearAuditFilters);
   dom.moduleEditSelect?.addEventListener('change', () => {
     const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
     dom.moduleTitleInput.value = module?.title ?? '';

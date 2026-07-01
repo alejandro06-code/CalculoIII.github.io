@@ -1832,6 +1832,18 @@ body:not(.can-manage-users) .admin-users-card {
   grid-column: 1 / -1;
 }
 
+.audit-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.audit-filter-grid .btn {
+  align-self: end;
+  min-height: 42px;
+}
+
 .audit-list {
   display: grid;
   gap: 8px;
@@ -2104,6 +2116,7 @@ body:not(.can-manage-users) .admin-users-card {
 .editor-list {
   display: grid;
   gap: 6px;
+  --account-grid: minmax(0, 1fr) minmax(210px, 260px) minmax(210px, auto);
 }
 
 .registered-users {
@@ -2129,6 +2142,7 @@ body:not(.can-manage-users) .admin-users-card {
 .registered-user-list {
   display: grid;
   gap: 6px;
+  --account-grid: minmax(0, 1fr) minmax(210px, 260px) minmax(180px, auto);
 }
 
 .permission-grid {
@@ -2168,22 +2182,65 @@ body:not(.can-manage-users) .admin-users-card {
 .editor-row,
 .registered-user-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(140px, 190px) auto;
-  gap: 8px;
+  grid-template-columns: var(--account-grid);
+  gap: 10px;
   align-items: center;
 }
 
 .editor-list-header {
-  padding: 0 8px;
+  padding: 0 10px;
   color: var(--muted);
   font-size: 0.74rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
+.editor-list-header span:nth-child(2),
+.editor-list-header span:nth-child(3) {
+  text-align: center;
+}
+
+.account-list-scroll {
+  display: grid;
+  gap: 9px;
+  max-height: 430px;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.account-role-group {
+  display: grid;
+  gap: 6px;
+}
+
+.account-role-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  color: var(--brand-2);
+  background: #f7fbfb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.77rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.account-role-heading strong {
+  min-width: 28px;
+  padding: 3px 7px;
+  color: var(--brand);
+  background: var(--brand-soft);
+  border-radius: 999px;
+  text-align: center;
+}
+
 .editor-row,
 .registered-user-row {
-  padding: 8px;
+  padding: 9px 10px;
   background: var(--surface-2);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2236,11 +2293,17 @@ body:not(.can-manage-users) .admin-users-card {
   justify-content: flex-end;
 }
 
+.registered-user-row > .mini-btn,
+.registered-user-row > .fixed-account-label,
+.editor-row > .fixed-account-label {
+  justify-self: end;
+}
+
 .registered-user-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .role-pill {
@@ -2264,6 +2327,12 @@ body:not(.can-manage-users) .admin-users-card {
   color: #0f5f5a;
   background: #def7f3;
   border-color: #aee1dc;
+}
+
+.role-manager {
+  color: var(--brand);
+  background: var(--brand-soft);
+  border-color: #cce0f1;
 }
 
 .role-contributor {
@@ -2438,6 +2507,7 @@ body:not(.can-manage-users) .admin-users-card {
   .app-header,
   .workspace-header,
   .admin-heading,
+  .audit-filter-grid,
   .audit-resource-item,
   .panel-heading,
   .map-heading,
