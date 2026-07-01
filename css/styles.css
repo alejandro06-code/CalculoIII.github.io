@@ -1073,6 +1073,7 @@ textarea {
 
 .resource-panel {
   padding-top: 2px;
+  min-height: 0;
 }
 
 .panel-heading {
@@ -1087,6 +1088,39 @@ textarea {
 .resource-list {
   display: grid;
   gap: 10px;
+  max-height: clamp(360px, 54vh, 640px);
+  margin-right: -6px;
+  padding: 2px 8px 2px 2px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scroll-padding: 12px;
+}
+
+.resource-list:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 28%, transparent);
+  outline-offset: 4px;
+}
+
+.resource-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.resource-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.resource-list::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.resource-list::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--brand) 38%, var(--line-strong));
 }
 
 .resource-group-section {
