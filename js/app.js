@@ -282,6 +282,8 @@ const dom = {
   auditStatus: document.querySelector('#audit-status'),
   auditList: document.querySelector('#audit-list'),
   auditPagination: document.querySelector('#audit-pagination'),
+  auditPaginationTop: document.querySelector('#audit-pagination-top'),
+  auditPaginations: Array.from(document.querySelectorAll('[data-audit-pagination]')),
   refreshAuditLog: document.querySelector('#refresh-audit-log'),
   profileAvatar: document.querySelector('#profile-avatar'),
   profileDisplayName: document.querySelector('#profile-display-name'),
@@ -3887,13 +3889,13 @@ function renderResourceAudit() {
   if (!remoteEditingActive()) {
     dom.auditStatus.textContent = 'Activa Supabase para guardar historial de recursos.';
     dom.auditList.innerHTML = '';
-    if (dom.auditPagination) dom.auditPagination.innerHTML = '';
+    clearAuditPagination();
     return;
   }
   if (!canManageEditors()) {
     dom.auditStatus.textContent = 'Solo una cuenta principal o un administrador puede ver el historial.';
     dom.auditList.innerHTML = '';
-    if (dom.auditPagination) dom.auditPagination.innerHTML = '';
+    clearAuditPagination();
     return;
   }
 
@@ -3931,7 +3933,7 @@ function renderResourceAudit() {
   });
 
   dom.auditList.innerHTML = '';
-  if (dom.auditPagination) dom.auditPagination.innerHTML = '';
+  clearAuditPagination();
   const totalPages = Math.max(1, Math.ceil(entries.length / state.auditPageSize));
   state.auditPage = Math.min(Math.max(state.auditPage, 1), totalPages);
   const startIndex = (state.auditPage - 1) * state.auditPageSize;
@@ -4003,23 +4005,31 @@ function clearAuditFilters() {
   renderResourceAudit();
 }
 
+function clearAuditPagination() {
+  (dom.auditPaginations || []).forEach((pagination) => {
+    pagination.innerHTML = '';
+  });
+}
+
 function renderAuditPagination(totalPages) {
-  if (!dom.auditPagination || totalPages <= 1) return;
-  for (let page = 1; page <= totalPages; page += 1) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'audit-page-button';
-    button.textContent = page;
-    if (page === state.auditPage) {
-      button.classList.add('active');
-      button.setAttribute('aria-current', 'page');
+  if (!dom.auditPaginations?.length || totalPages <= 1) return;
+  dom.auditPaginations.forEach((pagination) => {
+    for (let page = 1; page <= totalPages; page += 1) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'audit-page-button';
+      button.textContent = page;
+      if (page === state.auditPage) {
+        button.classList.add('active');
+        button.setAttribute('aria-current', 'page');
+      }
+      button.addEventListener('click', () => {
+        state.auditPage = page;
+        renderResourceAudit();
+      });
+      pagination.appendChild(button);
     }
-    button.addEventListener('click', () => {
-      state.auditPage = page;
-      renderResourceAudit();
-    });
-    dom.auditPagination.appendChild(button);
-  }
+  });
 }
 
 async function loadResourceAudit() {

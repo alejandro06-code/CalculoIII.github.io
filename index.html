@@ -8,7 +8,7 @@
   <meta property="og:description" content="Mapa compartido de modulos, lecciones y recursos del curso.">
   <meta property="og:type" content="website">
   <title>Organizador de Recursos | Calculo III</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260701-111500">
+  <link rel="stylesheet" href="css/styles.css?v=20260701-113100">
 </head>
 <body>
   <header class="app-header">
@@ -446,9 +446,10 @@
           </label>
           <button class="btn ghost" id="clear-audit-filters" type="button">Limpiar filtros</button>
         </div>
+        <div class="audit-pagination audit-pagination-top" id="audit-pagination-top" data-audit-pagination aria-label="Paginas del historial arriba"></div>
         <p class="asset-empty" id="audit-status"></p>
         <div class="audit-list" id="audit-list"></div>
-        <div class="audit-pagination" id="audit-pagination" aria-label="Paginas del historial"></div>
+        <div class="audit-pagination" id="audit-pagination" data-audit-pagination aria-label="Paginas del historial abajo"></div>
       </section>
     </section>
 
@@ -552,6 +553,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260701-111500"></script>
+  <script src="js/app.js?v=20260701-113100"></script>
 </body>
 </html>

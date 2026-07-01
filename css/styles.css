@@ -2053,6 +2053,15 @@ body:not(.can-manage-users) .admin-users-card {
   margin-top: 10px;
 }
 
+.audit-pagination:empty {
+  display: none;
+}
+
+.audit-pagination-top {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
 .audit-page-button {
   min-width: 36px;
   min-height: 34px;
