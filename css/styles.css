@@ -1088,7 +1088,7 @@ textarea {
 .resource-list {
   display: grid;
   gap: 10px;
-  max-height: clamp(360px, 54vh, 640px);
+  max-height: clamp(560px, 76vh, 860px);
   margin-right: -6px;
   padding: 2px 8px 2px 2px;
   overflow-y: auto;

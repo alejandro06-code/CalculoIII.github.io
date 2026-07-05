@@ -31,7 +31,7 @@ Notas:
 - Solo una cuenta principal puede eliminar entradas del historial.
 - La tabla `course_editors` usa perfiles:
   - `owner`: cuenta principal con acceso completo. Puede asignar tambien el perfil de cuenta principal a otra cuenta.
-  - `admin`: administra estructura, categorias y recursos; puede ver cuentas e historial, pero no elimina recursos, cuentas, permisos, historial, categorias ni estructura.
+  - `admin`: administra configuracion del curso, estructura, categorias y recursos; puede ver cuentas e historial, pero no cambia perfiles, no borra cuentas y no elimina historial.
   - `manager`: editor avanzado. Puede crear, editar, mover y eliminar recursos, pero no administra usuarios ni estructura.
   - `editor`: puede crear y editar recursos, pero no eliminar recursos completos.
   - `contributor`: creador de recursos. Puede crear recursos y subir archivos, pero no editar recursos existentes.

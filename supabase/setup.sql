@@ -163,7 +163,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.current_course_role() in ('owner', 'manager', 'editor');
+  select public.current_course_role() in ('owner', 'admin', 'manager', 'editor');
 $$;
 
 create or replace function public.can_manage_users()
