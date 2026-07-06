@@ -1289,7 +1289,12 @@ function renderCourseMap() {
           <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
           <h4>${module.title}</h4>
         </div>
-        <span class="map-count"><strong>${totals.total}</strong><span> ${totals.total === 1 ? 'recurso registrado' : 'recursos registrados'}</span></span>
+        <span class="map-count">
+    <strong>${totals.total}</strong>
+    <span>
+        ${totals.total === 1 ? 'pregunta registrada' : 'preguntas registradas'}
+    </span>
+</span>
       </div>
       <div class="map-stats">
         <span>${plural(module.lessons.length, 'leccion', 'lecciones')}</span>
@@ -1341,7 +1346,9 @@ function renderCourseMap() {
         }
         sectionButton.innerHTML = `
           <span>${section.title}</span>
-          <small class="section-total">${plural(partStats.total, 'recurso registrado', 'recursos registrados')}</small>
+          <small class="section-total">
+    ${plural(partStats.total, 'pregunta registrada', 'preguntas registradas')}
+</small>
           <small class="section-status">
             <span>${plural(partStats.missing, 'falta', 'faltan')}</span>
             <span>${partStats.review} revisar</span>
@@ -1526,7 +1533,7 @@ function renderResources() {
   dom.moduleLabel.textContent = module?.title ?? 'Modulo';
   dom.lessonTitle.textContent = lesson?.title ?? 'Selecciona una leccion';
   dom.lessonMeta.textContent = lesson
-    ? `${(lesson.resources || []).length} recursos registrados en esta leccion.`
+    ? `${(lesson.resources || []).length} preguntas registradas en esta leccion.`
     : 'Elige un punto del curso para organizar sus recursos.';
   dom.sectionHeading.textContent = section?.title ?? 'Recursos';
   dom.sectionDescription.textContent = section?.description ?? '';
