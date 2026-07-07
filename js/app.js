@@ -153,6 +153,22 @@ function plural(count, singular, pluralText) {
   return `${count} ${count === 1 ? singular : pluralText}`;
 }
 
+function resourceCountLabel(count) {
+  return count === 1 ? 'recurso' : 'recursos';
+}
+
+function resourceCountText(count) {
+  return `${count} ${resourceCountLabel(count)}`;
+}
+
+function resourceRegisteredLabel(count) {
+  return count === 1 ? 'recurso registrado' : 'recursos registrados';
+}
+
+function resourceRegisteredText(count) {
+  return `${count} ${resourceRegisteredLabel(count)}`;
+}
+
 const state = {
   data: null,
   selectedModuleId: null,
@@ -1223,7 +1239,7 @@ function renderCourseMap() {
       <div class="course-overview-stats">
         <span><strong>${courseTotals.modules}</strong> modulos</span>
         <span><strong>${courseTotals.lessons}</strong> lecciones</span>
-        <span><strong>${courseTotals.resources}</strong> recursos</span>
+        <span><strong>${courseTotals.resources}</strong> ${resourceCountLabel(courseTotals.resources)}</span>
         <span><strong>${courseTotals.missing}</strong> faltantes</span>
         <span><strong>${courseTotals.review}</strong> por revisar</span>
         <span><strong>${courseTotals.approved}</strong> aprobados</span>
@@ -1250,7 +1266,7 @@ function renderCourseMap() {
       card.innerHTML = `
         <span class="map-kicker">Modulo ${moduleIndex + 1}</span>
         <strong>${module.title}</strong>
-        <span class="module-overview-meta">${plural(module.lessons.length, 'leccion', 'lecciones')} · ${plural(totals.total, 'recurso', 'recursos')}</span>
+        <span class="module-overview-meta">${plural(module.lessons.length, 'leccion', 'lecciones')} · ${resourceCountText(totals.total)}</span>
       `;
       card.addEventListener('click', () => {
         state.selectedModuleId = module.id;
@@ -1289,12 +1305,7 @@ function renderCourseMap() {
           <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
           <h4>${module.title}</h4>
         </div>
-        <span class="map-count">
-    <strong>${totals.total}</strong>
-    <span>
-        ${totals.total === 1 ? 'pregunta registrada' : 'preguntas registradas'}
-    </span>
-</span>
+        <span class="map-count"><strong>${totals.total}</strong><span> ${resourceRegisteredLabel(totals.total)}</span></span>
       </div>
       <div class="map-stats">
         <span>${plural(module.lessons.length, 'leccion', 'lecciones')}</span>
@@ -1320,7 +1331,7 @@ function renderCourseMap() {
             <span class="lesson-name">${lesson.title}</span>
           </span>
           <span class="lesson-pills">
-            <span class="total-pill">${stats.total} en total</span>
+            <span class="total-pill">${resourceCountText(stats.total)}</span>
             <span class="${stats.missing ? 'pill-danger' : ''}">${plural(stats.missing, 'falta', 'faltan')}</span>
             <span class="${stats.review ? 'pill-warning' : ''}">${stats.review} revisar</span>
           </span>
@@ -1346,9 +1357,7 @@ function renderCourseMap() {
         }
         sectionButton.innerHTML = `
           <span>${section.title}</span>
-          <small class="section-total">
-    ${plural(partStats.total, 'pregunta registrada', 'preguntas registradas')}
-</small>
+          <small class="section-total">${resourceRegisteredText(partStats.total)}</small>
           <small class="section-status">
             <span>${plural(partStats.missing, 'falta', 'faltan')}</span>
             <span>${partStats.review} revisar</span>
@@ -1533,7 +1542,7 @@ function renderResources() {
   dom.moduleLabel.textContent = module?.title ?? 'Modulo';
   dom.lessonTitle.textContent = lesson?.title ?? 'Selecciona una leccion';
   dom.lessonMeta.textContent = lesson
-    ? `${(lesson.resources || []).length} preguntas registradas en esta leccion.`
+    ? `${resourceRegisteredText((lesson.resources || []).length)} en esta leccion.`
     : 'Elige un punto del curso para organizar sus recursos.';
   dom.sectionHeading.textContent = section?.title ?? 'Recursos';
   dom.sectionDescription.textContent = section?.description ?? '';
@@ -1558,7 +1567,7 @@ function renderResources() {
     heading.className = 'resource-group-heading';
     heading.innerHTML = `
       <h4 class="resource-group-title"><span class="resource-group-swatch"></span>${categoryLabel('group', groupId)}</h4>
-      <span class="resource-group-count">${plural(items.length, 'recurso', 'recursos')}</span>
+      <span class="resource-group-count">${resourceCountText(items.length)}</span>
     `;
     const list = document.createElement('div');
     list.className = 'resource-group-items';
