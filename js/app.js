@@ -1107,7 +1107,7 @@ function renderNavigation() {
   dom.nav.innerHTML = '';
 
   if (!state.data.modules.length) {
-    dom.nav.innerHTML = '<p class="empty-state">No hay modulos cargados. Usa Restaurar demo para volver a la estructura base.</p>';
+    dom.nav.innerHTML = '<p class="empty-state">No hay modulos cargados. Recarga la pagina o revisa la estructura desde Administracion.</p>';
     return;
   }
 
