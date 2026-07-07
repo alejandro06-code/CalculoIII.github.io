@@ -1,6 +1,6 @@
 -- Ejecutar en Supabase SQL Editor.
 -- Alinea el perfil administrador para que pueda eliminar archivos/enlaces de recursos
--- igual que puede eliminar recursos, categorias y estructura desde la pagina.
+-- igual que puede eliminar recursos, categorías y estructura desde la página.
 
 create or replace function public.can_delete_resource_assets()
 returns boolean

@@ -8,7 +8,7 @@ const cloudClient =
 
 const labels = {
   exists: 'Existe',
-  planned: 'Por anadir',
+  planned: 'Por añadir',
   missing: 'Falta',
   review: 'Por revisar',
   approved: 'Aprobado',
@@ -16,7 +16,7 @@ const labels = {
   video: 'Video',
   link: 'Link',
   file: 'Archivo',
-  page: 'Pagina Moodle',
+  page: 'Página Moodle',
   h5p: 'H5P',
   quiz: 'Pregunta/reto',
   other: 'Otro',
@@ -41,6 +41,26 @@ const categoryKeys = {
   group: 'resourceGroups',
 };
 
+const legacyTextCorrections = new Map([
+  ['Calculo III', 'Cálculo III'],
+  ['Preparacion', 'Preparación'],
+  ['Profundizacion', 'Profundización'],
+  ['Autoevaluacion', 'Autoevaluación'],
+  ['sintesis', 'síntesis'],
+  ['Por anadir', 'Por añadir'],
+  ['Pagina Moodle', 'Página Moodle'],
+  ['Introduccion', 'Introducción'],
+  ['Funcion vectorial y funcion de varias variables', 'Función vectorial y función de varias variables'],
+  ['Limites', 'Límites'],
+  ['Resumenes', 'Resúmenes'],
+  ['duracion', 'duración'],
+  ['diagnostica', 'diagnóstica'],
+  ['visualizacion', 'visualización'],
+  ['Integrales multiples', 'Integrales múltiples'],
+  ['Calculo vectorial', 'Cálculo vectorial'],
+  ['Derivadas de funciónes', 'Derivadas de funciones'],
+]);
+
 const categoryFallbacks = {
   status: 'planned',
   type: 'other',
@@ -50,7 +70,7 @@ const categoryFallbacks = {
 const defaultCategories = {
   status: [
     { id: 'exists', title: 'Existe', color: '#247548', active: true },
-    { id: 'planned', title: 'Por anadir', color: '#b7791f', active: true },
+    { id: 'planned', title: 'Por añadir', color: '#b7791f', active: true },
     { id: 'missing', title: 'Falta', color: '#b4233b', active: true },
     { id: 'review', title: 'Por revisar', color: '#d89521', active: true },
     { id: 'approved', title: 'Aprobado', color: '#16815f', active: true },
@@ -60,7 +80,7 @@ const defaultCategories = {
     { id: 'video', title: 'Video', color: '#1e4f87', active: true },
     { id: 'link', title: 'Link', color: '#2b746b', active: true },
     { id: 'file', title: 'Archivo', color: '#7047a8', active: true },
-    { id: 'page', title: 'Pagina Moodle', color: '#8a5a1f', active: true },
+    { id: 'page', title: 'Página Moodle', color: '#8a5a1f', active: true },
     { id: 'h5p', title: 'H5P', color: '#0f766e', active: true },
     { id: 'quiz', title: 'Pregunta/reto', color: '#9f2d3d', active: true },
     { id: 'other', title: 'Otro', color: '#607086', active: true },
@@ -70,7 +90,7 @@ const defaultCategories = {
     { id: 'simuladores', title: 'Simuladores', color: '#19a974', active: true },
     { id: 'videos', title: 'Videos', color: '#1e4f87', active: true },
     { id: 'lecturas', title: 'Lecturas', color: '#7047a8', active: true },
-    { id: 'resumenes', title: 'Resumenes', color: '#d89521', active: true },
+    { id: 'resumenes', title: 'Resúmenes', color: '#d89521', active: true },
     { id: 'competencias', title: 'Competencias', color: '#b4233b', active: true },
     { id: 'material-apoyo', title: 'Material de apoyo', color: '#2b746b', active: true },
     { id: 'moodle', title: 'Moodle', color: '#8a5a1f', active: true },
@@ -79,7 +99,7 @@ const defaultCategories = {
 
 const profileStatusLabels = {
   profile_ready: 'Perfil activo',
-  missing_profile: 'Sin perfil publico',
+  missing_profile: 'Sin perfil público',
   no_auth_user: 'Sin cuenta Auth',
 };
 
@@ -400,7 +420,7 @@ function updateAuthUi() {
     dom.loginIdentifierLabel.textContent = signupMode || resetMode ? 'Correo' : 'Correo o nombre de usuario';
   }
   if (dom.loginPasswordLabel) {
-    dom.loginPasswordLabel.textContent = updateMode ? 'Nueva contrasena' : 'Contrasena';
+    dom.loginPasswordLabel.textContent = updateMode ? 'Nueva contraseña' : 'Contraseña';
   }
   dom.loginEmail.placeholder = signupMode || resetMode ? 'Correo' : 'Correo o nombre de usuario';
   dom.loginPassword.autocomplete = signupMode || updateMode ? 'new-password' : 'current-password';
@@ -415,41 +435,41 @@ function updateAuthUi() {
           : state.authMode === 'signup'
         ? 'Registrate para entrar al organizador'
         : state.authMode === 'reset'
-          ? 'Recupera tu contrasena'
+          ? 'Recupera tu contraseña'
           : state.authMode === 'update'
-            ? 'Crea una nueva contrasena'
-            : 'Inicia sesion para ver el organizador';
+            ? 'Crea una nueva contraseña'
+            : 'Inicia sesión para ver el organizador';
   }
   if (dom.authDescription) {
     dom.authDescription.textContent =
       checkingAccess
         ? 'Estamos revisando si esta cuenta tiene un perfil autorizado para entrar al organizador.'
         : blockedByAccess
-          ? 'La cuenta existe, pero la cuenta principal aun no le ha asignado un perfil de acceso.'
+          ? 'La cuenta existe, pero la cuenta principal aún no le ha asignado un perfil de acceso.'
           : state.authMode === 'signup'
-        ? 'Crea un usuario con nombre, correo y contrasena. Luego podras iniciar sesion para ver el organizador.'
+        ? 'Crea un usuario con nombre, correo y contraseña. Luego podrás iniciar sesión para ver el organizador.'
         : state.authMode === 'reset'
-          ? 'Escribe el correo registrado. Te enviaremos un enlace para elegir una contrasena nueva.'
+          ? 'Escribe el correo registrado. Te enviaremos un enlace para elegir una contraseña nueva.'
           : state.authMode === 'update'
-            ? 'Escribe y confirma la nueva contrasena que reemplazara la anterior.'
-            : 'Debes iniciar sesion para ver modulos, lecciones, recursos y administracion.';
+            ? 'Escribe y confirma la nueva contraseña que reemplazará la anterior.'
+            : 'Debes iniciar sesión para ver módulos, lecciones, recursos y administración.';
   }
   if (dom.authModeNote) {
     dom.authModeNote.textContent =
       checkingAccess
         ? 'Esto puede tardar unos segundos.'
         : blockedByAccess
-          ? 'Pide a la cuenta principal que asigne un perfil en Administracion.'
+          ? 'Pide a la cuenta principal que asigne un perfil en Administración.'
           : state.authMode === 'signup'
-        ? 'El nombre de usuario puede tener espacios. El correo debe ser unico.'
+        ? 'El nombre de usuario puede tener espacios. El correo debe ser único.'
         : state.authMode === 'reset'
-          ? 'Solo se enviara el enlace si el correo ya esta registrado.'
+          ? 'Solo se enviará el enlace si el correo ya está registrado.'
           : state.authMode === 'update'
-            ? 'La nueva contrasena puede tener hasta 72 caracteres.'
-            : 'Usa tu correo o nombre de usuario y tu contrasena.';
+            ? 'La nueva contraseña puede tener hasta 72 caracteres.'
+            : 'Usa tu correo o nombre de usuario y tu contraseña.';
   }
   if (signedIn) {
-    dom.logoutButton.textContent = `Cerrar sesion`;
+    dom.logoutButton.textContent = `Cerrar sesión`;
     if (dom.profileLink) {
       dom.profileLink.textContent = `${state.currentUserProfile?.full_name || state.session.user.email} · ${labels[state.userRole] ?? 'sin perfil'}`;
     }
@@ -472,7 +492,7 @@ function hasCapability(capability) {
 
 function requireCapability(capability, message) {
   if (hasCapability(capability)) return true;
-  alert(message || 'Tu perfil no tiene permiso para realizar esta accion.');
+  alert(message || 'Tu perfil no tiene permiso para realizar esta acción.');
   return false;
 }
 
@@ -712,7 +732,7 @@ async function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
     return true;
   } catch {
-    alert('No se pudo guardar. El navegador no tiene espacio suficiente para estos archivos. Prueba con archivos mas livianos o guarda el archivo definitivo en la carpeta archivos-recursos del repositorio.');
+    alert('No se pudo guardar. El navegador no tiene espacio suficiente para estos archivos. Prueba con archivos más livianos o guarda el archivo definitivo en la carpeta archivos-recursos del repositorio.');
     return false;
   }
 }
@@ -776,8 +796,33 @@ function normalizeResourceCategory(value, kind) {
   return list.some((item) => item.id === id) ? id : fallback;
 }
 
+function correctLegacyText(value) {
+  let corrected = value;
+  legacyTextCorrections.forEach((replacement, legacy) => {
+    corrected = corrected.split(legacy).join(replacement);
+  });
+  return corrected;
+}
+
+function normalizeLegacyCourseText(value) {
+  if (typeof value === 'string') return correctLegacyText(value);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      value[index] = normalizeLegacyCourseText(item);
+    });
+    return value;
+  }
+  if (value && typeof value === 'object') {
+    Object.keys(value).forEach((key) => {
+      value[key] = normalizeLegacyCourseText(value[key]);
+    });
+  }
+  return value;
+}
+
 function ensureCategoryData(data) {
   if (!data) return data;
+  normalizeLegacyCourseText(data);
   Object.keys(categoryKeys).forEach((kind) => {
     data[categoryKeys[kind]] = normalizeCategoryList(data[categoryKeys[kind]], defaultCategories[kind]);
   });
@@ -1015,7 +1060,7 @@ async function downloadResourceFile(file) {
       const blob = await response.blob();
       downloadBlob(filename, blob);
     } catch {
-      alert('No se pudo descargar el archivo sin salir de la pagina. Intenta de nuevo.');
+      alert('No se pudo descargar el archivo sin salir de la página. Intenta de nuevo.');
     }
     return;
   }
@@ -1031,7 +1076,7 @@ async function downloadResourceFile(file) {
     const blob = await response.blob();
     downloadBlob(filename, blob);
   } catch {
-    alert('No se pudo descargar el archivo sin salir de la pagina. Intenta de nuevo.');
+    alert('No se pudo descargar el archivo sin salir de la página. Intenta de nuevo.');
   }
 }
 
@@ -1091,7 +1136,7 @@ function selectFirstAvailable() {
 function renderSummary() {
   const resources = allResources().map((item) => item.resource);
   const course = state.data.course || {};
-  document.querySelector('h1').textContent = course.title ?? 'Calculo III';
+  document.querySelector('h1').textContent = course.title ?? 'Cálculo III';
   if (dom.courseEyebrowDisplay) dom.courseEyebrowDisplay.textContent = course.eyebrow || 'Propuesta de organizador Moodle';
   if (dom.courseDescriptionDisplay) {
     dom.courseDescriptionDisplay.textContent = course.description || 'Organizador de recursos para construir y revisar un curso en Moodle.';
@@ -1107,20 +1152,20 @@ function renderNavigation() {
   dom.nav.innerHTML = '';
 
   if (!state.data.modules.length) {
-    dom.nav.innerHTML = '<p class="empty-state">No hay modulos cargados. Recarga la pagina o revisa la estructura desde Administracion.</p>';
+    dom.nav.innerHTML = '<p class="empty-state">No hay módulos cargados. Recarga la página o revisa la estructura desde Administración.</p>';
     return;
   }
 
   const indexSection = document.createElement('section');
   indexSection.className = 'module-group module-index-group';
-  indexSection.innerHTML = '<p class="nav-kicker">Indice de modulos</p>';
+  indexSection.innerHTML = '<p class="nav-kicker">Índice de módulos</p>';
   state.data.modules.forEach((module, moduleIndex) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'module-index-button';
     if (module.id === state.selectedModuleId) button.classList.add('active');
     button.innerHTML = `
-      <small>Modulo ${moduleIndex + 1}</small>
+      <small>Módulo ${moduleIndex + 1}</small>
       <span>${module.title}</span>
     `;
     button.addEventListener('click', () => selectModulePage(module));
@@ -1133,14 +1178,14 @@ function renderNavigation() {
 
   const lessons = document.createElement('section');
   lessons.className = 'module-group current-module-lessons';
-  lessons.innerHTML = '<p class="nav-kicker">Lecciones del modulo</p>';
+  lessons.innerHTML = '<p class="nav-kicker">Lecciones del módulo</p>';
   module.lessons.forEach((lesson, lessonIndex) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'lesson-button';
     if (lesson.id === state.selectedLessonId) button.classList.add('active');
     button.innerHTML = `
-      <small>Leccion ${lessonIndex + 1}</small>
+      <small>Lección ${lessonIndex + 1}</small>
       <span>${lesson.title}</span>
     `;
     button.addEventListener('click', () => selectLessonPage(module, lesson, { scrollToResources: true }));
@@ -1154,7 +1199,7 @@ function renderModuleStrip() {
   dom.moduleStrip.innerHTML = '';
 
   if (!state.data.modules.length) {
-    dom.moduleStrip.innerHTML = '<p class="empty-state">No hay modulos cargados.</p>';
+    dom.moduleStrip.innerHTML = '<p class="empty-state">No hay módulos cargados.</p>';
     return;
   }
 
@@ -1164,7 +1209,7 @@ function renderModuleStrip() {
     button.className = 'module-strip-button';
     if (state.currentView === 'module' && module.id === state.selectedModuleId) button.classList.add('active');
     button.innerHTML = `
-      <span>Modulo ${moduleIndex + 1}</span>
+      <span>Módulo ${moduleIndex + 1}</span>
       <strong>${module.title}</strong>
     `;
     button.addEventListener('click', () => selectModulePage(module));
@@ -1196,16 +1241,16 @@ function renderCourseMap() {
   dom.map.innerHTML = '';
 
   if (!state.data.modules.length) {
-    dom.map.innerHTML = '<p class="empty-state">No hay estructura cargada. La pagina intentara recuperar la estructura base al recargar.</p>';
+    dom.map.innerHTML = '<p class="empty-state">No hay estructura cargada. La página intentará recuperar la estructura base al recargar.</p>';
     return;
   }
 
   if (state.currentView === 'course') {
     dom.moduleLabel.textContent = 'Estructura general';
     dom.lessonTitle.textContent = 'Mapa del curso';
-    dom.lessonMeta.textContent = 'Escoge un modulo en la fila superior para revisar sus lecciones, partes y recursos.';
+    dom.lessonMeta.textContent = 'Escoge un módulo en la fila superior para revisar sus lecciones, partes y recursos.';
     dom.mapTitle.textContent = 'Mapa del curso';
-    dom.mapDescription.textContent = 'Los cuatro modulos quedan siempre arriba para navegar sin cargar toda la informacion a la vez.';
+    dom.mapDescription.textContent = 'Los cuatro módulos quedan siempre arriba para navegar sin cargar toda la información a la vez.';
     const courseTotals = state.data.modules.reduce(
       (acc, module) => {
         acc.modules += 1;
@@ -1232,12 +1277,12 @@ function renderCourseMap() {
     overview.innerHTML = `
       <div>
         <p class="map-kicker">Vista general</p>
-        <h4>Selecciona un modulo para abrir su pagina de trabajo</h4>
-        <p class="muted">${course.description || 'El mapa mantiene la vision general limpia; cada modulo concentra sus lecciones, partes y recursos en una pagina propia.'}</p>
+        <h4>Selecciona un módulo para abrir su página de trabajo</h4>
+        <p class="muted">${course.description || 'El mapa mantiene la visión general limpia; cada módulo concentra sus lecciones, partes y recursos en una página propia.'}</p>
         ${courseFacts ? `<div class="course-facts">${courseFacts}</div>` : ''}
       </div>
       <div class="course-overview-stats">
-        <span><strong>${courseTotals.modules}</strong> modulos</span>
+        <span><strong>${courseTotals.modules}</strong> módulos</span>
         <span><strong>${courseTotals.lessons}</strong> lecciones</span>
         <span><strong>${courseTotals.resources}</strong> ${resourceCountLabel(courseTotals.resources)}</span>
         <span><strong>${courseTotals.missing}</strong> faltantes</span>
@@ -1264,9 +1309,9 @@ function renderCourseMap() {
       card.className = 'module-overview-card';
       if (module.id === state.selectedModuleId) card.classList.add('active');
       card.innerHTML = `
-        <span class="map-kicker">Modulo ${moduleIndex + 1}</span>
+        <span class="map-kicker">Módulo ${moduleIndex + 1}</span>
         <strong>${module.title}</strong>
-        <span class="module-overview-meta">${plural(module.lessons.length, 'leccion', 'lecciones')} · ${resourceCountText(totals.total)}</span>
+        <span class="module-overview-meta">${plural(module.lessons.length, 'lección', 'lecciones')} · ${resourceCountText(totals.total)}</span>
       `;
       card.addEventListener('click', () => {
         state.selectedModuleId = module.id;
@@ -1283,8 +1328,8 @@ function renderCourseMap() {
 
   const module = currentModule() ?? state.data.modules[0];
   const moduleIndex = state.data.modules.findIndex((item) => item.id === module.id);
-  dom.mapTitle.textContent = `Modulo ${moduleIndex + 1}`;
-  dom.mapDescription.textContent = 'Selecciona una leccion o una parte para trabajar sus recursos.';
+  dom.mapTitle.textContent = `Módulo ${moduleIndex + 1}`;
+  dom.mapDescription.textContent = 'Selecciona una lección o una parte para trabajar sus recursos.';
     const totals = module.lessons.reduce(
       (acc, lesson) => {
         const stats = lessonStats(lesson);
@@ -1302,13 +1347,13 @@ function renderCourseMap() {
     card.innerHTML = `
       <div class="map-module-header">
         <div>
-          <p class="map-kicker">Modulo ${moduleIndex + 1}</p>
+          <p class="map-kicker">Módulo ${moduleIndex + 1}</p>
           <h4>${module.title}</h4>
         </div>
         <span class="map-count"><strong>${totals.total}</strong><span> ${resourceRegisteredLabel(totals.total)}</span></span>
       </div>
       <div class="map-stats">
-        <span>${plural(module.lessons.length, 'leccion', 'lecciones')}</span>
+        <span>${plural(module.lessons.length, 'lección', 'lecciones')}</span>
         <span class="${totals.missing ? 'pill-danger' : ''}">${plural(totals.missing, 'faltante', 'faltantes')}</span>
         <span class="${totals.review ? 'pill-warning' : ''}">${totals.review} por revisar</span>
         <span class="${totals.approved ? 'pill-ok' : ''}">${plural(totals.approved, 'aprobado', 'aprobados')}</span>
@@ -1327,7 +1372,7 @@ function renderCourseMap() {
       lessonBlock.innerHTML = `
         <button class="map-lesson-title" type="button">
           <span>
-            <span class="map-kicker">Leccion ${lessonIndex + 1}</span>
+            <span class="map-kicker">Lección ${lessonIndex + 1}</span>
             <span class="lesson-name">${lesson.title}</span>
           </span>
           <span class="lesson-pills">
@@ -1473,7 +1518,7 @@ function resourcePeopleText(resource) {
     const createdDate = formatDateTime(resource.createdAt);
     parts.push(`Creado por ${actorText(resource.createdByName, resource.createdByEmail)}${createdDate ? `, ${createdDate}` : ''}`);
   } else {
-    parts.push('Creacion sin registro');
+    parts.push('Creación sin registro');
   }
 
   const hasDistinctUpdate =
@@ -1481,7 +1526,7 @@ function resourcePeopleText(resource) {
     (resource.updatedAt !== resource.createdAt || resource.updatedByEmail !== resource.createdByEmail);
   if (hasDistinctUpdate) {
     const updatedDate = formatDateTime(resource.updatedAt);
-    parts.push(`Ultima edicion por ${actorText(resource.updatedByName, resource.updatedByEmail)}${updatedDate ? `, ${updatedDate}` : ''}`);
+    parts.push(`Última edición por ${actorText(resource.updatedByName, resource.updatedByEmail)}${updatedDate ? `, ${updatedDate}` : ''}`);
   }
 
   return parts.join(' | ');
@@ -1539,17 +1584,17 @@ function renderResources() {
   const module = currentModule();
   const lesson = currentLesson();
   const section = currentSection();
-  dom.moduleLabel.textContent = module?.title ?? 'Modulo';
-  dom.lessonTitle.textContent = lesson?.title ?? 'Selecciona una leccion';
+  dom.moduleLabel.textContent = module?.title ?? 'Módulo';
+  dom.lessonTitle.textContent = lesson?.title ?? 'Selecciona una lección';
   dom.lessonMeta.textContent = lesson
-    ? `${resourceRegisteredText((lesson.resources || []).length)} en esta leccion.`
+    ? `${resourceRegisteredText((lesson.resources || []).length)} en esta lección.`
     : 'Elige un punto del curso para organizar sus recursos.';
   dom.sectionHeading.textContent = section?.title ?? 'Recursos';
   dom.sectionDescription.textContent = section?.description ?? '';
   dom.list.innerHTML = '';
 
   if (!lesson) {
-    dom.list.innerHTML = '<p class="empty-state">No hay una leccion seleccionada.</p>';
+    dom.list.innerHTML = '<p class="empty-state">No hay una lección selecciónada.</p>';
     return;
   }
 
@@ -1683,14 +1728,14 @@ function renderLessonControls() {
   state.data.modules.forEach((module, moduleIndex) => {
     const moduleOption = document.createElement('option');
     moduleOption.value = module.id;
-    moduleOption.textContent = `Modulo ${moduleIndex + 1}: ${module.title}`;
+    moduleOption.textContent = `Módulo ${moduleIndex + 1}: ${module.title}`;
     dom.lessonModuleSelect.appendChild(moduleOption);
     dom.moduleOrderSelect.appendChild(moduleOption.cloneNode(true));
 
     module.lessons.forEach((lesson, lessonIndex) => {
       const lessonOption = document.createElement('option');
       lessonOption.value = `${module.id}|${lesson.id}`;
-      lessonOption.textContent = `Modulo ${moduleIndex + 1} / Leccion ${lessonIndex + 1}: ${lesson.title}`;
+      lessonOption.textContent = `Módulo ${moduleIndex + 1} / Lección ${lessonIndex + 1}: ${lesson.title}`;
       dom.lessonEditSelect.appendChild(lessonOption);
       dom.lessonOrderSelect.appendChild(lessonOption.cloneNode(true));
     });
@@ -1740,7 +1785,7 @@ function renderAdminControls() {
     state.data.modules.forEach((module, index) => {
       const option = document.createElement('option');
       option.value = module.id;
-      option.textContent = `Modulo ${index + 1}: ${module.title}`;
+      option.textContent = `Módulo ${index + 1}: ${module.title}`;
       dom.moduleEditSelect.appendChild(option);
     });
     dom.moduleEditSelect.value = state.selectedModuleId ?? state.data.modules[0]?.id ?? '';
@@ -1873,7 +1918,7 @@ function renderStructureParts(lessonBlock) {
   parts.className = 'structure-parts';
   const title = document.createElement('p');
   title.className = 'structure-subtitle';
-  title.textContent = 'Partes comunes de la leccion';
+  title.textContent = 'Partes comunes de la lección';
   parts.appendChild(title);
 
   state.structureDraft.sections.forEach((section, sectionIndex) => {
@@ -1888,7 +1933,7 @@ function renderStructureParts(lessonBlock) {
       createStructureInput(section.title, 'Nombre de la parte', (value) => {
         section.title = value;
       }),
-      createStructureInput(section.description, 'Descripcion breve', (value) => {
+      createStructureInput(section.description, 'Descripción breve', (value) => {
         section.description = value;
       })
     );
@@ -1910,7 +1955,7 @@ function renderStructureParts(lessonBlock) {
   const titleInput = document.createElement('input');
   titleInput.placeholder = 'Nueva parte';
   const descriptionInput = document.createElement('input');
-  descriptionInput.placeholder = 'Descripcion';
+  descriptionInput.placeholder = 'Descripción';
   creator.append(
     titleInput,
     descriptionInput,
@@ -1937,8 +1982,8 @@ function renderStructureList() {
     const moduleFields = document.createElement('div');
     const kicker = document.createElement('p');
     kicker.className = 'map-kicker';
-    kicker.textContent = `Modulo ${moduleIndex + 1}`;
-    moduleFields.append(kicker, createStructureInput(module.title, 'Nombre del modulo', (value) => {
+    kicker.textContent = `Módulo ${moduleIndex + 1}`;
+    moduleFields.append(kicker, createStructureInput(module.title, 'Nombre del módulo', (value) => {
       module.title = value;
     }));
     const moduleActions = document.createElement('div');
@@ -1962,8 +2007,8 @@ function renderStructureList() {
       row.className = 'structure-lesson-row';
       const label = document.createElement('span');
       label.className = 'structure-index';
-      label.textContent = `Leccion ${lessonIndex + 1}`;
-      const input = createStructureInput(lesson.title, 'Nombre de la leccion', (value) => {
+      label.textContent = `Lección ${lessonIndex + 1}`;
+      const input = createStructureInput(lesson.title, 'Nombre de la lección', (value) => {
         lesson.title = value;
       });
       const actions = document.createElement('div');
@@ -1984,10 +2029,10 @@ function renderStructureList() {
     const creator = document.createElement('div');
     creator.className = 'structure-create-row';
     const lessonInput = document.createElement('input');
-    lessonInput.placeholder = 'Nueva leccion en este modulo';
+    lessonInput.placeholder = 'Nueva lección en este módulo';
     creator.append(
       lessonInput,
-      createStructureButton('Crear leccion', 'mini-btn accent', () => {
+      createStructureButton('Crear lección', 'mini-btn accent', () => {
         addStructureLesson(module.id, lessonInput.value);
       })
     );
@@ -2033,7 +2078,7 @@ function countResourcesUsingCategory(kind, categoryId) {
 
 function uniqueCategoryId(kind, title) {
   const list = categoryDraftList(kind);
-  const base = slugify(title || 'categoria');
+  const base = slugify(title || 'categoría');
   let id = base;
   let counter = 2;
   while (list.some((category) => category.id === id)) {
@@ -2044,7 +2089,7 @@ function uniqueCategoryId(kind, title) {
 }
 
 function moveCategoryDraft(kind, categoryId, direction) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorías.')) return;
   const list = categoryDraftList(kind);
   const index = list.findIndex((category) => category.id === categoryId);
   if (!moveDraftItem(list, index, direction)) return;
@@ -2053,10 +2098,10 @@ function moveCategoryDraft(kind, categoryId, direction) {
 }
 
 function deleteCategoryDraft(kind, categoryId) {
-  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar categorias.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar categorías.')) return;
   const list = categoryDraftList(kind);
   if (list.length <= 1) {
-    alert('Debe quedar al menos una categoria en esta lista.');
+    alert('Debe quedar al menos una categoría en esta lista.');
     return;
   }
   const category = list.find((item) => item.id === categoryId);
@@ -2064,16 +2109,16 @@ function deleteCategoryDraft(kind, categoryId) {
   const used = countResourcesUsingCategory(kind, categoryId);
   const replacement = list.find((item) => item.id !== categoryId);
   const warning = used
-    ? ` Hay ${used} recursos usando esta categoria; al guardar se moveran a "${replacement.title}".`
+    ? ` Hay ${used} recursos usando esta categoría; al guardar se moveran a "${replacement.title}".`
     : '';
-  if (!confirm(`Quitar la categoria "${category.title}"?${warning}`)) return;
+  if (!confirm(`¿Quitar la categoría "${category.title}"?${warning}`)) return;
   state.categoryDraft[categoryKeys[kind]] = list.filter((item) => item.id !== categoryId);
   setCategoryDirty(true);
   renderCategoryEditors();
 }
 
 function addCategoryDraft(kind, title, color) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorías.')) return;
   const cleanTitle = title.trim();
   if (!cleanTitle) return;
   categoryDraftList(kind).push({
@@ -2103,7 +2148,7 @@ function categoryEditorRow(kind, category, index) {
   nameWrap.className = 'category-name-field';
   const name = document.createElement('input');
   name.value = category.title || '';
-  name.placeholder = 'Nombre de la categoria';
+  name.placeholder = 'Nombre de la categoría';
   name.addEventListener('input', () => {
     category.title = name.value;
     setCategoryDirty(true);
@@ -2148,7 +2193,7 @@ function categoryCreateRow(kind) {
   color.type = 'color';
   color.value = kind === 'status' ? '#1e4f87' : kind === 'type' ? '#2b746b' : '#19a974';
   const input = document.createElement('input');
-  input.placeholder = kind === 'group' ? 'Nuevo grupo visual' : 'Nueva categoria';
+  input.placeholder = kind === 'group' ? 'Nuevo grupo visual' : 'Nueva categoría';
   const add = createStructureButton('Crear', 'mini-btn accent', () => {
     addCategoryDraft(kind, input.value, color.value);
   });
@@ -2185,11 +2230,11 @@ function validateCategoryDraft() {
   const draft = ensureCategoryDraft();
   for (const kind of Object.keys(categoryKeys)) {
     const list = draft[categoryKeys[kind]];
-    if (!list.length) return 'Cada lista debe tener al menos una categoria.';
-    if (list.some((category) => !category.title.trim())) return 'Todas las categorias deben tener nombre.';
+    if (!list.length) return 'Cada lista debe tener al menos una categoría.';
+    if (list.some((category) => !category.title.trim())) return 'Todas las categorías deben tener nombre.';
     const ids = new Set();
     for (const category of list) {
-      if (ids.has(category.id)) return 'Hay IDs de categorias repetidos.';
+      if (ids.has(category.id)) return 'Hay IDs de categorías repetidos.';
       ids.add(category.id);
       category.color = normalizeHexColor(category.color);
       category.title = category.title.trim();
@@ -2214,7 +2259,7 @@ function reconcileResourcesWithCategories() {
 }
 
 async function saveCategoryDraft() {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorias.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar categorías.')) return;
   ensureCategoryDraft();
   const error = validateCategoryDraft();
   if (error) {
@@ -2231,7 +2276,7 @@ async function saveCategoryDraft() {
 }
 
 function discardCategoryDraft() {
-  if (!state.categoryDirty || confirm('Descartar los cambios de categorias sin guardar?')) {
+  if (!state.categoryDirty || confirm('¿Descartar los cambios de categorías sin guardar?')) {
     ensureCategoryDraft({ reset: true });
     renderCategoryEditors();
   }
@@ -2470,8 +2515,8 @@ function applyResourceAuditFields(resource, existingResource = null) {
 
 function auditActionLabel(action) {
   return {
-    create: 'Creacion',
-    update: 'Edicion',
+    create: 'Creación',
+    update: 'Edición',
     move: 'Movimiento',
     delete: 'Eliminacion',
   }[action] || action;
@@ -2494,15 +2539,15 @@ function auditContextLabel(entry) {
   const sectionIndex = state.data?.sections?.findIndex((section) => section.id === entry.section_id) ?? -1;
   const section = sectionIndex >= 0 ? state.data.sections[sectionIndex] : null;
   const moduleLabel = module
-    ? `Modulo ${moduleIndex + 1}: ${module.title}`
+    ? `Módulo ${moduleIndex + 1}: ${module.title}`
     : entry.module_title
-      ? `Modulo sin ubicar: ${entry.module_title}`
-      : 'Modulo sin registro';
+      ? `Módulo sin ubicar: ${entry.module_title}`
+      : 'Módulo sin registro';
   const lessonLabel = lesson
-    ? `Leccion ${lessonIndex + 1}: ${lesson.title}`
+    ? `Lección ${lessonIndex + 1}: ${lesson.title}`
     : entry.lesson_title
-      ? `Leccion sin ubicar: ${entry.lesson_title}`
-      : 'Leccion sin registro';
+      ? `Lección sin ubicar: ${entry.lesson_title}`
+      : 'Lección sin registro';
   const sectionLabel = section
     ? `Parte ${sectionIndex + 1}: ${section.title}`
     : entry.section_title
@@ -2536,7 +2581,7 @@ function auditFieldValue(key, value) {
 }
 
 const auditTrackedFields = [
-  ['title', 'Titulo'],
+  ['title', 'Título'],
   ['type', 'Tipo'],
   ['status', 'Estado'],
   ['group', 'Grupo visual'],
@@ -2613,8 +2658,8 @@ function auditChangeDetails(entry) {
   if (entry.action === 'move') {
     return [{
       label: 'Orden en la parte',
-      before: Number.isInteger(previousData?.orderIndex) ? `Posicion ${previousData.orderIndex + 1}` : 'Sin registro',
-      after: Number.isInteger(newData?.orderIndex) ? `Posicion ${newData.orderIndex + 1}` : 'Sin registro',
+      before: Number.isInteger(previousData?.orderIndex) ? `Posición ${previousData.orderIndex + 1}` : 'Sin registro',
+      after: Number.isInteger(newData?.orderIndex) ? `Posición ${newData.orderIndex + 1}` : 'Sin registro',
       kind: 'text',
     }];
   }
@@ -2877,7 +2922,7 @@ async function addFiles(event) {
     state.draftFiles.push(...loaded);
     renderDraftFiles();
   } catch {
-    alert('No se pudieron cargar uno o mas archivos.');
+    alert('No se pudieron cargar uno o más archivos.');
   } finally {
     dom.resourceFiles.value = '';
   }
@@ -2900,7 +2945,7 @@ function deleteResource(resourceId) {
   state.pendingDeleteResourceId = resourceId;
   state.pendingDeleteAuditId = null;
   if (dom.deleteConfirmTitle) dom.deleteConfirmTitle.textContent = 'Eliminar recurso';
-  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta accion quitara el recurso del organizador.';
+  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta acción quitará el recurso del organizador.';
   dom.deleteConfirmResource.textContent = resource.title;
   dom.confirmDelete.textContent = 'Eliminar recurso';
   dom.deleteConfirm.hidden = false;
@@ -2999,10 +3044,10 @@ async function updateLesson() {
 }
 
 async function updateCourseSettings() {
-  if (!requireCapability('manageCourseSettings', 'Tu perfil no puede modificar la configuracion general del curso.')) return;
+  if (!requireCapability('manageCourseSettings', 'Tu perfil no puede modificar la configuración general del curso.')) return;
   state.data.course = state.data.course || {};
   state.data.course.eyebrow = dom.courseEyebrowInput?.value.trim() || 'Propuesta de organizador Moodle';
-  state.data.course.title = dom.courseTitleInput.value.trim() || 'Calculo III';
+  state.data.course.title = dom.courseTitleInput.value.trim() || 'Cálculo III';
   state.data.course.description = dom.courseDescriptionInput.value.trim();
   state.data.course.period = dom.coursePeriodInput?.value.trim() || '';
   state.data.course.owner = dom.courseOwnerInput?.value.trim() || '';
@@ -3018,7 +3063,7 @@ async function updateCourseSettings() {
 }
 
 async function addModule() {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede crear modulos.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede crear módulos.')) return;
   const title = dom.newModuleTitleInput.value.trim();
   if (!title) return;
   const module = { id: uid('m'), title, lessons: [] };
@@ -3031,7 +3076,7 @@ async function addModule() {
 }
 
 async function updateModule() {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar modulos.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar módulos.')) return;
   const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
   const title = dom.moduleTitleInput.value.trim();
   if (!module || !title) return;
@@ -3042,11 +3087,11 @@ async function updateModule() {
 }
 
 async function deleteModule() {
-  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar modulos.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar módulos.')) return;
   const module = state.data.modules.find((item) => item.id === dom.moduleEditSelect.value);
   if (!module) return;
   const lessonCount = module.lessons?.length ?? 0;
-  if (!confirm(`Eliminar el modulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
+  if (!confirm(`¿Eliminar el módulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
   state.data.modules = state.data.modules.filter((item) => item.id !== module.id);
   selectFirstAvailable();
   if (!(await saveData())) return;
@@ -3067,7 +3112,7 @@ async function updateSection() {
 }
 
 async function moveModuleOrder(direction) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede reordenar modulos.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede reordenar módulos.')) return;
   const index = state.data.modules.findIndex((module) => module.id === dom.moduleOrderSelect.value);
   const targetIndex = index + direction;
   if (index < 0 || targetIndex < 0 || targetIndex >= state.data.modules.length) return;
@@ -3104,7 +3149,7 @@ async function moveSectionOrder(direction) {
 }
 
 async function updateModuleTitleInline(moduleId, titleValue) {
-  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar modulos.')) return;
+  if (!requireCapability('manageStructure', 'Tu perfil no puede modificar módulos.')) return;
   const module = state.data.modules.find((item) => item.id === moduleId);
   const title = titleValue.trim();
   if (!module || !title) return render();
@@ -3137,11 +3182,11 @@ async function moveLessonById(moduleId, lessonId, direction) {
 }
 
 async function deleteModuleById(moduleId) {
-  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar modulos.')) return;
+  if (!requireCapability('deleteStructure', 'Tu perfil no puede eliminar módulos.')) return;
   const module = state.data.modules.find((item) => item.id === moduleId);
   if (!module) return;
   const lessonCount = module.lessons?.length ?? 0;
-  if (!confirm(`Eliminar el modulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
+  if (!confirm(`¿Eliminar el módulo "${module.title}" y sus ${lessonCount} lecciones?`)) return;
   state.data.modules = state.data.modules.filter((item) => item.id !== module.id);
   selectFirstAvailable();
   if (!(await saveData())) return;
@@ -3155,7 +3200,7 @@ async function deleteLessonById(moduleId, lessonId) {
   const lesson = module?.lessons.find((item) => item.id === lessonId);
   if (!module || !lesson) return;
   const resourceCount = lesson.resources?.length ?? 0;
-  if (!confirm(`Eliminar la leccion "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
+  if (!confirm(`¿Eliminar la lección "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
   module.lessons = module.lessons.filter((item) => item.id !== lesson.id);
   state.selectedModuleId = module.id;
   state.selectedLessonId = module.lessons[0]?.id ?? null;
@@ -3232,7 +3277,7 @@ function deleteStructureModule(moduleId) {
   const module = structureDraftModule(moduleId);
   if (!module) return;
   const resourceCount = module.lessons.reduce((total, lesson) => total + (lesson.resources?.length ?? 0), 0);
-  if (!confirm(`Eliminar el modulo "${module.title}" con ${module.lessons.length} lecciones y ${resourceCount} recursos?`)) return;
+  if (!confirm(`¿Eliminar el módulo "${module.title}" con ${module.lessons.length} lecciones y ${resourceCount} recursos?`)) return;
   state.structureDraft.modules = state.structureDraft.modules.filter((item) => item.id !== moduleId);
   setStructureDirty(true);
   renderStructureList();
@@ -3244,7 +3289,7 @@ function deleteStructureLesson(moduleId, lessonId) {
   const lesson = structureDraftLesson(moduleId, lessonId);
   if (!module || !lesson) return;
   const resourceCount = lesson.resources?.length ?? 0;
-  if (!confirm(`Eliminar la leccion "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
+  if (!confirm(`¿Eliminar la lección "${lesson.title}" y sus ${resourceCount} recursos?`)) return;
   module.lessons = module.lessons.filter((item) => item.id !== lessonId);
   setStructureDirty(true);
   renderStructureList();
@@ -3280,10 +3325,10 @@ function deleteStructureSection(sectionId) {
 
 function validateStructureDraft() {
   const data = state.structureDraft;
-  if (!data.modules.length) return 'Debe quedar al menos un modulo.';
+  if (!data.modules.length) return 'Debe quedar al menos un módulo.';
   if (!data.sections.length) return 'Debe quedar al menos una parte.';
   const emptyModule = data.modules.find((module) => !module.title.trim());
-  if (emptyModule) return 'Todos los modulos deben tener nombre.';
+  if (emptyModule) return 'Todos los módulos deben tener nombre.';
   const emptyLesson = data.modules.flatMap((module) => module.lessons).find((lesson) => !lesson.title.trim());
   if (emptyLesson) return 'Todas las lecciones deben tener nombre.';
   const emptySection = data.sections.find((section) => !section.title.trim());
@@ -3308,7 +3353,7 @@ async function saveStructureDraft() {
 }
 
 function discardStructureDraft() {
-  if (!state.structureDirty || confirm('Descartar los cambios de estructura sin guardar?')) {
+  if (!state.structureDirty || confirm('¿Descartar los cambios de estructura sin guardar?')) {
     ensureStructureDraft({ reset: true });
     renderStructureList();
   }
@@ -3320,7 +3365,7 @@ function exportJson() {
 
 function exportCsv() {
   const rows = [
-    ['Modulo', 'Leccion', 'Seccion', 'Titulo', 'Tipo', 'Estado', 'Grupo visual', 'Prioridad', 'Responsable', 'Enlaces', 'Archivos', 'Notas'],
+    ['Módulo', 'Lección', 'Seccion', 'Título', 'Tipo', 'Estado', 'Grupo visual', 'Prioridad', 'Responsable', 'Enlaces', 'Archivos', 'Notas'],
     ...allResources().map(({ module, lesson, resource }) => [
       module.title,
       lesson.title,
@@ -3375,7 +3420,7 @@ function importJson(event) {
 }
 
 async function resetData() {
-  if (!confirm('Restaurar los datos de demostracion? Esto borra los cambios guardados en este navegador.')) return;
+  if (!confirm('¿Restaurar los datos de demostración? Esto borra los cambios guardados en este navegador.')) return;
   if (!requireEditPermission()) return;
   localStorage.removeItem(STORAGE_KEY);
   LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
@@ -3384,18 +3429,18 @@ async function resetData() {
 
 async function loginEditor() {
   if (!cloudClient) {
-    alert('Supabase aun no esta configurado.');
+    alert('Supabase aún no está configurado.');
     return;
   }
   const identifier = dom.loginEmail.value.trim();
   const password = dom.loginPassword.value;
   if (!identifier || !password) {
-    alert('Escribe correo o nombre de usuario, y contrasena.');
+    alert('Escribe correo o nombre de usuario, y contraseña.');
     return;
   }
   const email = await resolveLoginEmail(identifier);
   if (!email) {
-    alert('No se encontro una cuenta con ese correo o nombre de usuario.');
+    alert('No se encontró una cuenta con ese correo o nombre de usuario.');
     return;
   }
   const { error } = await cloudClient.auth.signInWithPassword({
@@ -3403,11 +3448,11 @@ async function loginEditor() {
     password,
   });
   if (error) {
-    alert(`No se pudo iniciar sesion: ${error.message}`);
+    alert(`No se pudo iniciar sesión: ${error.message}`);
     return;
   }
   dom.loginPassword.value = '';
-  setCloudStatus('Sesion iniciada. Verificando permisos...', 'pending');
+  setCloudStatus('Sesión iniciada. Verificando permisos...', 'pending');
   const { data } = await cloudClient.auth.getUser();
   if (data.user) await upsertUserProfile(data.user);
   await refreshEditorStatus();
@@ -3449,32 +3494,32 @@ async function resolveLoginEmail(identifier) {
 
 async function signupEditor() {
   if (!cloudClient) {
-    alert('Supabase aun no esta configurado.');
+    alert('Supabase aún no está configurado.');
     return;
   }
   const name = dom.loginName.value.trim();
   const email = dom.loginEmail.value.trim();
   const password = dom.loginPassword.value;
   if (!name || !email || !password) {
-    alert('Escribe nombre, correo y contrasena para registrarte.');
+    alert('Escribe nombre, correo y contraseña para registrarte.');
     return;
   }
   if (name.length > 80 || password.length > 72) {
-    alert('El nombre o la contrasena superan el maximo permitido.');
+    alert('El nombre o la contraseña superan el máximo permitido.');
     return;
   }
   const existingEmail = await lookupRegisteredEmail(email);
   if (existingEmail) {
-    alert('Ese correo ya esta registrado. Inicia sesion o recupera la contrasena.');
+    alert('Ese correo ya está registrado. Inicia sesión o recupera la contraseña.');
     return;
   }
   const existingName = await lookupRegisteredEmail(name);
   if (existingName) {
-    alert('Ese nombre de usuario ya esta registrado. Escoge otro.');
+    alert('Ese nombre de usuario ya está registrado. Escoge otro.');
     return;
   }
   if (dom.confirmPassword && dom.confirmPassword.value !== password) {
-    alert('Las contrasenas no coinciden.');
+    alert('Las contraseñas no coinciden.');
     return;
   }
   const { data, error } = await cloudClient.auth.signUp({
@@ -3491,7 +3536,7 @@ async function signupEditor() {
     const probablyExists = /already|registered|exists|exist/i.test(error.message);
     alert(
       probablyExists
-        ? 'Ese correo ya existe en el sistema. Inicia sesion o recupera la contrasena; si no aparece en usuarios registrados, usa Sincronizar usuarios desde Administracion.'
+        ? 'Ese correo ya existe en el sistema. Inicia sesión o recupera la contraseña; si no aparece en usuarios registrados, usa Sincronizar usuarios desde Administración.'
         : `No se pudo registrar la cuenta: ${error.message}`
     );
     return;
@@ -3502,61 +3547,61 @@ async function signupEditor() {
   dom.loginName.value = '';
   dom.loginPassword.value = '';
   if (dom.confirmPassword) dom.confirmPassword.value = '';
-  setCloudStatus('Cuenta creada. Si Supabase pide confirmacion, revisa el correo antes de entrar.', 'pending');
+  setCloudStatus('Cuenta creada. Si Supabase pide confirmación, revisa el correo antes de entrar.', 'pending');
 }
 
 async function resetPassword() {
   if (!cloudClient) {
-    alert('Supabase aun no esta configurado.');
+    alert('Supabase aún no está configurado.');
     return;
   }
   const email = dom.loginEmail.value.trim();
   if (!email) {
-    alert('Escribe el correo para recuperar la contrasena.');
+    alert('Escribe el correo para recuperar la contraseña.');
     return;
   }
   if (!isEmailIdentifier(email)) {
-    alert('Escribe un correo valido para recuperar la contrasena.');
+    alert('Escribe un correo válido para recuperar la contraseña.');
     return;
   }
   const { error } = await cloudClient.auth.resetPasswordForEmail(email, {
     redirectTo: `${window.location.href.split('#')[0]}#/recuperar`,
   });
   if (error) {
-    alert(`No se pudo enviar la recuperacion: ${error.message}`);
+    alert(`No se pudo enviar la recuperación: ${error.message}`);
     return;
   }
-  setCloudStatus('Si el correo esta registrado, recibira un enlace para cambiar la contrasena.', 'pending');
+  setCloudStatus('Si el correo está registrado, recibirá un enlace para cambiar la contraseña.', 'pending');
 }
 
 async function updatePasswordFromRecovery() {
   if (!cloudClient) {
-    alert('Supabase aun no esta configurado.');
+    alert('Supabase aún no está configurado.');
     return;
   }
   const password = dom.loginPassword.value;
   const confirmation = dom.confirmPassword?.value || '';
   if (!password || !confirmation) {
-    alert('Escribe y confirma la nueva contrasena.');
+    alert('Escribe y confirma la nueva contraseña.');
     return;
   }
   if (password.length > 72) {
-    alert('La contrasena supera el maximo de 72 caracteres.');
+    alert('La contraseña supera el máximo de 72 caracteres.');
     return;
   }
   if (password !== confirmation) {
-    alert('Las contrasenas no coinciden.');
+    alert('Las contraseñas no coinciden.');
     return;
   }
   const { error } = await cloudClient.auth.updateUser({ password });
   if (error) {
-    alert(`No se pudo cambiar la contrasena: ${error.message}`);
+    alert(`No se pudo cambiar la contraseña: ${error.message}`);
     return;
   }
   dom.loginPassword.value = '';
   if (dom.confirmPassword) dom.confirmPassword.value = '';
   state.recoveringPassword = false;
-  setCloudStatus('Contrasena actualizada. Ya puedes usar tu cuenta.', 'ok');
+  setCloudStatus('Contraseña actualizada. Ya puedes usar tu cuenta.', 'ok');
   await refreshEditorStatus();
   if (!state.hasCourseAccess) {
     setAuthMode('login', { updateRoute: true, replace: true });
@@ -3670,15 +3715,15 @@ async function changeProfilePassword() {
   const newPassword = dom.profileNewPassword?.value || '';
   const confirmation = dom.profileConfirmPassword?.value || '';
   if (!currentPassword || !newPassword || !confirmation) {
-    alert('Escribe la contrasena actual, la nueva y la confirmacion.');
+    alert('Escribe la contraseña actual, la nueva y la confirmación.');
     return;
   }
   if (newPassword.length > 72) {
-    alert('La nueva contrasena supera el maximo de 72 caracteres.');
+    alert('La nueva contraseña supera el máximo de 72 caracteres.');
     return;
   }
   if (newPassword !== confirmation) {
-    alert('Las contrasenas nuevas no coinciden.');
+    alert('Las contraseñas nuevas no coinciden.');
     return;
   }
   const { error: signInError } = await cloudClient.auth.signInWithPassword({
@@ -3686,18 +3731,18 @@ async function changeProfilePassword() {
     password: currentPassword,
   });
   if (signInError) {
-    alert('La contrasena actual no coincide.');
+    alert('La contraseña actual no coincide.');
     return;
   }
   const { error } = await cloudClient.auth.updateUser({ password: newPassword });
   if (error) {
-    alert(`No se pudo cambiar la contrasena: ${error.message}`);
+    alert(`No se pudo cambiar la contraseña: ${error.message}`);
     return;
   }
   dom.profileCurrentPassword.value = '';
   dom.profileNewPassword.value = '';
   dom.profileConfirmPassword.value = '';
-  setCloudStatus('Contrasena actualizada correctamente.', 'ok');
+  setCloudStatus('Contraseña actualizada correctamente.', 'ok');
 }
 
 async function sendProfileRecovery() {
@@ -3706,10 +3751,10 @@ async function sendProfileRecovery() {
     redirectTo: `${window.location.href.split('#')[0]}#/recuperar`,
   });
   if (error) {
-    alert(`No se pudo enviar la recuperacion: ${error.message}`);
+    alert(`No se pudo enviar la recuperación: ${error.message}`);
     return;
   }
-  setCloudStatus('Enviamos un enlace de recuperacion al correo de esta cuenta.', 'pending');
+  setCloudStatus('Enviamos un enlace de recuperación al correo de esta cuenta.', 'pending');
 }
 
 async function copyOfficialLink() {
@@ -3744,7 +3789,7 @@ async function logoutEditor() {
   renderRegisteredUsers([]);
   renderResourceAudit();
   render();
-  setCloudStatus('Sesion cerrada. Inicia sesion para entrar al organizador.', state.cloudReady ? 'pending' : 'local');
+  setCloudStatus('Sesión cerrada. Inicia sesión para entrar al organizador.', state.cloudReady ? 'pending' : 'local');
 }
 
 function renderEditorList(editors = []) {
@@ -3764,7 +3809,7 @@ function renderEditorList(editors = []) {
   dom.editorList.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'editor-list-header';
-  header.innerHTML = '<span>Cuenta</span><span>Perfil</span><span>Accion</span>';
+  header.innerHTML = '<span>Cuenta</span><span>Perfil</span><span>Acción</span>';
   dom.editorList.appendChild(header);
   const scroll = document.createElement('div');
   scroll.className = 'account-list-scroll editor-list-scroll';
@@ -3935,8 +3980,8 @@ function requestDeleteAuditEntry(entry) {
   state.pendingDeleteAuditId = entry.id;
   state.pendingDeleteResourceId = null;
   if (dom.deleteConfirmTitle) dom.deleteConfirmTitle.textContent = 'Eliminar entrada del historial';
-  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta accion quitara solo este registro del historial. No cambia el recurso ni la estructura del curso.';
-  dom.deleteConfirmResource.textContent = `${entry.resource_title || 'Recurso sin titulo'} | ${auditActionLabel(entry.action)} | ${formatDateTime(entry.created_at) || 'Sin fecha'}`;
+  if (dom.deleteConfirmCopy) dom.deleteConfirmCopy.textContent = 'Esta acción quitará solo este registro del historial. No cambia el recurso ni la estructura del curso.';
+  dom.deleteConfirmResource.textContent = `${entry.resource_title || 'Recurso sin título'} | ${auditActionLabel(entry.action)} | ${formatDateTime(entry.created_at) || 'Sin fecha'}`;
   dom.confirmDelete.textContent = 'Eliminar del historial';
   dom.deleteConfirm.hidden = false;
   dom.confirmDelete.focus();
@@ -4027,7 +4072,7 @@ function renderResourceAudit() {
     const head = document.createElement('div');
     head.className = 'audit-row-head';
     const title = document.createElement('strong');
-    title.textContent = entry.resource_title || 'Recurso sin titulo';
+    title.textContent = entry.resource_title || 'Recurso sin título';
     const action = document.createElement('span');
     action.className = `role-pill audit-action-${entry.action || 'update'}`;
     action.textContent = auditActionLabel(entry.action);
@@ -4169,8 +4214,8 @@ async function refreshEditorStatus() {
   updateAuthUi();
   setCloudStatus(
     state.hasCourseAccess
-      ? `Sesion activa: ${labels[state.userRole] ?? state.userRole}.`
-      : 'Sesion iniciada, pero este correo no tiene perfil asignado.',
+      ? `Sesión activa: ${labels[state.userRole] ?? state.userRole}.`
+      : 'Sesión iniciada, pero este correo no tiene perfil asignado.',
     state.hasCourseAccess ? 'ok' : 'pending'
   );
   await loadEditors();
@@ -4241,7 +4286,7 @@ async function addEditor() {
   if (!email) return;
   const account = await lookupRegisteredAccount(email);
   if (!account?.email) {
-    alert('Ese correo todavia no aparece como cuenta registrada. Si ya se registro, ejecuta el SQL de reparacion y luego usa Sincronizar usuarios.');
+    alert('Ese correo todavía no aparece como cuenta registrada. Si ya se registró, ejecuta el SQL de reparación y luego usa Sincronizar usuarios.');
     return;
   }
   const { error } = await cloudClient.from('course_editors').upsert({ email, role });
@@ -4262,7 +4307,7 @@ async function updateEditorRole(email, role) {
     return;
   }
   if (normalizedEmail === state.session?.user?.email?.toLowerCase() && previousRole === 'owner' && role !== 'owner') {
-    if (!confirm('Estas quitando tu propio perfil de cuenta principal. Continuar?')) return;
+    if (!confirm('¿Estás quitando tu propio perfil de cuenta principal? ¿Continuar?')) return;
   }
   const { error } = await cloudClient.from('course_editors').upsert({ email: normalizedEmail, role });
   if (error) {
@@ -4303,10 +4348,10 @@ async function syncRegisteredUsers() {
 async function removeEditor(email) {
   if (!requireMainEditorPermission()) return;
   if (isLastOwnerEmail(email)) {
-    alert('No se puede quitar la ultima cuenta principal.');
+    alert('No se puede quitar la última cuenta principal.');
     return;
   }
-  if (email === state.session?.user?.email && !confirm('Estas quitando tu propio permiso de editor. Continuar?')) return;
+  if (email === state.session?.user?.email && !confirm('¿Estás quitando tu propio permiso de editor? ¿Continuar?')) return;
   const { error } = await cloudClient.from('course_editors').delete().eq('email', email);
   if (error) {
     alert(`No se pudo quitar este editor: ${error.message}`);
@@ -4320,14 +4365,14 @@ async function deleteRegisteredAccount(email) {
   const normalizedEmail = email?.trim().toLowerCase();
   if (!normalizedEmail) return;
   if (isLastOwnerEmail(normalizedEmail)) {
-    alert('No se puede borrar la ultima cuenta principal.');
+    alert('No se puede borrar la última cuenta principal.');
     return;
   }
   if (normalizedEmail === state.session?.user?.email?.toLowerCase()) {
-    alert('No puedes borrar tu propia cuenta desde esta pantalla. Cierra sesion y pide a otra cuenta principal que lo haga.');
+    alert('No puedes borrar tu propia cuenta desde esta pantalla. Cierra sesión y pide a otra cuenta principal que lo haga.');
     return;
   }
-  const confirmation = prompt(`Esto borrara la cuenta ${normalizedEmail}, su perfil, permisos y credenciales de inicio de sesion. Escribe BORRAR para confirmar.`);
+  const confirmation = prompt(`Esto borrará la cuenta ${normalizedEmail}, su perfil, permisos y credenciales de inicio de sesión. Escribe BORRAR para confirmar.`);
   if (confirmation !== 'BORRAR') return;
   const { error } = await cloudClient.rpc('delete_registered_account', {
     account_email: normalizedEmail,
@@ -4522,14 +4567,14 @@ function resetMultiFilter(kind) {
 async function loadCloudData() {
   if (!cloudClient) return null;
   if (!state.session?.user) {
-    setCloudStatus('Inicia sesion para cargar los datos compartidos.', 'pending');
+    setCloudStatus('Inicia sesión para cargar los datos compartidos.', 'pending');
     return null;
   }
   if (!state.accessChecked) {
     await refreshEditorStatus();
   }
   if (!state.hasCourseAccess) {
-    setCloudStatus('Sesion iniciada, pero este correo no tiene perfil asignado.', 'pending');
+    setCloudStatus('Sesión iniciada, pero este correo no tiene perfil asignado.', 'pending');
     return null;
   }
   const { data, error } = await cloudClient
@@ -4539,17 +4584,17 @@ async function loadCloudData() {
     .single();
   if (error) {
     state.cloudReady = false;
-    setCloudStatus('No se pudieron cargar los datos compartidos. Revisa la configuracion de Supabase.', 'local');
+    setCloudStatus('No se pudieron cargar los datos compartidos. Revisa la configuración de Supabase.', 'local');
     return null;
   }
   state.cloudReady = true;
-  setCloudStatus(`Datos compartidos activos. Ultima sincronizacion: ${formatDateTime(data.updated_at)}.`, 'ok');
+  setCloudStatus(`Datos compartidos activos. Última sincronización: ${formatDateTime(data.updated_at)}.`, 'ok');
   return ensureCategoryData(data.data);
 }
 
 async function initCloudSession() {
   if (!cloudClient) {
-    setCloudStatus('Modo local. Supabase no esta configurado.', 'local');
+    setCloudStatus('Modo local. Supabase no está configurado.', 'local');
     updateAuthUi();
     return;
   }
@@ -4577,7 +4622,7 @@ async function initCloudSession() {
       await refreshEditorStatus();
     }
     if (state.cloudReady) {
-      if (!session) setCloudStatus('Modo lectura. Inicia sesion para editar.', 'pending');
+      if (!session) setCloudStatus('Modo lectura. Inicia sesión para editar.', 'pending');
     }
   });
 }

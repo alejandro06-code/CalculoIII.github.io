@@ -452,11 +452,11 @@ begin
 
   normalized_email := lower(trim(account_email));
   if normalized_email is null or normalized_email = '' then
-    raise exception 'Correo invalido.';
+    raise exception 'Correo inválido.';
   end if;
 
   if normalized_email = lower(coalesce(auth.jwt() ->> 'email', '')) then
-    raise exception 'No puedes borrar tu propia cuenta desde esta funcion.';
+    raise exception 'No puedes borrar tu propia cuenta desde esta función.';
   end if;
 
   if exists (
@@ -466,7 +466,7 @@ begin
       and role = 'owner'
   )
   and public.owner_editor_count() <= 1 then
-    raise exception 'No se puede borrar la ultima cuenta principal.';
+    raise exception 'No se puede borrar la última cuenta principal.';
   end if;
 
   select id

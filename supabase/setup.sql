@@ -400,11 +400,11 @@ begin
 
   normalized_email := lower(trim(account_email));
   if normalized_email is null or normalized_email = '' then
-    raise exception 'Correo invalido.';
+    raise exception 'Correo inválido.';
   end if;
 
   if normalized_email = lower(coalesce(auth.jwt() ->> 'email', '')) then
-    raise exception 'No puedes borrar tu propia cuenta desde esta funcion.';
+    raise exception 'No puedes borrar tu propia cuenta desde esta función.';
   end if;
 
   if exists (
@@ -414,7 +414,7 @@ begin
       and role = 'owner'
   )
   and public.owner_editor_count() <= 1 then
-    raise exception 'No se puede borrar la ultima cuenta principal.';
+    raise exception 'No se puede borrar la última cuenta principal.';
   end if;
 
   select id
@@ -629,18 +629,18 @@ values (
   $course$
 {
   "course": {
-    "title": "Calculo III",
+    "title": "Cálculo III",
     "description": "Organizador de recursos para construir y revisar un curso en Moodle."
   },
   "sections": [
     {
       "id": "preparacion",
-      "title": "Preparacion",
+      "title": "Preparación",
       "description": "Recursos previos, recordatorios y materiales de entrada."
     },
     {
       "id": "profundizacion",
-      "title": "Profundizacion",
+      "title": "Profundización",
       "description": "Lecturas, videos, enlaces y materiales para ampliar el tema."
     },
     {
@@ -651,7 +651,7 @@ values (
     {
       "id": "cierre",
       "title": "Cierre",
-      "description": "Autoevaluacion, sintesis y decisiones finales de la leccion."
+      "description": "Autoevaluación, síntesis y decisiones finales de la lección."
     }
   ],
   "modules": [
@@ -661,7 +661,7 @@ values (
       "lessons": [
         {
           "id": "l10",
-          "title": "Introduccion a la asignatura",
+          "title": "Introducción a la asignatura",
           "resources": [
             {
               "id": "r1",
@@ -674,12 +674,12 @@ values (
               "files": [],
               "owner": "Profesor",
               "priority": "high",
-              "notes": "Definir duracion y mensaje inicial."
+              "notes": "Definir duración y mensaje inicial."
             },
             {
               "id": "r2",
               "section": "cierre",
-              "title": "Encuesta diagnostica",
+              "title": "Encuesta diagnóstica",
               "type": "quiz",
               "status": "missing",
               "url": "",
@@ -693,12 +693,12 @@ values (
         },
         {
           "id": "l11",
-          "title": "Funcion vectorial y funcion de varias variables",
+          "title": "Función vectorial y función de varias variables",
           "resources": []
         },
         {
           "id": "l12",
-          "title": "Limites y continuidad",
+          "title": "Límites y continuidad",
           "resources": []
         },
         {
@@ -708,7 +708,7 @@ values (
             {
               "id": "r3",
               "section": "profundizacion",
-              "title": "Applet o enlace de visualizacion 3D",
+              "title": "Applet o enlace de visualización 3D",
               "type": "link",
               "status": "review",
               "url": "",
@@ -745,7 +745,7 @@ values (
     },
     {
       "id": "m3",
-      "title": "Integrales multiples",
+      "title": "Integrales múltiples",
       "lessons": [
         {
           "id": "l31",
@@ -766,7 +766,7 @@ values (
     },
     {
       "id": "m4",
-      "title": "Calculo vectorial",
+      "title": "Cálculo vectorial",
       "lessons": [
         {
           "id": "l41",

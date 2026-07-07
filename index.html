@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Organizador compartido de recursos para el curso Calculo III.">
-  <meta property="og:title" content="Organizador de Recursos | Calculo III">
-  <meta property="og:description" content="Mapa compartido de modulos, lecciones y recursos del curso.">
+  <meta name="description" content="Organizador compartido de recursos para el curso Cálculo III.">
+  <meta property="og:title" content="Organizador de Recursos | Cálculo III">
+  <meta property="og:description" content="Mapa compartido de módulos, lecciones y recursos del curso.">
   <meta property="og:type" content="website">
-  <title>Organizador de Recursos | Calculo III</title>
+  <title>Organizador de Recursos | Cálculo III</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20260706-222000">
   <link rel="stylesheet" href="css/styles.css?v=20260705-172400">
 </head>
@@ -15,17 +15,17 @@
   <header class="app-header">
     <div>
       <p class="eyebrow" id="course-eyebrow-display">Propuesta de organizador Moodle</p>
-      <h1>Calculo III</h1>
+      <h1>Cálculo III</h1>
       <p class="header-description" id="course-description-display">Organizador de recursos para construir y revisar un curso en Moodle.</p>
     </div>
-    <section class="cloud-panel" aria-label="Sincronizacion">
+    <section class="cloud-panel" aria-label="Sincronización">
       <div>
         <p class="eyebrow">Datos compartidos</p>
-        <p id="cloud-status">Preparando conexion...</p>
+        <p id="cloud-status">Preparando conexión...</p>
       </div>
       <div class="cloud-actions">
         <a class="btn ghost profile-shortcut" id="profile-link" href="#/perfil" hidden>Mi perfil</a>
-        <button class="btn ghost" id="logout-button" type="button" hidden>Cerrar sesion</button>
+        <button class="btn ghost" id="logout-button" type="button" hidden>Cerrar sesión</button>
       </div>
     </section>
   </header>
@@ -33,11 +33,11 @@
   <section class="auth-gate" id="auth-gate">
     <div class="auth-copy">
       <p class="eyebrow">Acceso requerido</p>
-      <h2 id="auth-title">Inicia sesion para ver el organizador</h2>
-      <p id="auth-description">Los editores autorizados podran modificar y descargar; los demas usuarios registrados solo podran revisar la estructura.</p>
+      <h2 id="auth-title">Inicia sesión para ver el organizador</h2>
+      <p id="auth-description">Los editores autorizados podrán modificar y descargar; los demás usuarios registrados solo podrán revisar la estructura.</p>
     </div>
     <div class="auth-card" aria-label="Acceso al organizador">
-      <p class="auth-mode-note" id="auth-mode-note">Usa tu correo o nombre de usuario y tu contrasena.</p>
+      <p class="auth-mode-note" id="auth-mode-note">Usa tu correo o nombre de usuario y tu contraseña.</p>
       <label class="auth-field signup-only" id="login-name-field">
         Nombre de usuario
         <input id="login-name" maxlength="80" autocomplete="name" placeholder="Nombre de usuario">
@@ -47,21 +47,21 @@
         <input id="login-email" autocomplete="username" placeholder="Correo o nombre de usuario">
       </label>
       <label class="auth-field" id="login-password-field">
-        <span id="login-password-label">Contrasena</span>
-        <input id="login-password" type="password" maxlength="72" autocomplete="current-password" placeholder="contrasena">
+        <span id="login-password-label">Contraseña</span>
+        <input id="login-password" type="password" maxlength="72" autocomplete="current-password" placeholder="contraseña">
       </label>
       <label class="auth-field confirm-only" id="confirm-password-field">
-        Confirmar contrasena
-        <input id="confirm-password" type="password" maxlength="72" autocomplete="new-password" placeholder="Repite la contrasena">
+        Confirmar contraseña
+        <input id="confirm-password" type="password" maxlength="72" autocomplete="new-password" placeholder="Repite la contraseña">
       </label>
       <button class="btn primary" id="login-button" type="button">Entrar</button>
       <button class="btn primary" id="signup-button" type="button" hidden>Registrarse</button>
-      <button class="btn primary" id="reset-password-button" type="button" hidden>Enviar enlace de recuperacion</button>
-      <button class="btn primary" id="update-password-button" type="button" hidden>Cambiar contrasena</button>
+      <button class="btn primary" id="reset-password-button" type="button" hidden>Enviar enlace de recuperación</button>
+      <button class="btn primary" id="update-password-button" type="button" hidden>Cambiar contraseña</button>
       <nav class="auth-switches" aria-label="Enlaces de acceso">
-        <a id="auth-login-link" href="#/login">Iniciar sesion</a>
+        <a id="auth-login-link" href="#/login">Iniciar sesión</a>
         <a id="auth-signup-link" href="#/registro">Crear cuenta</a>
-        <a id="auth-reset-link" href="#/recuperar">Recuperar contrasena</a>
+        <a id="auth-reset-link" href="#/recuperar">Recuperar contraseña</a>
       </nav>
     </div>
   </section>
@@ -69,25 +69,25 @@
   <main class="app-shell">
     <nav class="page-tabs" aria-label="Vistas del organizador">
       <button class="page-tab active" data-view="course" type="button">Mapa del curso</button>
-      <button class="page-tab" data-view="categories" type="button">Categorias</button>
+      <button class="page-tab" data-view="categories" type="button">Categorías</button>
       <button class="page-tab" data-view="structure" type="button">Estructura</button>
-      <button class="page-tab" data-view="admin" type="button">Administracion</button>
+      <button class="page-tab" data-view="admin" type="button">Administración</button>
       <button class="page-tab" data-view="profile" type="button">Perfil</button>
     </nav>
 
-    <section class="module-strip" data-view-panel="course module" aria-label="Modulos del curso">
-      <div class="route-controls" aria-label="Navegacion">
+    <section class="module-strip" data-view-panel="course module" aria-label="Módulos del curso">
+      <div class="route-controls" aria-label="Navegación">
         <button class="mini-btn" id="route-back" type="button" aria-label="Volver">&lt;</button>
         <button class="mini-btn" id="route-forward" type="button" aria-label="Adelante">&gt;</button>
       </div>
       <div id="module-strip" class="module-strip-list"></div>
     </section>
 
-    <section class="workspace" data-view-panel="course module" aria-label="Area de trabajo">
+    <section class="workspace" data-view-panel="course module" aria-label="Área de trabajo">
       <div class="workspace-header">
         <div>
-          <p class="eyebrow" id="current-module-label">Modulo</p>
-          <h2 id="current-lesson-title">Selecciona una leccion</h2>
+          <p class="eyebrow" id="current-module-label">Módulo</p>
+          <h2 id="current-lesson-title">Selecciona una lección</h2>
           <p class="muted" id="current-lesson-meta">Elige un punto del curso para organizar sus recursos.</p>
         </div>
       </div>
@@ -98,17 +98,17 @@
             <p class="eyebrow">Estructura general</p>
             <h3 id="map-title">Mapa del curso</h3>
           </div>
-          <p class="muted" id="map-description">Primero escoge un modulo. Luego veras sus lecciones y partes sin cargar toda la informacion a la vez.</p>
+          <p class="muted" id="map-description">Primero escoge un módulo. Luego verás sus lecciones y partes sin cargar toda la información a la vez.</p>
         </div>
         <div id="course-map" class="course-map"></div>
       </section>
     </section>
 
     <section class="workbench" data-view-panel="module" aria-label="Herramientas y recursos">
-      <aside class="sidebar" aria-label="Navegacion del curso">
+      <aside class="sidebar" aria-label="Navegación del curso">
         <div class="search-box">
           <label for="search">Buscar recurso</label>
-          <input id="search" type="search" placeholder="Titulo, enlace, nota...">
+          <input id="search" type="search" placeholder="Título, enlace, nota...">
         </div>
 
         <section class="summary-grid" aria-label="Resumen" hidden>
@@ -131,13 +131,13 @@
         </section>
 
         <div class="sidebar-title">
-          <h2>Modulos y lecciones</h2>
+          <h2>Módulos y lecciones</h2>
         </div>
         <nav id="course-nav" class="course-nav"></nav>
       </aside>
 
       <section class="workbench-main">
-        <section class="resource-workspace" aria-label="Recursos de la leccion">
+        <section class="resource-workspace" aria-label="Recursos de la lección">
           <div class="filters" aria-label="Filtros de recursos">
             <fieldset class="filter-group" id="status-filter">
               <legend>Estado</legend>
@@ -150,7 +150,7 @@
             </fieldset>
           </div>
 
-          <div class="section-tabs" id="section-tabs" role="tablist" aria-label="Momentos de la leccion"></div>
+          <div class="section-tabs" id="section-tabs" role="tablist" aria-label="Momentos de la lección"></div>
 
           <section class="resource-panel">
             <div class="panel-heading">
@@ -166,7 +166,7 @@
           <input type="hidden" id="resource-id">
           <h2 id="form-title">Nuevo recurso</h2>
           <label>
-            Titulo
+            Título
             <input id="resource-title" required placeholder="Ej. Video sobre plano tangente">
           </label>
           <div class="three-col">
@@ -245,11 +245,11 @@
       </section>
     </section>
 
-    <section class="categories-row" data-view-panel="categories" aria-label="Categorias de recursos">
+    <section class="categories-row" data-view-panel="categories" aria-label="Categorías de recursos">
       <div class="categories-heading">
         <div>
-          <p class="eyebrow">Organizacion visual</p>
-          <h2>Categorias de recursos</h2>
+          <p class="eyebrow">Organización visual</p>
+          <h2>Categorías de recursos</h2>
           <p class="muted">Edita estados, tipos y grupos visuales. Los recursos se agrupan por grupo visual dentro de cada parte.</p>
         </div>
         <div class="category-savebar">
@@ -271,13 +271,13 @@
           <div>
             <p class="eyebrow">Formato</p>
             <h3>Tipos</h3>
-            <p class="muted">Describen la naturaleza del recurso: video, enlace, archivo, pagina Moodle y otros formatos.</p>
+            <p class="muted">Describen la naturaleza del recurso: video, enlace, archivo, página Moodle y otros formatos.</p>
           </div>
           <div id="type-category-list" class="category-list"></div>
         </section>
         <section class="category-card category-card-wide">
           <div>
-            <p class="eyebrow">Separadores de visualizacion</p>
+            <p class="eyebrow">Separadores de visualización</p>
             <h3>Grupos visuales</h3>
             <p class="muted">Crean separadores como Simuladores, Videos o Lecturas para que cada parte no quede como una lista mezclada.</p>
           </div>
@@ -289,9 +289,9 @@
     <section class="structure-row" data-view-panel="structure" aria-label="Estructura">
       <div class="structure-heading">
         <div>
-          <p class="eyebrow">Edicion de estructura</p>
+          <p class="eyebrow">Edición de estructura</p>
           <h2>Estructura del curso</h2>
-          <p class="muted">Edita modulos, lecciones y partes en esta lista. Los cambios quedan en borrador hasta guardar.</p>
+          <p class="muted">Edita módulos, lecciones y partes en esta lista. Los cambios quedan en borrador hasta guardar.</p>
         </div>
         <div class="structure-savebar">
           <span id="structure-status">Sin cambios pendientes</span>
@@ -300,17 +300,17 @@
         </div>
       </div>
       <div class="structure-create-module">
-        <input id="structure-new-module-title" placeholder="Nombre del nuevo modulo">
-        <button class="btn secondary" id="structure-add-module" type="button">Crear modulo</button>
+        <input id="structure-new-module-title" placeholder="Nombre del nuevo módulo">
+        <button class="btn secondary" id="structure-add-module" type="button">Crear módulo</button>
       </div>
       <div id="structure-list" class="structure-list" aria-label="Lista editable de estructura"></div>
     </section>
 
-    <section class="admin-row" data-view-panel="admin" aria-label="Administracion del curso">
+    <section class="admin-row" data-view-panel="admin" aria-label="Administración del curso">
       <div class="admin-heading">
         <div>
-          <p class="eyebrow">Administracion</p>
-          <h2>Configuracion del curso</h2>
+          <p class="eyebrow">Administración</p>
+          <h2>Configuración del curso</h2>
         </div>
         <p class="muted">Los visitantes pueden ver y descargar. Solo editores autorizados pueden guardar cambios.</p>
       </div>
@@ -323,12 +323,12 @@
             <input id="course-eyebrow-input" placeholder="Propuesta de organizador Moodle">
           </label>
           <label>
-            Titulo principal
-            <input id="course-title-input" placeholder="Calculo III">
+            Título principal
+            <input id="course-title-input" placeholder="Cálculo III">
           </label>
           <label>
-            Descripcion visible
-            <textarea id="course-description-input" rows="3" placeholder="Descripcion del organizador"></textarea>
+            Descripción visible
+            <textarea id="course-description-input" rows="3" placeholder="Descripción del organizador"></textarea>
           </label>
           <div class="two-col">
             <label>
@@ -381,7 +381,7 @@
             </article>
             <article>
               <strong>Administrador</strong>
-              <span>Gestiona configuracion del curso, categorias, estructura y recursos. Puede revisar usuarios e historial, pero no cambia perfiles, no borra cuentas y no elimina historial.</span>
+              <span>Gestiona configuración del curso, categorías, estructura y recursos. Puede revisar usuarios e historial, pero no cambia perfiles, no borra cuentas y no elimina historial.</span>
             </article>
             <article>
               <strong>Cuenta principal</strong>
@@ -412,7 +412,7 @@
             <div class="registered-users-heading">
               <div>
                 <h4>Usuarios registrados</h4>
-                <p class="muted">Cuentas creadas en Supabase Auth, incluso si todavia les falta perfil publico.</p>
+                <p class="muted">Cuentas creadas en Supabase Auth, incluso si todavía les falta perfil público.</p>
               </div>
               <button class="mini-btn accent" id="sync-registered-users" type="button">Sincronizar usuarios</button>
             </div>
@@ -430,19 +430,19 @@
         </div>
         <div class="audit-filter-grid" aria-label="Filtros del historial">
           <label>
-            Buscar recurso o accion
-            <input id="audit-search" placeholder="Titulo, crear, editar, mover...">
+            Buscar recurso o acción
+            <input id="audit-search" placeholder="Título, crear, editar, mover...">
           </label>
           <label>
             Persona o correo
             <input id="audit-person-search" placeholder="Nombre o correo">
           </label>
           <label>
-            Accion
+            Acción
             <select id="audit-action-filter">
               <option value="">Todas</option>
-              <option value="create">Creacion</option>
-              <option value="update">Edicion</option>
+              <option value="create">Creación</option>
+              <option value="update">Edición</option>
               <option value="move">Movimiento</option>
               <option value="delete">Eliminacion</option>
             </select>
@@ -456,15 +456,15 @@
             <input id="audit-date-to" type="date">
           </label>
           <label>
-            Ubicacion, categoria o etiqueta
-            <input id="audit-detail-search" placeholder="Modulo, leccion, estado, tipo, grupo...">
+            Ubicación, categoría o etiqueta
+            <input id="audit-detail-search" placeholder="Módulo, lección, estado, tipo, grupo...">
           </label>
           <button class="btn ghost" id="clear-audit-filters" type="button">Limpiar filtros</button>
         </div>
-        <div class="audit-pagination audit-pagination-top" id="audit-pagination-top" data-audit-pagination aria-label="Paginas del historial arriba"></div>
+        <div class="audit-pagination audit-pagination-top" id="audit-pagination-top" data-audit-pagination aria-label="Páginas del historial arriba"></div>
         <p class="asset-empty" id="audit-status"></p>
         <div class="audit-list" id="audit-list"></div>
-        <div class="audit-pagination" id="audit-pagination" data-audit-pagination aria-label="Paginas del historial abajo"></div>
+        <div class="audit-pagination" id="audit-pagination" data-audit-pagination aria-label="Páginas del historial abajo"></div>
       </section>
     </section>
 
@@ -473,7 +473,7 @@
         <div>
           <p class="eyebrow">Cuenta personal</p>
           <h2>Mi perfil</h2>
-          <p class="muted">Revisa tus datos, cambia tu nombre de usuario o actualiza tu contrasena.</p>
+          <p class="muted">Revisa tus datos, cambia tu nombre de usuario o actualiza tu contraseña.</p>
         </div>
       </div>
 
@@ -481,7 +481,7 @@
         <section class="profile-card profile-summary-card">
           <div class="profile-avatar" id="profile-avatar">U</div>
           <div class="profile-summary-main">
-            <p class="eyebrow">Sesion activa</p>
+            <p class="eyebrow">Sesión activa</p>
             <h3 id="profile-display-name">Usuario</h3>
             <p id="profile-display-email">correo@ejemplo.com</p>
             <span class="role-pill" id="profile-display-role">Sin perfil asignado</span>
@@ -509,23 +509,23 @@
         <section class="profile-card">
           <h3>Seguridad</h3>
           <label>
-            Contrasena actual
+            Contraseña actual
             <input id="profile-current-password" type="password" maxlength="72" autocomplete="current-password">
           </label>
           <div class="two-col">
             <label>
-              Nueva contrasena
+              Nueva contraseña
               <input id="profile-new-password" type="password" maxlength="72" autocomplete="new-password">
             </label>
             <label>
-              Confirmar nueva contrasena
+              Confirmar nueva contraseña
               <input id="profile-confirm-password" type="password" maxlength="72" autocomplete="new-password">
             </label>
           </div>
           <div class="profile-actions">
-            <button class="btn primary" id="change-profile-password" type="button">Cambiar contrasena</button>
-            <button class="btn ghost" id="send-profile-recovery" type="button">Enviar recuperacion</button>
-            <button class="btn danger" id="profile-logout" type="button">Cerrar sesion</button>
+            <button class="btn primary" id="change-profile-password" type="button">Cambiar contraseña</button>
+            <button class="btn ghost" id="send-profile-recovery" type="button">Enviar recuperación</button>
+            <button class="btn danger" id="profile-logout" type="button">Cerrar sesión</button>
           </div>
         </section>
       </div>
@@ -534,9 +534,9 @@
 
   <div class="confirm-overlay" id="delete-confirm" hidden>
     <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
-      <p class="eyebrow">Confirmacion requerida</p>
+      <p class="eyebrow">Confirmación requerida</p>
       <h2 id="delete-confirm-title">Eliminar recurso</h2>
-      <p class="confirm-copy" id="delete-confirm-copy">Esta accion quitara el recurso del organizador.</p>
+      <p class="confirm-copy" id="delete-confirm-copy">Esta acción quitará el recurso del organizador.</p>
       <p class="confirm-resource" id="delete-confirm-resource"></p>
       <div class="confirm-actions">
         <button class="btn ghost" id="cancel-delete" type="button">Cancelar</button>
@@ -568,6 +568,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js?v=20260620-214500"></script>
-  <script src="js/app.js?v=20260706-222000"></script>
+<script src="js/app.js?v=20260706-224000"></script>
 </body>
 </html>
